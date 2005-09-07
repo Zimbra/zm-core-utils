@@ -1,0 +1,17 @@
+/var/log/zimbra.log {
+    missingok
+    notifempty
+    create 0644 zimbra zimbra
+    postrotate
+	killall -HUP syslogd
+	killall -HUP swatch
+    endscript
+	compress
+}
+
+/opt/zimbra/log/myslow.log {
+    missingok
+    notifempty
+    create 0644 zimbra zimbra
+	compress
+}
