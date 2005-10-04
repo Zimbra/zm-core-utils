@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: ZPL 1.1
@@ -24,29 +24,42 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-progdir=`dirname $0`
+BASE=/opt/zimbra
+SCRIPTS="logmysql.server zmlogswatchctl"
 
-source `dirname $0`/zmshutil || exit 1
-
-zmsetvars \
-	zimbra_home \
-	zimbra_server_hostname 
-
-rewriteconfig() {
-    /opt/zimbra/bin/zmmtaconfig mta > /dev/null 2>&1
-}
-
-if [ $1 = "start" -o $1 = "reload" ]; then
-	if [ x$2 = "x" ]; then
-		rewriteconfig
-	fi
-fi
-
-if [ $1 = "status" ]; then
-	PID=`ps auxww | grep /opt/zimbra/postfix-2.2.3/libexec/master | grep -v grep`
-	exit $?
-fi
-
-sudo ${zimbra_home}/postfix/sbin/postalias /etc/aliases
-sudo ${zimbra_home}/postfix/sbin/postfix $@
-
+case "$1" in 
+	start)
+		for i in $SCRIPTS; do
+			/opt/zimbra/bin/$i start
+		done
+	;;
+	stop)
+		for i in $SCRIPTS; do
+			/opt/zimbra/bin/$i stop
+		done
+	;;
+	reload)
+		for i in $SCRIPTS; do
+			/opt/zimbra/bin/$i reload
+		done
+	;;
+	status)
+		STATUS=0
+		for i in $SCRIPTS; do
+			if [ $i = "logmysql.server" ]; then
+				/opt/zimbra/bin/logmysqladmin status > /dev/null 2>&1
+			else
+				/opt/zimbra/bin/$i status
+			fi
+			R=$?
+			if [ $R -ne "0" ]; then
+				STATUS=$R
+			fi
+		done
+		exit $STATUS
+	;;
+	*)
+		echo "$0 start|stop|reload|status"
+		exit 1
+	;;
+esac
