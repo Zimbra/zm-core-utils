@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: ZPL 1.1
@@ -24,28 +24,31 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-my $desthost=$ARGV[0];
+source `dirname $0`/../bin/zmshutil || exit 1
 
-shift;
+replicaHost=$1
 
-my $keyfile="/opt/zimbra/.ssh/zimbra_identity";
+if [ x$replicaHost = "x" ]; then
+	echo "Need hostname!"
+	exit 1
+fi
 
-if ($desthost eq "") {
-	print "Usage: $0 <hostname>\n";
-	exit 1;
+zmsetvars \
+	zimbra_home \
+	zimbra_server_hostname \
+	ldap_host \
+	ldap_port \
+	ldap_root_password \
+	zimbra_ldap_userdn
+
+addReplicaToLdapConfig() {
+
+	cat >> ${zimbra_home}/conf/slapd.conf <<EOF
+replica uri=ldap://$replicaHost:389
+	binddn="uid=zimbrareplication,cn=admins,cn=zimbra"
+	bindmethod=simple credentials=${ldap_root_password}
+EOF
+
 }
 
-if ($#ARGV >= 0) {
-	$cmd = "echo @ARGV | ssh -T -i ${keyfile} -o StrictHostKeyChecking=no zimbra\@${desthost}";
-} else {
-	$cmd = "ssh -T -i ${keyfile} -o StrictHostKeyChecking=no zimbra\@${desthost}";
-}
-
-open P, "$cmd |";
-$SIG{ALRM} = \&quit;
-while (<P>) {print $_; alarm(10);}
-close P;
-
-sub quit {
-	exit 0;
-}
+addReplicaToLdapConfig
