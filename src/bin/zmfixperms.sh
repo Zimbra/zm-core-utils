@@ -1,9 +1,9 @@
 #!/bin/sh 
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1
+# Version: ZPL 1.1
 # 
-# The contents of this file are subject to the Mozilla Public License
+# The contents of this file are subject to the Zimbra Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite Server.
+# The Original Code is: Zimbra Collaboration Suite.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -26,33 +26,22 @@
 # This may not be there, but we don't want to break the zimbramta package
 # if it's installed.
 
+chown -R zimbra:zimbra /opt/zimbra
+
+chown -R root:root /opt/zimbra/libexec
+chown -R root:root /opt/zimbra/bin
+chown -R root:root /opt/zimbra/lib
+
+chmod 755 /opt/zimbra/libexec/*
+
+chmod 755 /opt/zimbra/bin/*
+
 ROOTGROUP=root
 
 PLAT=`/bin/sh /opt/zimbra/bin/get_plat_tag.sh`
 
 if [ "X$PLAT" = "XMACOSX" ]; then
 	ROOTGROUP=wheel
-fi
-
-chown -R zimbra:zimbra /opt/zimbra
-
-chown -R root:$ROOTGROUP /opt/zimbra/libexec
-chown -R root:$ROOTGROUP /opt/zimbra/bin
-chown -R root:$ROOTGROUP /opt/zimbra/lib
-if [ -d /opt/zimbra/jdk1.5.0_05 ]; then
-	chown -R root:$ROOTGROUP /opt/zimbra/jdk1.5.0_05
-fi
-
-chown root:$ROOTGROUP /opt/zimbra
-chmod 755 /opt/zimbra
-
-chmod 755 /opt/zimbra/libexec/*
-
-chmod 755 /opt/zimbra/bin/*
-
-if [ ! -d /opt/zimbra/tomcat/conf ]; then
-	mkdir -p /opt/zimbra/tomcat/conf
-	chown zimbra:zimbra /opt/zimbra/tomcat/conf
 fi
 
 if [ -L /opt/zimbra/postfix ]; then
@@ -87,12 +76,6 @@ if [ -L /opt/zimbra/postfix ]; then
 
 fi
 
-if [ -d /opt/zimbra/cyrus-sasl-2.1.21.ZIMBRA ]; then
-	chown root:zimbra /opt/zimbra/cyrus-sasl-2.1.21.ZIMBRA
-	mkdir -p /opt/zimbra/cyrus-sasl-2.1.21.ZIMBRA/state
-	chown zimbra:zimbra /opt/zimbra/cyrus-sasl-2.1.21.ZIMBRA/state
-fi
-
 if [ -d /opt/zimbra/clamav-0.85.1 ]; then
 	chown zimbra:zimbra /opt/zimbra/clamav-0.85.1
 fi
@@ -100,10 +83,5 @@ fi
 if [ -f /opt/zimbra/openldap/libexec/slapd ]; then
 	chown root:$ROOTGROUP /opt/zimbra/openldap/libexec/slapd
 	chmod 755 /opt/zimbra/openldap/libexec/slapd
-fi
-
-if [ -f /opt/zimbra/libexec/ZmSetup.app/Contents/MacOS/ZmSetup ]; then
-	chown root:$ROOTGROUP /opt/zimbra/libexec/ZmSetup.app/Contents/MacOS/ZmSetup
-	chmod 544 /opt/zimbra/libexec/ZmSetup.app/Contents/MacOS/ZmSetup
 fi
 

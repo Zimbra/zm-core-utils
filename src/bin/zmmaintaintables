@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1
+# Version: ZPL 1.1
 # 
-# The contents of this file are subject to the Mozilla Public License
+# The contents of this file are subject to the Zimbra Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite Server.
+# The Original Code is: Zimbra Collaboration Suite.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -32,6 +32,8 @@ use lib "/opt/zimbra/zimbramon/lib/zimbrapm";
 use lib "/opt/zimbra/zimbramon/lib/zimbrapm/SOAP";
 use lib "/opt/zimbra/zimbramon/lib";
 
+use zimbralog;
+
 use Getopt::Std;
 
 use POSIX ":sys_wait_h";
@@ -39,17 +41,14 @@ use LWP::UserAgent;
 
 use Zimbra::SOAP::XmlElement;
 use Zimbra::SOAP::XmlDoc;
-use Zimbra::SOAP::Soap;
+use Soap;
 
 use Time::Local;
-
-# Exit if software-only node.
-exit(0) unless (-f '/opt/zimbra/conf/localconfig.xml');
 
 my $ACCTNS = "urn:zimbraAccount";
 my $MAILNS = "urn:zimbraMail";
 my $ADMINNS = "urn:zimbraAdmin";
-my $SOAP = $Zimbra::SOAP::Soap::Soap12;
+my $SOAP = $Soap::Soap12;
 
 my $authToken;
 my $START;

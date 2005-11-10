@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 # ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1
+# Version: ZPL 1.1
 # 
-# The contents of this file are subject to the Mozilla Public License
+# The contents of this file are subject to the Zimbra Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite Server.
+# The Original Code is: Zimbra Collaboration Suite.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -35,12 +35,11 @@ platform=`/opt/zimbra/bin/get_plat_tag.sh`
 
 if [ x$platform = "xMACOSX" ]; then
 	logfile="/var/log/zimbra.log"
-	LOCALHOST=`hostname`
 else
 	logfile="-/var/log/zimbra.log"
-	LOCALHOST=`hostname --fqdn`
 fi
 LOGHOST=`su - zimbra -c 'zmprov gacf | egrep "^zimbraLogHostname"'`
+LOCALHOST=`su - zimbra -c 'zmlocalconfig -m nokey zimbra_server_hostname'`
 
 if [ "x$LOGHOST" = "x" ]; then
 	TYPE="local"
@@ -69,17 +68,19 @@ cp -f /etc/syslog.conf /etc/syslog.conf.bak
 grep -v local0 /etc/syslog.conf > /tmp/syslog.zimbra
 
 if [ $TYPE = "remote" ]; then
-      echo "local0.*                @$LOGHOST" >> /tmp/syslog.zimbra
+      echo "local0.info                @$LOGHOST" >> /tmp/syslog.zimbra
+else
+      echo "local0.info                $logfile" >> /tmp/syslog.zimbra
+	  touch /var/log/zimbra.log
 fi
-echo "local0.*                $logfile" >> /tmp/syslog.zimbra
-touch /var/log/zimbra.log
 
 egrep -v "^mail.*($LOGHOST|zimbra)" /tmp/syslog.zimbra > /tmp/syslog.zimbra2
 
 if [ $TYPE = "remote" ]; then
-      echo "mail.*                @$LOGHOST" >> /tmp/syslog.zimbra2
+      echo "mail.info                @$LOGHOST" >> /tmp/syslog.zimbra2
+else
+      echo "mail.info                $logfile" >> /tmp/syslog.zimbra2
 fi
-echo "mail.*                $logfile" >> /tmp/syslog.zimbra2
 
 cp -f /tmp/syslog.zimbra2 /etc/syslog.conf
 
