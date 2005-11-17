@@ -54,7 +54,7 @@ my $hostname;
 
 logStatus();
 
-#logDiskUsage();
+logDiskUsage();
 
 exit 0;
 
