@@ -24,4 +24,12 @@
 # ***** END LICENSE BLOCK *****
 # 
 
+platform=`/opt/zimbra/bin/get_plat_tag.sh`
+
+if [ "x$platform" = "xMACOSX" ]; then
+	echo "Volume management not supported on this platform!"
+	echo ""
+	exit 1
+fi
+
 exec `dirname $0`/zmjava com.zimbra.cs.store.VolumeUtil "$@"
