@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: ZPL 1.1
+# Version: MPL 1.1
 # 
-# The contents of this file are subject to the Zimbra Public License
+# The contents of this file are subject to the Mozilla Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite.
+# The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -320,8 +320,13 @@ sub traceProcessedMsg {
 		my $fromIP = $$f[0];
 
 		my $statement = 
-			"select distinct(recipient) from mta where msgid='".$msgId.
-				"' and from_IP='".$fromIP."'";
+			"select distinct(recipient) from mta where msgid='".$msgId;
+
+		if ($fromIP ne "") {
+			$statement .= "' and from_IP='".$fromIP."'";
+		} else {
+			$statement .= "' and from_IP is null";
+		}
 
 		my $rary = execSelect($statement);
 
@@ -332,8 +337,13 @@ sub traceProcessedMsg {
 				"select arrive_time, leave_time, host, ".
 				"sender, recipient, status, statusmsg, from_host, from_IP, to_host, to_IP, ".
 				"amavis_pid ".
-				"from mta where msgid='".$msgId."' and recipient='".$recip."' ".
-				"and from_IP='".$fromIP."'";
+				"from mta where msgid='".$msgId."' and recipient='".$recip."' ";
+
+			if ($fromIP ne "") {
+				$statement .= " and from_IP='".$fromIP."'";
+			} else {
+				$statement .= " and from_IP is null";
+			}
 
 			my $ary = execSelect($statement);
 

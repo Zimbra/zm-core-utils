@@ -1,9 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: ZPL 1.1
+# Version: MPL 1.1
 # 
-# The contents of this file are subject to the Zimbra Public License
+# The contents of this file are subject to the Mozilla Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite.
+# The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -40,13 +40,19 @@ if [ $1 = "start" -o $1 = "reload" ]; then
 	if [ x$2 = "x" ]; then
 		rewriteconfig
 	fi
+	sudo ${zimbra_home}/postfix-2.2.5/sbin/postsuper -r ALL
 fi
 
 if [ $1 = "status" ]; then
-	PID=`ps auxww | grep /opt/zimbra/postfix-2.2.3/libexec/master | grep -v grep`
-	exit $?
+	${zimbra_home}/postfix-2.2.5/sbin/postqueue -p > /dev/null 2>&1
+	R=$?
+	if [ x$R != "x0" ]; then
+		exit 1
+	else
+		exit 0
+	fi
 fi
 
-sudo ${zimbra_home}/postfix-2.2.3/sbin/postalias /etc/aliases
-sudo ${zimbra_home}/postfix-2.2.3/sbin/postfix $@
+sudo ${zimbra_home}/postfix-2.2.5/sbin/postalias /etc/aliases
+sudo ${zimbra_home}/postfix-2.2.5/sbin/postfix $@
 

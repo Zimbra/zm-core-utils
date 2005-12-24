@@ -1,9 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: ZPL 1.1
+# Version: MPL 1.1
 # 
-# The contents of this file are subject to the Zimbra Public License
+# The contents of this file are subject to the Mozilla Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite.
+# The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -83,11 +83,26 @@ case "$1" in
         ;;
 
     'stop')
-		cpid=`cat /opt/zimbra/log/amavisd.pid`
-        kill -TERM "$cpid" 2> /dev/null
-		killall -TERM ${zimbra_home}/amavisd/sbin/amavisd
-		sleep 2
-		umount ${zimbra_home}/amavisd/tmp
+		if [ -f /opt/zimbra/log/amavisd.pid ]; then
+			cpid=`cat /opt/zimbra/log/amavisd.pid`
+			kill -TERM "$cpid" 2> /dev/null
+			if [ -f /opt/zimbra/log/amavisd.pid ]; then
+				if [ "x$platform" = "xMACOSX" ]; then
+					killall -TERM amavisd > /dev/null 2>&1
+				else
+					killall -TERM ${zimbra_home}/amavisd/sbin/amavisd > /dev/null 2>&1
+				fi
+			fi
+			sleep 2
+			umount ${zimbra_home}/amavisd/tmp
+		else
+			if [ "x$platform" = "xMACOSX" ]; then
+				killall -TERM amavisd > /dev/null 2>&1
+			else
+				killall -TERM ${zimbra_home}/amavisd/sbin/amavisd > /dev/null 2>&1
+			fi
+		fi
+		exit 0
         ;;
     
     'restart')

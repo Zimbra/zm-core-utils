@@ -1,9 +1,9 @@
 #!/bin/sh
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: ZPL 1.1
+# Version: MPL 1.1
 # 
-# The contents of this file are subject to the Zimbra Public License
+# The contents of this file are subject to the Mozilla Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite.
+# The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -27,24 +27,38 @@
 BASE=/opt/zimbra
 SCRIPTS="tomcat mysql.server"
 
+STATUS=0
+
 case "$1" in 
 	start)
 		for i in $SCRIPTS; do
 			/opt/zimbra/bin/$i start
+			R=$?
+			if [ $R -ne "0" ]; then
+				STATUS=$R
+			fi
 		done
 	;;
 	stop)
 		for i in $SCRIPTS; do
 			/opt/zimbra/bin/$i stop
+			R=$?
+			if [ $R -ne "0" ]; then
+				STATUS=$R
+			fi
 		done
 	;;
 	reload)
 		for i in $SCRIPTS; do
 			/opt/zimbra/bin/$i reload
+			R=$?
+			if [ $R -ne "0" ]; then
+				STATUS=$R
+			fi
 		done
+		exit $STATUS
 	;;
 	status)
-		STATUS=0
 		for i in $SCRIPTS; do
 			if [ $i = "mysql.server" ]; then
 				/opt/zimbra/bin/mysqladmin status > /dev/null 2>&1

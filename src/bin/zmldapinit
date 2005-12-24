@@ -1,9 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: ZPL 1.1
+# Version: MPL 1.1
 # 
-# The contents of this file are subject to the Zimbra Public License
+# The contents of this file are subject to the Mozilla Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite.
+# The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -23,6 +23,14 @@
 # 
 # ***** END LICENSE BLOCK *****
 # 
+
+#
+# Exit values
+#
+# 0 - success
+# 1 - ldap start failed
+# 2 - ldapmodify failed
+#
 
 source `dirname $0`/../bin/zmshutil || exit 1
 zmsetvars zimbra_home
@@ -40,6 +48,9 @@ else
 	${zimbra_home}/bin/zmlocalconfig -f -e ldap_root_password=$ldap_pw
 fi
 
+${zimbra_home}/bin/zmlocalconfig -e ldap_is_master="true"
+${zimbra_home}/bin/zmlocalconfig -e ldap_master_url="ldap://$zimbra_server_hostname:389"
+
 zmsetvars -f zimbra_ldap_userdn zimbra_ldap_password ldap_root_password zimbra_server_hostname
 
 root_sha=`/opt/zimbra/openldap/sbin/slappasswd -s ${ldap_root_password}`
@@ -51,7 +62,13 @@ sed -e "s|^rootpw.*|rootpw ${root_sha}|" \
 	${source_config_dir}/slapd.conf > ${config_dir}/slapd.conf
 
 if [ -f "/opt/zimbra/lib/conf/zimbra-ext.schema" ]; then
-	sed -e '\|/opt/zimbra/openldap/etc/openldap/schema/zimbra.schema| a include "/opt/zimbra/lib/conf/zimbra-ext.schema"' ${config_dir}/slapd.conf > /tmp/slapd.conf
+	plat=`/opt/zimbra/bin/get_plat_tag.sh`
+	if [ "x$plat" = "xMACOSX" ]; then
+		sed -e '\|/opt/zimbra/openldap/etc/openldap/schema/zimbra.schema| a\
+		include "/opt/zimbra/lib/conf/zimbra-ext.schema"' ${config_dir}/slapd.conf > /tmp/slapd.conf
+	else
+		sed -e '\|/opt/zimbra/openldap/etc/openldap/schema/zimbra.schema| a include "/opt/zimbra/lib/conf/zimbra-ext.schema"' ${config_dir}/slapd.conf > /tmp/slapd.conf
+	fi
 	mv -f /tmp/slapd.conf ${config_dir}/slapd.conf
 fi
 
@@ -64,9 +81,30 @@ sed -e "s|^userPassword.*|userPassword: ${zimbra_sha}|" \
 
 ${zimbra_home}/bin/ldap start
 
-${zimbra_home}/openldap/bin/ldapmodify -a -c -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f ${config_dir}/zimbra.ldif
-${zimbra_home}/openldap/bin/ldapmodify -a -c -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f ${source_config_dir}/zimbra_mimehandlers.ldif
+if [ $? -ne 0 ]; then
+	exit 1
+fi
 
-for i in "/opt/zimbra/lib/conf/*ldif"; do
-	${zimbra_home}/openldap/bin/ldapmodify -a -c -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f $i
-done
+${zimbra_home}/openldap/bin/ldapmodify -a -c -H ldap://127.0.0.1:389 -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f ${config_dir}/zimbra.ldif
+
+if [ $? -ne 0 ]; then
+	exit 2
+fi
+
+${zimbra_home}/openldap/bin/ldapmodify -a -c -H ldap://127.0.0.1:389 -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f ${source_config_dir}/zimbra_mimehandlers.ldif
+
+if [ $? -ne 0 ]; then
+	exit 2
+fi
+
+if [ -d "/opt/zimbra/lib/conf/" ]; then
+	for i in /opt/zimbra/lib/conf/*ldif; do
+		${zimbra_home}/openldap/bin/ldapmodify -a -c -H ldap://127.0.0.1:389 -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f $i
+
+		if [ $? -ne 0 ]; then
+			exit 2
+		fi
+	done
+fi
+
+exit 0

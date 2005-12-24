@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: ZPL 1.1
+# Version: MPL 1.1
 # 
-# The contents of this file are subject to the Zimbra Public License
+# The contents of this file are subject to the Mozilla Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite.
+# The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -265,7 +265,7 @@ sub getVar {
 	# print STDERR "getVar: @_\n";
 
 	if ($keys[0] =~ m/SERVICE/) {
-		if (! defined ($knownkeys{"SERVICE:$keys[1]"}) && !$SERVICE_SET) {
+		if (! defined ($knownkeys{"SERVICE:$keys[1]"})) {
 			getService($keys[1]);
 		}
 	} elsif ($keys[0] =~ m/VAR/) {
@@ -382,9 +382,9 @@ sub processLine {
 		}
 	} elsif ($line =~ m/^POSTCONF/) {
 		my $cmd = $commands{'POSTCONF'};
-		if ($fields[2] eq "VAR") {
+		if ($fields[2] eq "VAR" || $fields[2] eq "LOCAL") {
 			getVar ($fields[2], $fields[3]);
-			$cmd = $cmd." $fields[1]='".$knownkeys{"VAR:$fields[3]"}."'";
+			$cmd = $cmd." $fields[1]='".$knownkeys{"$fields[2]:$fields[3]"}."'";
 		} elsif ($fields[2] eq "FILE") {
 			# Should probably do this with getVar...
 			# print STDERR "Rewriting file conf/$fields[3] /tmp/$fields[3].$$\n";
@@ -402,7 +402,7 @@ sub processLine {
 		} else {
 			$cmd = $cmd." $fields[1]='".$fields[2]."'";
 		}
-		if (changedVar("VAR:$fields[3]") || defined ($FORCE{$cursection}) ) {
+		if ($fields[3] eq "" || changedVar("VAR:$fields[3]") || defined ($FORCE{$cursection}) ) {
 			push @{$todo{$cursection}}, $cmd;
 		}
 		return $i+1;
@@ -510,7 +510,11 @@ sub compareKeys {
 	foreach $section (sort keys %affectedsections) {
 		foreach (@{$restarts{$section}}) {
 			if (!defined $stopstarts{$_}) {
-				$stopstarts{$_} = -1;
+				if ($knownkeys{"SERVICE:$_"}) {
+					$stopstarts{$_} = -1;
+				} else {
+					$stopstarts{$_} = 0;
+				}
 			}
 		}
 	}
@@ -577,7 +581,8 @@ sub rewriteConfig {
 			if ($sr =~ m/^comment/) {
 				my ($cmd, $key) = ($sr =~ m/comment ([^:]+):(\S+)/);
 				if ($knownkeys{"$cmd:$key"} ne "" &&
-					($knownkeys{"$cmd:$key"} ne "no" ||
+					( ( $knownkeys{"$cmd:$key"} ne "no" &&
+					$knownkeys{"$cmd:$key"} != 0 ) ||
 					$knownkeys{"$cmd:$key"} == 1)
 					) {
 					$rep = "#";
@@ -587,7 +592,8 @@ sub rewriteConfig {
 			} elsif ($sr =~ m/^uncomment/) {
 				my ($cmd, $key) = ($sr =~ m/comment ([^:]+):(\S+)/);
 				if ($knownkeys{"$cmd:$key"} ne "" &&
-					($knownkeys{"$cmd:$key"} ne "no" ||
+					( ( $knownkeys{"$cmd:$key"} ne "no" &&
+					$knownkeys{"$cmd:$key"} != 0 ) ||
 					$knownkeys{"$cmd:$key"} == 1)
 					) {
 					$rep = "";
@@ -688,8 +694,7 @@ sub stopStartServers {
 	foreach my $section (sort keys %stopstarts) {
 		if ($stopstarts{$section} == 0) {
 			if (defined ($depends{$section}) ) {
-				if ( defined ($stopstarts{$depends{$section}}) &&
-					$stopstarts{$depends{$section}} != 0 && $knownkeys{"SERVICE:$section"}) {
+				if ( $knownkeys{"SERVICE:$depends{$section}"}) {
 					# It's got a dependency that we're not stopping (and is running)
 					# So change our action to a restart
 					print STDERR 
@@ -708,21 +713,13 @@ sub stopStartServers {
 			}
 		}
 
-		if ($stopstarts{$section} == -1) {
-			foreach (sort keys %{$rewrites{$section}}) {
-				if (! defined($written{$_})) {
-					rewriteConfig ($_, $rewrites{$section}{$_});
-					$written{$_} = $rewrites{$section}{$_};
-				}
-			}
-		} elsif ($stopstarts{$section} == 1) {
-			foreach (sort keys %{$rewrites{$section}}) {
-				if (! defined($written{$_})) {
-					rewriteConfig ($_, $rewrites{$section}{$_});
-					$written{$_} = $rewrites{$section}{$_};
-				}
+		foreach (sort keys %{$rewrites{$section}}) {
+			if (! defined($written{$_})) {
+				rewriteConfig ($_, $rewrites{$section}{$_});
+				$written{$_} = $rewrites{$section}{$_};
 			}
 		}
+
 		controlProcess ($section);
 	}
 }

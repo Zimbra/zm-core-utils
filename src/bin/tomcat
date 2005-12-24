@@ -1,9 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: ZPL 1.1
+# Version: MPL 1.1
 # 
-# The contents of this file are subject to the Zimbra Public License
+# The contents of this file are subject to the Mozilla Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite.
+# The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -24,44 +24,20 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-if [ x`whoami` = xroot ]; then
-    echo Error: cannot be run as root user
-        exit 1
-fi
-
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-    zimbra_home \
-    tomcat_directory \
-    tomcat_java_home \
-    tomcat_java_heap_memory_percent \
-    tomcat_java_options \
-    tomcat_pidfile
+zmsetvars
 
 #
 # Expected by catalina scripts
 #
-if [ -d /Library/Java/Home ]; then
-	export JAVA_HOME=/Library/Java/Home
-else
-	export JAVA_HOME=${tomcat_java_home}
-	zmassert -d ${tomcat_java_home}
-	zmassert -x ${tomcat_java_home}/bin/java
-	zmassert -d ${tomcat_directory}
-fi
-
-#
-# Available system memory in KB
-#
-if [ -f /proc/meminfo ]; then
-	memkb=`awk '/^MemTotal.*kB$/ { print $2; }' /proc/meminfo`
-else
-	memkb=524288
-fi
+export JAVA_HOME=${tomcat_java_home}
+zmassert -d ${tomcat_java_home}
+zmassert -d ${tomcat_directory}
 
 #
 # Memory for use by JVM
 #
+memkb=$(zmsysmemkb)
 jm=`expr $memkb '*' ${tomcat_java_heap_memory_percent} / 100 / 1024`
 
 #
@@ -122,11 +98,11 @@ case "$1" in
     'kill')
         if [ ! -s "${tomcat_pidfile}" ]; then
             echo "Error: no pid in ${tomcat_pidfile}"
-            exit 1
+            exit 0
         fi
         if ! isrunning; then
             echo "Error: tomcat not running (pid $pid), stale pid file?"
-            exit 1
+            exit 0
         fi
         echo "Sending TERM signal to tomcat (pid $pid)"
         kill -TERM "$pid" 2> /dev/null
@@ -140,11 +116,11 @@ case "$1" in
     'stop')
         if [ ! -s "${tomcat_pidfile}" ]; then
             echo "Error: no pid in ${tomcat_pidfile}"
-            exit 1
+            exit 0
         fi
         if ! isrunning; then
             echo "Error: tomcat not running (pid $pid), stale pid file?"
-            exit 1
+            exit 0
         fi
 
 
@@ -155,8 +131,7 @@ case "$1" in
         # stop it I want this script to sit here and loop and not
         # pretend that it did something.
 
-		count=0
-
+        count=0
         while true; do
             # Every n seconds we send invoke one of these
             ${tomcat_directory}/bin/catalina.sh stop
@@ -175,12 +150,12 @@ case "$1" in
                 echo " shutdown ok"
                 break
             fi
-			count=`expr $count + 1`
-			if [ $count -gt 3 ]; then
-				echo "Giving up - killing $pid"
-				kill -TERM $pid
-				break
-			fi
+            count=`expr $count + 1`
+            if [ $count -gt 3 ]; then
+                echo "Giving up - killing $pid"
+                kill -TERM $pid
+                break
+            fi
         done
         ;;
     
@@ -189,10 +164,10 @@ case "$1" in
         $0 start
         ;;
     
-	'status')
-		kill -0 "$pid" 2> /dev/null
-		exit $?
-		;;
+    'status')
+        kill -0 "$pid" 2> /dev/null
+        exit $?
+        ;;
     *)
         echo "Usage: $0 start|stop|kill|restart|status"
         exit 1

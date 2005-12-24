@@ -1,9 +1,9 @@
 #!/bin/sh
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: ZPL 1.1
+# Version: MPL 1.1
 # 
-# The contents of this file are subject to the Zimbra Public License
+# The contents of this file are subject to the Mozilla Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite.
+# The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -60,11 +60,17 @@ start()
 		if [ -x /opt/zimbra/sleepycat/bin/db_recover ]; then
 			/opt/zimbra/sleepycat/bin/db_recover -h /opt/zimbra/openldap-data -v
 		fi
-		sudo /opt/zimbra/openldap/libexec/slapd -4 -u zimbra -h "ldap://:389/" \
+		sudo /opt/zimbra/openldap/libexec/slapd -l LOCAL0 -4 -u zimbra -h "ldaps:// ldap://:389/" \
 			-f /opt/zimbra/conf/slapd.conf
 		sleep 2
 		getpid
-		echo "Started slapd: pid $PID"
+		if [ "x$PID" = "x" ]; then
+			echo "ERROR - failed to start slapd"
+			echo ""
+			exit 1
+		else
+			echo "Started slapd: pid $PID"
+		fi
 	else
 		echo "slapd already running: pid $PID"
 		exit 1
@@ -76,7 +82,7 @@ stop()
 	checkrunning
 	if [ $RUNNING = 0 ]; then
 		echo "slapd not running"
-		exit 1
+		exit 0
 	else
 		kill -TERM $PID
 	fi

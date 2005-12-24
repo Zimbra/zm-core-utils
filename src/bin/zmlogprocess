@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# Version: ZPL 1.1
+# Version: MPL 1.1
 # 
-# The contents of this file are subject to the Zimbra Public License
+# The contents of this file are subject to the Mozilla Public License
 # Version 1.1 ("License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.zimbra.com/license
@@ -13,7 +13,7 @@
 # the License for the specific language governing rights and limitations
 # under the License.
 # 
-# The Original Code is: Zimbra Collaboration Suite.
+# The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
 # Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
@@ -32,6 +32,9 @@ use lib "/opt/zimbra/zimbramon/lib";
 
 use DBI;
 use Time::Local;
+
+# Exit if software-only node.
+exit(0) unless (-f '/opt/zimbra/conf/localconfig.xml');
 
 my $baseDir = "/opt/zimbra";
 
@@ -121,6 +124,16 @@ sub aggregateMta {
 						$count = ${$$ary[0]}[0];
 					}
 
+					$sth = sqlExec("select sum(msg_count) from mta_aggregate where ".
+						"host = '".$host."' and ".
+						"period_start='".$periodStart."' and ".
+						"period_end='".$periodEnd."'");
+
+					$ary = $sth->fetchall_arrayref;
+					if (@$ary) {
+						$count += ${$$ary[0]}[0];
+					}
+
 					$sth = sqlExec("select sum(bytes) from mta where ".
 						"host = '".$host."' and ".
 						"arrive_time >= '".$periodStart."' and ".
@@ -130,6 +143,21 @@ sub aggregateMta {
 					if (@$ary) {
 						$bytes = ${$$ary[0]}[0];
 					}
+
+					$sth = sqlExec("select sum(msg_bytes) from mta_aggregate where ".
+						"host = '".$host."' and ".
+						"period_start='".$periodStart."' and ".
+						"period_end='".$periodEnd."'");
+
+					$ary = $sth->fetchall_arrayref;
+					if (@$ary) {
+						$bytes += ${$$ary[0]}[0];
+					}
+
+					$sth = sqlExec("delete from mta_aggregate where ".
+						"period_start='".$periodStart."' and ".
+						"period_end='".$periodEnd."' and ".
+						"host='".$host."'");
 
 					$sth = sqlExec("insert into mta_aggregate ".
 						"(period_start, period_end, host, period, ".
@@ -231,6 +259,16 @@ sub aggregateAmavis {
 						$count = ${$$ary[0]}[0];
 					}
 
+					$sth = sqlExec("select msg_count from amavis_aggregate where ".
+						"host = '".$host."' and ".
+						"period_start='".$periodStart."' and ".
+						"period_end='".$periodEnd."'");
+
+					$ary = $sth->fetchall_arrayref;
+					if (@$ary) {
+						$count += ${$$ary[0]}[0];
+					}
+
 					$sth = sqlExec("select count(*) from amavis where ".
 						"host = '".$host."' and ".
 						"arrive_time >= '".$periodStart."' and ".
@@ -240,6 +278,16 @@ sub aggregateAmavis {
 					$ary = $sth->fetchall_arrayref;
 					if (@$ary) {
 						$spam = ${$$ary[0]}[0];
+					}
+
+					$sth = sqlExec("select spam_count from amavis_aggregate where ".
+						"host = '".$host."' and ".
+						"period_start='".$periodStart."' and ".
+						"period_end='".$periodEnd."'");
+
+					$ary = $sth->fetchall_arrayref;
+					if (@$ary) {
+						$spam += ${$$ary[0]}[0];
 					}
 
 					$sth = sqlExec("select count(*) from amavis where ".
@@ -252,6 +300,21 @@ sub aggregateAmavis {
 					if (@$ary) {
 						$virus = ${$$ary[0]}[0];
 					}
+
+					$sth = sqlExec("select virus_count from amavis_aggregate where ".
+						"host = '".$host."' and ".
+						"period_start='".$periodStart."' and ".
+						"period_end='".$periodEnd."'");
+
+					$ary = $sth->fetchall_arrayref;
+					if (@$ary) {
+						$virus += ${$$ary[0]}[0];
+					}
+
+					$sth = sqlExec("delete from amavis_aggregate where ".
+						"period_start='".$periodStart."' and ".
+						"period_end='".$periodEnd."' and ".
+						"host='".$host."'");
 
 					$sth = sqlExec("insert into amavis_aggregate ".
 						"(period_start, period_end, host, period, msg_count, ".
@@ -373,6 +436,13 @@ sub aggregateDisk {
 						$tary = $sth->fetchall_arrayref;
 						my $avail = ${$$tary[0]}[0];
 
+
+						$sth = sqlExec("delete from disk_aggregate where ".
+							"period_start='".$periodStart."' and ".
+							"period_end='".$periodEnd."' and ".
+							"device='".$dev."' and ".
+							"host='".$host."'");
+
 						$sth = sqlExec("insert into disk_aggregate ".
 							"(period_start, period_end, host, period, device, total, available) ".
 							"values (?,?,?,?,?,?,?)",
@@ -478,6 +548,8 @@ sub incSqlTime {
 
 	my $sts = sqlTimeToTs($tm);
 
+	my $wasdst = (localtime($sts))[8];
+
 	if ($period eq "hour") {
 		$sts+=(60*60);
 	} elsif ($period eq "day") {
@@ -488,6 +560,11 @@ sub incSqlTime {
 		$sts+=(60*60*24*30);
 	} elsif ($period eq "year") {
 		$sts+=(60*60*24*365);
+	}
+
+	my $isdst = (localtime($sts))[8];
+	if ($wasdst && !$isdst) {
+		$sts+=((60*60)+1);
 	}
 
 	if ($period ne "hour") {
@@ -687,12 +764,13 @@ sub processZimbramon {
 	if (@$ary) {
 		foreach my $row (sort @$ary) {
 			my ($id, $dt, $host, $msg) = (@$row);
-			if ($msg =~ /info: ([^,]+), STATUS: (\S+): (Running|Stopped)\s*$/) {
+			if ($msg =~ /info: ([^,]+), STATUS: (\S+): (\S+): (Running|Stopped)\s*$/) {
 				my $tm = $1;
-				my $service = $2;
-				my $status = ($3 eq "Running")?1:0;
+				my $hostname = $2;
+				my $service = $3;
+				my $status = ($4 eq "Running")?1:0;
 				my $statement = "delete from service_status ".
-					"where server=\'".$host."\' and service=\'".$service."\'";
+					"where server=\'".$hostname."\' and service=\'".$service."\'";
 
 				sqlExec ($statement);
 
@@ -700,18 +778,19 @@ sub processZimbramon {
 					"(server, service, time, status) ".
 					"values (?,?,?,?)";
 
-				sqlExec ($statement, $host, $service, $tm, $status);
-			} elsif ($msg =~ /info: ([^,]+), DISK: dev: (\S+), mp: (\S+), tot: (\S+), avail: (\S+)\s*$/) {
+				sqlExec ($statement, $hostname, $service, $tm, $status);
+			} elsif ($msg =~ /info: ([^,]+), DISK: (\S+): dev: (\S+), mp: (\S+), tot: (\S+), avail: (\S+)\s*$/) {
 				my $tm = $1;
-				my $dev = $2;
-				my $mp = $3;
-				my $tot = $4;
-				my $avail = $5;
+				my $hostname = $2;
+				my $dev = $3;
+				my $mp = $4;
+				my $tot = $5;
+				my $avail = $6;
 				my $statement = "insert into disk_status ".
 					"(server, time, device, mount_point, total, available) ".
 					"values (?,?,?,?,?,?)";
 
-				sqlExec ($statement, $host, $tm, $dev, $mp, $tot, $avail);
+				sqlExec ($statement, $hostname, $tm, $dev, $mp, $tot, $avail);
 			}
 		}
 		$lastRowID = ${@$ary[$#$ary]}[0];
@@ -913,6 +992,28 @@ sub parseMessage {
 		}
 	}
 	if ($messageId eq "" || $msg{$messageId}{host} eq "") {
+		# Try to get it from the processed logs
+		my $H;
+		foreach my $row (@$ary) {
+			my ($rowid, $date, $host, $app, $pid, $msg) = (@$row);
+			$H = $host;
+			last;
+		}
+
+		my $statement =
+			"select msgid, arrive_time, from_host, from_IP from mta where qid=\'$qid\' and host=\'$H\'";
+
+		my $sth = sqlExec($statement);
+
+		my $ar = $sth->fetchall_arrayref;
+		$messageId = $$ar[0][0];
+		$msg{$messageId}{host} = $H;
+		$msg{$messageId}{arriveTime} = $$ar[0][1];
+		$msg{$messageId}{prevHost} = $$ar[0][2];
+		$msg{$messageId}{prevIp} = $$ar[0][3];
+
+	}
+	if ($messageId eq "" || $msg{$messageId}{host} eq "") {
 		return undef;
 	}
 
@@ -945,6 +1046,7 @@ sub parseMessage {
 			my $r = $1;
 			$msg{$messageId}{recipList}{$r}{leaveTime}{$date} = ();
 			$msg{$messageId}{recipList}{$r}{recip} = $r;
+			$msg{$messageId}{recipList}{$r}{qid} = $qid;
 			$msg{$messageId}{recipList}{$r}{nextHost} = $2;
 			$msg{$messageId}{recipList}{$r}{nextIp} = $3;
 			$msg{$messageId}{recipList}{$r}{leaveTime}{$date}{status} = $4;
@@ -966,6 +1068,7 @@ sub parseMessage {
 			my $r = $1;
 			$msg{$messageId}{recipList}{$r}{leaveTime}{$date} = ();
 			$msg{$messageId}{recipList}{$r}{recip} = $r;
+			$msg{$messageId}{recipList}{$r}{qid} = $qid;
 			$msg{$messageId}{recipList}{$r}{origRecip} = $2;
 			$msg{$messageId}{recipList}{$r}{nextHost} = $3;
 			$msg{$messageId}{recipList}{$r}{nextIp} = $4;
@@ -1000,9 +1103,10 @@ sub insertMtaMessage {
 		"from_host, from_IP, ".
 		"to_host, ".
 		"to_IP, ".
+		"qid, ".
 		"status, ".
 		"statusmsg) ".
-		"values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+		"values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
 	foreach my $messageId (sort keys %{$msg}) {
 		if ($$msg{$messageId}{rowid} > $last) {
@@ -1024,6 +1128,7 @@ sub insertMtaMessage {
 					$$msg{$messageId}{prevHost}, $$msg{$messageId}{prevIp}, 
 					$$msg{$messageId}{recipList}{$r}{nextHost}, 
 					$$msg{$messageId}{recipList}{$r}{nextIp}, 
+					$$msg{$messageId}{recipList}{$r}{qid}, 
 					$$msg{$messageId}{recipList}{$r}{leaveTime}{$lt}{status},
 					$$msg{$messageId}{recipList}{$r}{leaveTime}{$lt}{statusmsg});
 			}

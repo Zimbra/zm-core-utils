@@ -117,7 +117,7 @@ sub doStatus {
 	foreach (sort keys %{$services}) {
 		my $rc = 0xffff & system ("$allservices{$_} status >/dev/null 2>&1");
 		$rc = $rc >> 8;
-		if ($rc) {$status = $rc;}
+		if ($rc) {$status = 1;}
 		my $stat = sprintf "\t%-20s %10s\n",$_,($rc)?"Stopped":"Running";
 		print "$stat";
 	}
@@ -144,7 +144,7 @@ sub doStartup {
 		}
 	}
 	if ($rrc) {
-		$rc = $rrc;
+		$rc = 1;
 		my $out = `cat /tmp/zmcontrol.out.$$`;
 		print "FAILED\n";
 		print "$out\n\n";
@@ -162,7 +162,7 @@ sub doStartup {
 		}
 	}
 	if ($rrc) {
-		$rc = $rrc;
+		$rc = 1;
 		my $out = `cat /tmp/zmcontrol.out.$$`;
 		print "FAILED\n";
 		print "$out\n\n";
@@ -175,7 +175,7 @@ sub doStartup {
 		$rrc = 0xffff & system ("$allservices{$_} start > /tmp/zmcontrol.out.$$ 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
-			$rc = $rrc;
+			$rc = 1;
 			my $out = `cat /tmp/zmcontrol.out.$$`;
 			print "FAILED\n";
 			print "$out\n\n";
@@ -195,13 +195,13 @@ sub doShutdown {
 	foreach (sort keys %allservices) {
 		Zimbra::Mon::Logger::Log ("info", "Stopping $_");
 		if ($_ eq "ldap" && !(-d "/opt/zimbra/openldap-2.2.28") ) { next; }
-		if ($_ eq "mta" && !(-d "/opt/zimbra/postfix-2.2.3") ) { next; }
-		if ($_ eq "snmp" && !(-d "/opt/zimbra/bin/zmswatchctl") ) { next; }
+		if ($_ eq "mta" && !(-d "/opt/zimbra/postfix-2.2.5") ) { next; }
+		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
 		print "\tStopping $_...";
 		$rrc = 0xffff & system ("$allservices{$_} stop > /tmp/zmcontrol.out.$$ 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
-			$rc = $rrc;
+			$rc = 1;
 			my $out = `cat /tmp/zmcontrol.out.$$`;
 			print "FAILED\n";
 			print "$out\n\n";
@@ -267,9 +267,17 @@ sub getHostName {
 }
 
 sub displayVersion {
-	my $release = `rpm -q --queryformat "%{version}_%{release}" zimbra-core`;
-	my $inst = localtime (`rpm -q --queryformat "%{installtime}" zimbra-core`);
-	print "\nRelease $release installed $inst\n\n";
+	my $platform = `/opt/zimbra/bin/get_plat_tag.sh`;
+	chomp $platform;
+	if ($platform eq "MACOSX") {
+		my $release = ` basename /Library/Receipts/zimbra-core* | sed -e 's/zimbra-core.//' -e 's/.pkg//'`;
+		chomp $release;
+		print "\nRelease $release\n\n";
+	} else {
+		my $release = `rpm -q --queryformat "%{version}_%{release}" zimbra-core`;
+		my $inst = localtime (`rpm -q --queryformat "%{installtime}" zimbra-core`);
+		print "\nRelease $release installed $inst\n\n";
+	}
 }
 
 sub usage {
