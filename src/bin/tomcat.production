@@ -105,25 +105,12 @@ EOF
 	fi
 }
 
-rewriteconfig() {
-    /opt/zimbra/bin/zmmtaconfig mailbox > /dev/null 2>&1
-}
-
-rewriteWebXml() {
-    /opt/zimbra/bin/zmmtaconfig webxml > /dev/null 2>&1
-}
-
 #
 # Main
 #
 case "$1" in
     'start')
         unpack_webapps
-		if [ x$2 = "x" ]; then
-		   rewriteconfig
-		fi
-		rewriteWebXml
-		/opt/zimbra/bin/zmtlsctl
         if [ -s ${tomcat_pidfile} ]; then
             if isrunning; then
                 echo "Error: tomcat already running (pid $pid)"
