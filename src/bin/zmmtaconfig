@@ -734,6 +734,7 @@ sub controlProcess {
 			"antispam"	=>	"/opt/zimbra/bin/zmamavisdctl",
 			"antivirus"	=>	"/opt/zimbra/bin/zmclamdctl",
 			"sasl"	=>	"/opt/zimbra/bin/zmsaslauthdctl",
+			"tomcat"	=>	"/opt/zimbra/bin/tomcat",
 			);
 	my $action = ("restart", "stop", "start")[$stopstarts{$section}+1];
 	# Postfix, unique to the end.
