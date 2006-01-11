@@ -64,22 +64,7 @@ isrunning() {
 #
 # Expand war files.
 #
-unpack_webapps() {
-    if [ ! -f ${tomcat_directory}/webapps/service.war ]; then
-        echo Warning: ${tomcat_directory}/webapps/service.war does not exist
-    elif [ ! -d "${tomcat_directory}/webapps/service" ]; then
-        echo Info: expanding ${tomcat_directory}/webapps/service.war
-        mkdir "${tomcat_directory}/webapps/service"
-        (cd ${tomcat_directory}/webapps/service; jar xf ../service.war)
-    fi
-
-    if [ ! -f ${tomcat_directory}/webapps/zimbra.war ]; then
-        echo Warning: ${tomcat_directory}/webapps/zimbra.war does not exist
-    elif [ ! -d "${tomcat_directory}/webapps/zimbra" ]; then
-        echo Info: expanding ${tomcat_directory}/webapps/zimbra.war
-        mkdir "${tomcat_directory}/webapps/zimbra"
-        (cd ${tomcat_directory}/webapps/zimbra; jar xf ../zimbra.war)
-	fi
+mk_download_dir() {
 	if [ ! -d "${tomcat_directory}/webapps/zimbra/downloads" ]; then
 		mkdir ${tomcat_directory}/webapps/zimbra/downloads
 		cat >${tomcat_directory}/webapps/zimbra/downloads/index.html<<EOF
@@ -118,7 +103,7 @@ rewriteWebXml() {
 #
 case "$1" in
     'start')
-        unpack_webapps
+        mk_download_dir
 		if [ x$2 = "x" ]; then
 		   rewriteconfig
 		fi
