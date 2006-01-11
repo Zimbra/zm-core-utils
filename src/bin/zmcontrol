@@ -110,6 +110,7 @@ sub runRemoteCommand {
 sub doStatus {
 	$services = getEnabledServices();
 	if (scalar(keys %$services) == 0) {
+		print "Cannot determine services - exiting";
 		return 1;
 	}
 	my $status = 0;
@@ -240,7 +241,7 @@ sub getLocalConfig {
 }
 
 sub getEnabledServices {
-	if (open (ZMPROV, "/opt/zimbra/bin/zmprov gs $localHostName |")) {
+	if (open (ZMPROV, "/opt/zimbra/bin/zmprov gs $localHostName 2>/dev/null |")) {
 		my @lines = <ZMPROV>;
 		close ZMPROV;
 
