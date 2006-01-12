@@ -33,6 +33,9 @@ MODE=$1
 h=`zmhostname`
 if [ "x$MODE" = "x" ]; then
 	MODE=`zmprov gs $h | grep zimbraMailMode | sed -e 's/zimbraMailMode: //'`
+	if [ "x$MODE" = "x" ]; then
+		MODE="http"
+	fi
 else
 	shift
 fi
