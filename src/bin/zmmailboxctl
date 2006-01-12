@@ -25,15 +25,14 @@
 # 
 
 BASE=/opt/zimbra
-SCRIPTS="zmmtaconfigctl tomcat mysql.server"
+SCRIPTS="tomcat mysql.server"
 
 STATUS=0
 
 case "$1" in 
 	start)
-		/opt/zimbra/bin/zmmtaconfig antispam tomcat
 		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i start norewrite
+			/opt/zimbra/bin/$i start
 			R=$?
 			if [ $R -ne "0" ]; then
 				STATUS=$R
@@ -48,7 +47,6 @@ case "$1" in
 				STATUS=$R
 			fi
 		done
-		exit $STATUS
 	;;
 	reload)
 		for i in $SCRIPTS; do
