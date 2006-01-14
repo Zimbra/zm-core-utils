@@ -46,11 +46,13 @@ case "$1" in
     'kill')
 		cpid=`cat /opt/zimbra/log/zmmtaconfig.pid`
         kill -TERM "$cpid" 2> /dev/null
+		rm -f /opt/zimbra/log/zmmtaconfig.pid
         ;;
 
     'stop')
 		cpid=`cat /opt/zimbra/log/zmmtaconfig.pid`
         kill -TERM "$cpid" 2> /dev/null
+		rm -f /opt/zimbra/log/zmmtaconfig.pid
         ;;
     
     'restart')
