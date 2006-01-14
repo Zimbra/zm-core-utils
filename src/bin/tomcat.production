@@ -167,6 +167,7 @@ case "$1" in
 
 		lines=`wc -l ${tomcat_directory}/logs/catalina.out | awk '{print $1}'`
 		kill -3 $pid
+		sleep 2
 		newlines=`wc -l ${tomcat_directory}/logs/catalina.out | awk '{print $1}'`
 		difflines=`expr $newlines - $lines`
 		tail -${difflines} ${tomcat_directory}/logs/catalina.out > ${tomcat_directory}/logs/stacktrace.$$
