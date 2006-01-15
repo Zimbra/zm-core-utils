@@ -274,6 +274,10 @@ sub displayVersion {
 		my $release = ` basename /Library/Receipts/zimbra-core* | sed -e 's/zimbra-core.//' -e 's/.pkg//'`;
 		chomp $release;
 		print "\nRelease $release $platform\n\n";
+	} elsif ($platform =~ /DEBIAN/) {
+		my $release = `dpkg -s zimbra-core | egrep '^Version:' | sed -e 's/Version: //'`;
+		chomp $release;
+		print "\nRelease $release $platform\n\n";
 	} else {
 		my $release = `rpm -q --queryformat "%{version}_%{release}" zimbra-core`;
 		my $inst = localtime (`rpm -q --queryformat "%{installtime}" zimbra-core`);
