@@ -31,9 +31,6 @@ zmsetvars
 # Expected by catalina scripts
 #
 export JAVA_HOME=${tomcat_java_home}
-if [ ! -d ${tomcat_directory} ]; then
-	exit 0
-fi
 zmassert -d ${tomcat_java_home}
 zmassert -d ${tomcat_directory}
 
