@@ -285,7 +285,7 @@ sub displayVersion {
 		$string = "Release $release $platform";
 	}
 
-	my $rc = 0xffff & system ("/opt/zimbra/bin/zmprov gacf | grep 'zimbraComponentAvailable: hotbackup'");
+	my $rc = 0xffff & system ("/opt/zimbra/bin/zmprov gacf | grep -q 'zimbraComponentAvailable: hotbackup'");
 	if ($rc) { $string .= " FOSS edition"; }
 	else { $string .= " NETWORK edition"; }
 
