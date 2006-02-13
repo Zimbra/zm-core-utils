@@ -126,15 +126,15 @@ sub aggregateMta {
 						$count = ${$$ary[0]}[0];
 					}
 
-					$sth = sqlExec("select sum(msg_count) from mta_aggregate where ".
-						"host = '".$host."' and ".
-						"period_start='".$periodStart."' and ".
-						"period_end='".$periodEnd."'");
-
-					$ary = $sth->fetchall_arrayref;
-					if (@$ary) {
-						$count += ${$$ary[0]}[0];
-					}
+#					$sth = sqlExec("select sum(msg_count) from mta_aggregate where ".
+#						"host = '".$host."' and ".
+#						"period_start='".$periodStart."' and ".
+#						"period_end='".$periodEnd."'");
+#
+#					$ary = $sth->fetchall_arrayref;
+#					if (@$ary) {
+#						$count += ${$$ary[0]}[0];
+#					}
 
 					$sth = sqlExec("select sum(bytes) from mta where ".
 						"host = '".$host."' and ".
@@ -146,15 +146,15 @@ sub aggregateMta {
 						$bytes = ${$$ary[0]}[0];
 					}
 
-					$sth = sqlExec("select sum(msg_bytes) from mta_aggregate where ".
-						"host = '".$host."' and ".
-						"period_start='".$periodStart."' and ".
-						"period_end='".$periodEnd."'");
-
-					$ary = $sth->fetchall_arrayref;
-					if (@$ary) {
-						$bytes += ${$$ary[0]}[0];
-					}
+#					$sth = sqlExec("select sum(msg_bytes) from mta_aggregate where ".
+#						"host = '".$host."' and ".
+#						"period_start='".$periodStart."' and ".
+#						"period_end='".$periodEnd."'");
+#
+#					$ary = $sth->fetchall_arrayref;
+#					if (@$ary) {
+#						$bytes += ${$$ary[0]}[0];
+#					}
 
 					$sth = sqlExec("delete from mta_aggregate where ".
 						"period_start='".$periodStart."' and ".
@@ -261,15 +261,15 @@ sub aggregateAmavis {
 						$count = ${$$ary[0]}[0];
 					}
 
-					$sth = sqlExec("select msg_count from amavis_aggregate where ".
-						"host = '".$host."' and ".
-						"period_start='".$periodStart."' and ".
-						"period_end='".$periodEnd."'");
-
-					$ary = $sth->fetchall_arrayref;
-					if (@$ary) {
-						$count += ${$$ary[0]}[0];
-					}
+#					$sth = sqlExec("select msg_count from amavis_aggregate where ".
+#						"host = '".$host."' and ".
+#						"period_start='".$periodStart."' and ".
+#						"period_end='".$periodEnd."'");
+#
+#					$ary = $sth->fetchall_arrayref;
+#					if (@$ary) {
+#						$count += ${$$ary[0]}[0];
+#					}
 
 					$sth = sqlExec("select count(*) from amavis where ".
 						"host = '".$host."' and ".
@@ -282,15 +282,15 @@ sub aggregateAmavis {
 						$spam = ${$$ary[0]}[0];
 					}
 
-					$sth = sqlExec("select spam_count from amavis_aggregate where ".
-						"host = '".$host."' and ".
-						"period_start='".$periodStart."' and ".
-						"period_end='".$periodEnd."'");
-
-					$ary = $sth->fetchall_arrayref;
-					if (@$ary) {
-						$spam += ${$$ary[0]}[0];
-					}
+#					$sth = sqlExec("select spam_count from amavis_aggregate where ".
+#						"host = '".$host."' and ".
+#						"period_start='".$periodStart."' and ".
+#						"period_end='".$periodEnd."'");
+#
+#					$ary = $sth->fetchall_arrayref;
+#					if (@$ary) {
+#						$spam += ${$$ary[0]}[0];
+#					}
 
 					$sth = sqlExec("select count(*) from amavis where ".
 						"host = '".$host."' and ".
@@ -303,15 +303,15 @@ sub aggregateAmavis {
 						$virus = ${$$ary[0]}[0];
 					}
 
-					$sth = sqlExec("select virus_count from amavis_aggregate where ".
-						"host = '".$host."' and ".
-						"period_start='".$periodStart."' and ".
-						"period_end='".$periodEnd."'");
-
-					$ary = $sth->fetchall_arrayref;
-					if (@$ary) {
-						$virus += ${$$ary[0]}[0];
-					}
+#					$sth = sqlExec("select virus_count from amavis_aggregate where ".
+#						"host = '".$host."' and ".
+#						"period_start='".$periodStart."' and ".
+#						"period_end='".$periodEnd."'");
+#
+#					$ary = $sth->fetchall_arrayref;
+#					if (@$ary) {
+#						$virus += ${$$ary[0]}[0];
+#					}
 
 					$sth = sqlExec("delete from amavis_aggregate where ".
 						"period_start='".$periodStart."' and ".
