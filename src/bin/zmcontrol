@@ -110,7 +110,7 @@ sub runRemoteCommand {
 sub doStatus {
 	$services = getEnabledServices();
 	if (scalar(keys %$services) == 0) {
-		print "Cannot determine services - exiting\n";
+		print "Cannot determine services - exiting";
 		return 1;
 	}
 	my $status = 0;
