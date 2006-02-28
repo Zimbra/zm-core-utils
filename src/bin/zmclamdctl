@@ -37,7 +37,7 @@ zmsetvars \
     zimbra_log_directory
 
 rewriteconfig() {
-	/opt/zimbra/bin/zmmtaconfig antivirus > /dev/null 2>&1
+	/opt/zimbra/libexec/zmmtaconfig antivirus > /dev/null 2>&1
 }
 
 #
@@ -84,17 +84,17 @@ case "$1" in
 		fi
 		if [ "x$platform" = "xMACOSX" ]; then
 			if [ -f /opt/zimbra/log/freshclam.pid ]; then
-				killall -TERM freshclam
+				killall -TERM freshclam > /dev/null 2>&1
 			fi
 			if [ -f /opt/zimbra/log/clamd.pid ]; then
-				killall -TERM clamd
+				killall -TERM clamd > /dev/null 2>&1
 			fi
 		else
 			if [ -f /opt/zimbra/log/freshclam.pid ]; then
-				killall -TERM ${zimbra_home}/clamav/bin/freshclam
+				killall -TERM ${zimbra_home}/clamav/bin/freshclam > /dev/null 2>&1
 			fi
 			if [ -f /opt/zimbra/log/clamd.pid ]; then
-				killall -TERM ${zimbra_home}/clamav/sbin/clamd
+				killall -TERM ${zimbra_home}/clamav/sbin/clamd > /dev/null 2>&1
 			fi
 		fi
         ;;

@@ -91,7 +91,7 @@ sub runRemoteCommand {
 	my $cmd = shift;
 	my $cstr = "HOST:$GlobalOpts{H} $REMOTECOMMANDS{$cmd}";
 
-	open (REMOTE, "echo $cstr | /opt/zimbra/bin/zmrc $GlobalOpts{H} |") or 
+	open (REMOTE, "echo $cstr | /opt/zimbra/libexec/zmrc $GlobalOpts{H} |") or 
 		die "Can't contact $GlobalOpts{H}";
 
 	while (<REMOTE>) {
