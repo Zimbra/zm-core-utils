@@ -223,7 +223,8 @@ sub getLocalConfig {
 	if (defined ($ENV{zmsetvars})) {
 		return $ENV{$key};
 	}
-	open CONF, "/opt/zimbra/bin/zmlocalconfig -q -m shell |";
+	open CONF, "/opt/zimbra/bin/zmlocalconfig -q -m shell |" or
+		die "Can't open zmlocalconfig: $!";
 	my @conf = <CONF>;
 	close CONF;
 
