@@ -28,6 +28,10 @@
 
 use strict;
 
+my $id = `id -u -n`;
+chomp $id;
+if ($id ne "zimbra") {die "Run as the zimbra user!\n";}
+
 BEGIN {
 	our $Basedir = "/opt/zimbra/zimbramon";
 };
