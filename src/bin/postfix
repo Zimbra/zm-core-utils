@@ -33,19 +33,19 @@ zmsetvars \
 	zimbra_server_hostname 
 
 rewriteconfig() {
-    /opt/zimbra/bin/zmmtaconfig mta > /dev/null 2>&1
+    /opt/zimbra/libexec/zmmtaconfig mta > /dev/null 2>&1
 }
 
-if [ "x$1" = "xstart" -o "x$1" = "xreload" ]; then
+if [ $1 = "start" -o $1 = "reload" ]; then
 	if [ x$2 = "x" ]; then
 		rewriteconfig
 	fi
-	${zimbra_home}/postfix-2.2.8/sbin/postmap ${zimbra_home}/conf/postfix_header_checks
-	sudo ${zimbra_home}/postfix-2.2.8/sbin/postsuper -r ALL
+	${zimbra_home}/postfix-2.2.5/sbin/postmap ${zimbra_home}/conf/postfix_header_checks
+	sudo ${zimbra_home}/postfix-2.2.5/sbin/postsuper -r ALL
 fi
 
-if [ "x$1" = "xstatus" ]; then
-	${zimbra_home}/postfix-2.2.8/sbin/postqueue -p > /dev/null 2>&1
+if [ $1 = "status" ]; then
+	${zimbra_home}/postfix-2.2.5/sbin/postqueue -p > /dev/null 2>&1
 	R=$?
 	if [ x$R != "x0" ]; then
 		exit 1
@@ -54,6 +54,6 @@ if [ "x$1" = "xstatus" ]; then
 	fi
 fi
 
-sudo ${zimbra_home}/postfix-2.2.8/sbin/postalias /etc/aliases
-sudo ${zimbra_home}/postfix-2.2.8/sbin/postfix "$@"
+sudo ${zimbra_home}/postfix-2.2.5/sbin/postalias /etc/aliases
+sudo ${zimbra_home}/postfix-2.2.5/sbin/postfix "$@"
 
