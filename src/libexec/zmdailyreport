@@ -224,9 +224,9 @@ sub displayStats {
 	print "\t$bytesavg average bytes/msg\n";
 	print "\t$rcptavg average recipients/msg\n";
 	print "\t$delayavg average delay/msg (sec)\n";
-	foreach (sort keys %statii) {
-		print "\t$statii{$_} $_ deliveries\n";
-	}
+#	foreach (sort keys %statii) {
+#		print "\t$statii{$_} $_ deliveries\n";
+#	}
 
 	print "\n";
 
