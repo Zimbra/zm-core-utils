@@ -46,32 +46,42 @@ print "Generating report\n";
 if ($user) {
 	print "\tfor $user\n";
 }
+
+my $startTime;
+my $endTime;
+
 if ($options{t}) {
-	print "\tDuring $options{t}\n";
+	($startTime, $endTime) = split (',',$options{t});
+	$startTime = timeToSqlTime($startTime);
+	if ($endTime) {
+		$endTime = timeToSqlTime($endTime);
+	}
+} else {
+	# default to the previous day
+	$startTime = tsToSqlTime((time() - (60*60*24)),1);
+	$endTime = tsToSqlTime(time(),1);
 }
+print "\tFrom $startTime to $endTime\n";
 print "\n";
 
 my @msgIds;
 
+my %senders = ();
+my %recipients = ();
+my %errors = ();
+
 # We may have a msgId from the middle of the path - get the initial ID
 my $msgs = getMsgIds(\@msgIds);
 
-displayStats($msgs);
+getSenders(\%senders);
+getRecipients(\%recipients);
+getErrors(\%errors);
+
+displayStats($msgs, %senders, %recipients, %errors);
 
 sub getMsgIds {
 	my $ids = shift;
 	my $user = $options{u};
-
-	my $startTime;
-	my $endTime;
-
-	if ($options{t}) {
-		($startTime, $endTime) = split (',',$options{t});
-		$startTime = timeToSqlTime($startTime);
-		if ($endTime) {
-			$endTime = timeToSqlTime($endTime);
-		}
-	}
 
 	my $whereClause = "";
 	my @clauses = ();
@@ -133,8 +143,46 @@ sub getMsgIds {
 
 }
 
+sub getSenders {
+	my $senders = shift;
+
+	my $st = "select s2, count(s2) as C from ".
+		"(select distinct(msgid), sender as s2 from mta ".
+		"where sender is not null and arrive_time >= '".$startTime."' and arrive_time <= '".$endTime."') ".
+		"as foo group by s2 order by C desc";
+
+	#print $st,"\n\n";
+
+	my $ary = execSelect($st);
+	map { $$senders{$$_[0]} = $$_[1] } @$ary;
+
+}
+
+sub getRecipients {
+	my $recipients = shift;
+	my $st = "select recipient, count(recipient) as C from mta ".
+		"where recipient is not null and arrive_time >= '".$startTime."' and arrive_time <= '".$endTime."' ".
+		"group by recipient order by C desc";
+
+	my $ary = execSelect($st);
+	map { $$recipients{$$_[0]} = $$_[1] } @$ary;
+}
+
+sub getErrors {
+	my $errors = shift;
+	my $st = "select distinct(msgid), arrive_time, status, statusmsg from mta ".
+		"where status != 'sent' ".
+		"and arrive_time >= '".$startTime."' and arrive_time <= '".$endTime."' ".
+		"order by msgid";
+
+	my $ary = execSelect($st);
+	map {  $$errors{$$_[0]}{TIME} = $$_[1]; $$errors{$$_[0]}{STATUS} = $$_[2]; $$errors{$$_[0]}{MSG} = $$_[3] } @$ary;
+}
+
 sub displayStats {
 	my $msgs = shift;
+	my $senders = shift;
+	my $recipients = shift;
 
 	my $msgcount = 0;
 	my $msgbytes = 0;
@@ -171,13 +219,35 @@ sub displayStats {
 	my $bytesavg = sprintf ("%02.2f",$msgbytes/$msgcount);
 	my $rcptavg = sprintf ("%02.2f",$numrcpt/$msgcount);
 	my $delayavg = sprintf ("%02.2f",$delaytot/$msgcount);
-	print "\n$msgcount messages found for $numrcpt recipients ($delaytot)\n";
-	print "$msgbytes total bytes\n";
-	print "$bytesavg bytes/msg\n";
-	print "$rcptavg recipients/msg\n";
-	print "$delayavg delay/msg (sec)\n";
+	print "\n$msgcount messages found for $numrcpt recipients\n";
+	print "\t$msgbytes total bytes\n";
+	print "\t$bytesavg average bytes/msg\n";
+	print "\t$rcptavg average recipients/msg\n";
+	print "\t$delayavg average delay/msg (sec)\n";
 	foreach (sort keys %statii) {
-		print "$statii{$_} $_ deliveries\n";
+		print "\t$statii{$_} $_ deliveries\n";
+	}
+
+	print "\n";
+
+	print "Most active senders\n";
+	foreach (sort {$senders{$b} <=> $senders{$a}} keys %senders) {
+		print sprintf ("%9d %12s\n", $senders{$_}, $_);
+	}
+
+	print "\n";
+
+	print "Most active recipients\n";
+	foreach (sort {$recipients{$b} <=> $recipients{$a}} keys %recipients) {
+		print sprintf ("%9d %12s\n", $recipients{$_}, $_);
+	}
+
+	print "\n";
+
+	print "Errors\n";
+	foreach (sort keys %errors) {
+		print "$errors{$_}{TIME} $errors{$_}{STATUS} $errors{$_}{MSG}\n";
+		#print sprintf ("%10s %48s %s\n", $errors{$_}{STATUS}, $errors{$_}{MSG}, $_);
 	}
 }
 
@@ -453,8 +523,18 @@ sub connectDb {
 	return $dbh;
 }
 
+sub tsToSqlTime {
+	my $ts = shift;
+	my $trunc = shift;
+
+	my @T = localtime($ts);
+	return (timeToSqlTime(sprintf ("%04d%02d%02d%02d%02d%02d", $T[5]+1900,$T[4]+1,$T[3],$T[2],$T[1],$T[0]), 
+		$trunc));
+}
+
 sub timeToSqlTime {
 	my $ts = shift;
+	my $trunc = shift;
 	if ($ts eq "" || !defined($ts)) {
 		return '1000-01-01 00:00:00';
 	}
@@ -462,11 +542,17 @@ sub timeToSqlTime {
 	# IN: YYYYMMDDHHMMSS
 
 	# OUT: YYYY-MM-DD HH:MM:SS
-	my $dt = sprintf ("%4d-%02d-%02d %02d:%02d:%02d",
-		substr($ts,0,4), substr($ts,4,2), substr($ts,6,2),
-		substr($ts,8,2)?substr($ts,8,2):0, 
-		substr($ts,10,2)?substr($ts,10,2):0, 
-		substr($ts,12,2)?substr($ts,12,2):0);
+	my $dt;
+	if ($trunc) {
+		$dt = sprintf ("%4d-%02d-%02d 00:00:00",
+			substr($ts,0,4), substr($ts,4,2), substr($ts,6,2));
+	} else {
+		$dt = sprintf ("%4d-%02d-%02d %02d:%02d:%02d",
+			substr($ts,0,4), substr($ts,4,2), substr($ts,6,2),
+			substr($ts,8,2)?substr($ts,8,2):0, 
+			substr($ts,10,2)?substr($ts,10,2):0, 
+			substr($ts,12,2)?substr($ts,12,2):0);
+	}
 
 	return $dt;
 }
