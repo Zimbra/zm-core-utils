@@ -230,25 +230,38 @@ sub displayStats {
 
 	print "\n";
 
-	print "Most active senders\n";
-	foreach (sort {$senders{$b} <=> $senders{$a}} keys %senders) {
-		print sprintf ("%9d %12s\n", $senders{$_}, $_);
-	}
-
-	print "\n";
-
-	print "Most active recipients\n";
-	foreach (sort {$recipients{$b} <=> $recipients{$a}} keys %recipients) {
-		print sprintf ("%9d %12s\n", $recipients{$_}, $_);
-	}
-
-	print "\n";
-
 	print "Errors\n";
 	foreach (sort keys %errors) {
 		print "$errors{$_}{TIME} $errors{$_}{STATUS} $errors{$_}{MSG}\n";
 		#print sprintf ("%10s %48s %s\n", $errors{$_}{STATUS}, $errors{$_}{MSG}, $_);
 	}
+
+	print "\n";
+
+	my $numSenders = getLocalConfig("zimbra_mtareport_max_senders");
+	if ($numSenders == 0 || $numSenders eq "") { $numSenders = 50; }
+
+	my $i = 0;
+
+	print "Most active senders\n";
+	foreach (sort {$senders{$b} <=> $senders{$a}} keys %senders) {
+		if ($i++ > $numSenders) { last; }
+		print sprintf ("%9d %12s\n", $senders{$_}, $_);
+	}
+
+	print "\n";
+
+	my $numRecipients = getLocalConfig("zimbra_mtareport_max_recipients");
+	if ($numRecipients == 0 || $numRecipients eq "") { $numRecipients = 50; }
+
+	$i = 0;
+
+	print "Most active recipients\n";
+	foreach (sort {$recipients{$b} <=> $recipients{$a}} keys %recipients) {
+		if ($i++ > $numRecipients) { last; }
+		print sprintf ("%9d %12s\n", $recipients{$_}, $_);
+	}
+
 }
 
 sub displayMsg {
@@ -510,7 +523,7 @@ sub connectDb {
 	my $data_source="dbi:mysql:database=zimbra_logger;mysql_read_default_file=/opt/zimbra/conf/my.logger.cnf;mysql_socket=/opt/zimbra/logger/db/mysql.sock";
 
 	my $username="zimbra";
-	my $password = `/opt/zimbra/bin/zmlocalconfig -s -m nokey zimbra_logger_mysql_password`;
+	my $password = getLocalConfig("zimbra_logger_mysql_password");
 	chomp $password;
 
 	my $dbh = DBI->connect($data_source, $username, $password);
@@ -567,4 +580,28 @@ sub sqlTimeToTs {
 	}
 	return 0;
 }
+
+sub getLocalConfig {
+	my $key = shift;
+	if (defined ($ENV{zmsetvars})) {
+		return $ENV{$key};
+	}
+	open CONF, 
+		"/opt/zimbra/bin/zmlocalconfig -q -m shell |" or die "Can't open local config: $!";
+	my @conf = <CONF>;
+	close CONF;
+
+	chomp @conf;
+
+	foreach (@conf) {
+		my ($key, $val) = split '=', $_, 2;
+		$val =~ s/;$//;
+		$val =~ s/'$//;
+		$val =~ s/^'//;
+		$ENV{$key} = $val;
+	}
+	$ENV{zmsetvars} = 'true';
+	return $ENV{$key};
+}
+
 
