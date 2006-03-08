@@ -114,7 +114,7 @@ sub runRemoteCommand {
 sub doStatus {
 	$services = getEnabledServices();
 	if (scalar(keys %$services) == 0) {
-		print "Cannot determine services - exiting";
+		print "Cannot determine services - exiting\n";
 		return 1;
 	}
 	my $status = 0;
@@ -211,7 +211,7 @@ sub doShutdown {
 	foreach (sort keys %allservices) {
 		Zimbra::Mon::Logger::Log ("info", "Stopping $_");
 		if ($_ eq "ldap" && !(-d "/opt/zimbra/openldap-2.2.28") ) { next; }
-		if ($_ eq "mta" && !(-d "/opt/zimbra/postfix-2.2.5") ) { next; }
+		if ($_ eq "mta" && !(-d "/opt/zimbra/postfix-2.2.8") ) { next; }
 		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
 		print "\tStopping $_...";
 		$rrc = 0xffff & system ("$allservices{$_} stop > /tmp/zmcontrol.out.$$ 2>&1");
@@ -287,7 +287,7 @@ sub displayVersion {
 	my $platform = `/opt/zimbra/libexec/get_plat_tag.sh`;
 	chomp $platform;
 	my $string = "";
-	if ($platform eq "MACOSX") {
+	if ($platform =~ /MACOSX/) {
 		my $release = ` basename /Library/Receipts/zimbra-core* | sed -e 's/zimbra-core.//' -e 's/.pkg//'`;
 		chomp $release;
 		$string = "Release $release $platform";
