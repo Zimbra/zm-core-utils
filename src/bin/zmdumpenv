@@ -68,9 +68,7 @@ fi
 echo "----------------"
 cat /etc/hosts
 echo "----------------"
-echo "----------------"
 cat /etc/resolv.conf
-echo "----------------"
 echo "----------------"
 cat /etc/nsswitch.conf
 echo "----------------"
