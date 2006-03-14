@@ -103,7 +103,7 @@ my %commands = (
 	},
 	"zmqstat" => {
 		"args" => {
-			""	=> {
+			"all"	=> {
 				"script"	=> [ "sudo /opt/zimbra/libexec/zmqstat" ],
 			},
 			"incoming"	=> {
