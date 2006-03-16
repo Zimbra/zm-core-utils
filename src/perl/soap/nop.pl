@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1
@@ -24,36 +24,43 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-progdir=`dirname $0`
+use strict;
+use lib '.';
 
-source `dirname $0`/zmshutil || exit 1
+use LWP::UserAgent;
+use Getopt::Long;
+use XmlDoc;
+use Soap;
+use ZimbraSoapTest;
 
-zmsetvars \
-	zimbra_home \
-	zimbra_server_hostname 
+#standard options
+my ($user, $pw, $host, $help, $verbose);  #standard
+GetOptions("u|user=s" => \$user,
+           "pw=s" => \$pw,
+           "h|host=s" => \$host,
+           "help|?" => \$help,
+           "v" => \$verbose
+          );
 
-rewriteconfig() {
-    /opt/zimbra/libexec/zmmtaconfig mta > /dev/null 2>&1
+
+
+if (!defined($user)) {
+  my $usage = <<END_OF_USAGE;
+    
+USAGE: $0 -u USER 
+END_OF_USAGE
+  die $usage;
 }
 
-if [ "x$1" = "xstart" -o "x$1" = "xreload" ]; then
-	if [ x$2 = "x" ]; then
-		rewriteconfig
-	fi
-	${zimbra_home}/postfix-${postfix_version}/sbin/postmap ${zimbra_home}/conf/postfix_header_checks
-	sudo ${zimbra_home}/postfix-${postfix_version}/sbin/postsuper -r ALL
-fi
+my $z = ZimbraSoapTest->new($user, $host, $pw, { NOTIFY => '1' } );
+$z->verbose(3);
+$z->doStdAuth(); 
 
-if [ "x$1" = "xstatus" ]; then
-	${zimbra_home}/postfix-${postfix_version}/sbin/postqueue -p > /dev/null 2>&1
-	R=$?
-	if [ x$R != "x0" ]; then
-		exit 1
-	else
-		exit 0
-	fi
-fi
+my $d = new XmlDoc;
+$d->add('NoOpRequest', $Soap::ZIMBRA_MAIL_NS);
 
-sudo ${zimbra_home}/postfix-${postfix_version}/sbin/postalias /etc/aliases
-sudo ${zimbra_home}/postfix-${postfix_version}/sbin/postfix "$@"
+my $response = $z->invokeMail($d->root());
+
+print "REQUEST:\n-------------\n".$z->to_string_simple($d);
+print "RESPONSE:\n--------------\n".$z->to_string_simple($response);
 
