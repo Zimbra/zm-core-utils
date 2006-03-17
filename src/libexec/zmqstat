@@ -139,6 +139,21 @@ sub processQ {
 			$queue_stats{$cdir}{$_}{'REASON'} =~ s/reason=//;
 		}
 
+		my %qf = %{$queue_stats{$cdir}{$_}};
+		print "id=", $_, "\n";
+		print "time=", $qf{TIME}, "\n";
+		print "size=", $qf{LENGTH}, "\n";
+		print "sender=", $qf{SENDER}, "\n";
+		if (defined $qf{CADDR}) { print "caddr=", $qf{CADDR}, "\n"; }
+		if (defined $qf{CNAME}) { print "cname=", $qf{CNAME}, "\n"; }
+		if ($qf{'REASON'}) {
+			print "reason=", $qf{REASON}, "\n";
+		}
+		foreach my $recip (@{$qf{'RECIPS'}}) {
+			print "recip=", $recip, "\n";
+		} 
+		print "\n";
+
 	}
 }
 
@@ -176,26 +191,6 @@ if (!$qfiles) {
 	exit 0;
 }
 
-if ($readfiles) {
-	foreach (sort keys %queue_stats) {
-		foreach my $k (sort keys %{$queue_stats{$_}}) {
-			if ($k eq 'COUNT') {next;}
-			my %qf = %{$queue_stats{$_}{$k}};
-			print "id=", $k, "\n";
-			print "time=", $qf{TIME}, "\n";
-			print "size=", $qf{LENGTH}, "\n";
-			print "sender=", $qf{SENDER}, "\n";
-			if (defined $qf{CADDR}) { print "caddr=", $qf{CADDR}, "\n"; }
-			if (defined $qf{CNAME}) { print "cname=", $qf{CNAME}, "\n"; }
-			if ($qf{'REASON'}) {
-				print "reason=", $qf{REASON}, "\n";
-			}
-			foreach my $recip (@{$qf{'RECIPS'}}) {
-				print "recip=", $recip, "\n";
-			} 
-			print "\n";
-		}
-	}
-} else {
+if (! $readfiles) {
 	map { printf "%s=%d\n", $_, $queue_stats{$_}{COUNT} } keys %queue_stats;
 }
