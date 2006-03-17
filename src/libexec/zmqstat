@@ -36,6 +36,8 @@ my %queue_stats = ();
 my $hash_queue_depth;
 my $queue_directory;
 
+my $qfiles = 0;
+
 sub getLocalConfig {
 	my $key = shift;
 	if (defined ($ENV{zmsetvars})) {
@@ -90,6 +92,7 @@ sub getHashPath {
 sub processQ {
 	if (! -f $_ ) {return;}
 	if (! m{(^|/)[A-F0-9]{6,}$} ) { return; }
+	$qfiles++;
 	my ($cdir) = ($File::Find::dir =~ m|([^/]*)|);
 	#print "Processing $cdir - $_\n";
 	$queue_stats{$cdir}{'COUNT'}++;
@@ -155,6 +158,11 @@ foreach (map "$queue_directory/$_", @queues) {
 chdir $queue_directory;
 
 find (\&processQ, @queues);
+
+if (!$qfiles) {
+	print "No files found\n";
+	exit 0;
+}
 
 if ($readfiles) {
 	foreach (sort keys %queue_stats) {

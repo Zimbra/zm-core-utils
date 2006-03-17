@@ -50,11 +50,6 @@ EOF
 #
 # Parse command line
 #
-if [ "x$1" = "x-h" -o "x$1" = "x--help" ]; then
-	usage
-	exit 1
-fi
-
 if [ "x$1" = "x--root" ]; then
     password_key="ldap_root_password"
     shift # lose --root option
@@ -73,14 +68,9 @@ newpassword="$1"
 # TODO: notify app server that the password has changed,
 # for now you will have to restart tomcat
 #
-# MEM 2/9/2006 - apparently, these passwords have to be in sync.
 echo "Updating local config"
-if ! ${zimbra_home}/bin/zmlocalconfig -f -e ldap_root_password=${newpassword}; then
-    echo Error: command failed: ${zimbra_home}/bin/zmlocalconfig -e ldap_root_password='#'
-    exit 1
-fi
-if ! ${zimbra_home}/bin/zmlocalconfig -f -e zimbra_ldap_password=${newpassword}; then
-    echo Error: command failed: ${zimbra_home}/bin/zmlocalconfig -e zimbra_ldap_password='#'
+if ! ${zimbra_home}/bin/zmlocalconfig -f -e ${password_key}=${newpassword}; then
+    echo Error: command failed: ${zimbra_home}/bin/zmlocalconfig -e ${password_key}='#'
     exit 1
 fi
 
@@ -93,7 +83,7 @@ ${zimbra_home}/bin/ldap stop
 #
 # Get the SHA password.  We have modified one of these above.
 #
-zmsetvars -f ldap_root_password zimbra_ldap_password
+zmsetvars ldap_root_password zimbra_ldap_password
 root_sha=`${zimbra_home}/openldap/sbin/slappasswd -s ${ldap_root_password}`
 zimbra_sha=`${zimbra_home}/openldap/sbin/slappasswd -s ${zimbra_ldap_password}`
 config_dir="${zimbra_home}/openldap/etc/openldap"
@@ -118,7 +108,7 @@ ${zimbra_home}/bin/ldap start > /dev/null 2>&1
 echo "Updating zimbra.ldif"
 sed -e "s|^userPassword.*|userPassword: ${zimbra_sha}|" \
 	${config_dir}/zimbra.ldif > /tmp/zimbra.ldif.$$
-mv -f /tmp/zimbra.ldif.$$ ${zimbra_home}/openldap/etc/openldap/zimbra.ldif
+mv -f /tmp/zimbra.ldif.$$ ${zimbra_home}/conf/zimbra.ldif
 
 #
 # Rerun zimbra.ldif
