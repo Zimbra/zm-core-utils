@@ -98,16 +98,17 @@ sub processQ {
 	$queue_stats{$cdir}{'COUNT'}++;
 	
 	if ($readfiles) {
+		my %qf = ();
 		my @st = lstat($_);
 		if (@st == 0) { return; }
 		my $fh = new IO::File ($_, "r") || return;
 		my ($rec, $len, $data) = get_record($fh);
-		$queue_stats{$cdir}{$_}{'RECIPS'} = ();
+		$qf{'RECIPS'} = ();
 		if ($rec eq "C") { # Size
-			($queue_stats{$cdir}{$_}{'LENGTH'}) = ($data =~ m/\s*(\d+)\s*\d+\s*\d+/);
+			($qf{'LENGTH'}) = ($data =~ m/\s*(\d+)\s*\d+\s*\d+/);
 			($rec, $len, $data) = get_record($fh);
 			if ($rec eq "T") {
-				$queue_stats{$cdir}{$_}{'TIME'} = $data;
+				$qf{'TIME'} = $data;
 			} else {
 				return;
 			}
@@ -117,15 +118,15 @@ sub processQ {
 		while (my ($rec, $len, $data) = get_record($fh)) {
 			#print STDERR "got $rec, $len, $data\n";
 			if ($rec eq "R") { 
-                                push(@{$queue_stats{$cdir}{$_}{'RECIPS'}}, $data);
+                                push(@{$qf{'RECIPS'}}, $data);
                         } elsif ($rec eq "S") { 
-                                $queue_stats{$cdir}{$_}{'SENDER'} = $data?$data:'MAILER-DAEMON'; 
+                                $qf{'SENDER'} = $data?$data:'MAILER-DAEMON'; 
                         } elsif ($rec eq "A") {
                                 my ($aname, $avalue) = ($data =~ /^([^=]+)=(.*)$/);
                                 if ($aname eq "client_address" && defined($avalue)) {
-                                        $queue_stats{$cdir}{$_}{'CADDR'} = $avalue;
+                                        $qf{'CADDR'} = $avalue;
                                 } elsif ($aname eq "client_name" && defined($avalue)) {
-                                        $queue_stats{$cdir}{$_}{'CNAME'} = $avalue;
+                                        $qf{'CNAME'} = $avalue;
                                 }
                         }
 		}
@@ -134,12 +135,11 @@ sub processQ {
 			my $dfile = getHashPath($_);
 			$fh = new IO::File ("$queue_directory/defer/$dfile/$_","r") || die "Can't open $dfile/$_: $!";
 			my @reasons = grep /^reason=/, <$fh>;
-			$queue_stats{$cdir}{$_}{'REASON'} = $reasons[0];
-			chomp $queue_stats{$cdir}{$_}{'REASON'};
-			$queue_stats{$cdir}{$_}{'REASON'} =~ s/reason=//;
+			$qf{'REASON'} = $reasons[0];
+			chomp $qf{'REASON'};
+			$qf{'REASON'} =~ s/reason=//;
 		}
 
-		my %qf = %{$queue_stats{$cdir}{$_}};
 		print "id=", $_, "\n";
 		print "time=", $qf{TIME}, "\n";
 		print "size=", $qf{LENGTH}, "\n";
