@@ -187,7 +187,8 @@ chdir $queue_directory;
 find (\&processQ, @queues);
 
 if (!$qfiles) {
-	print STDERR "No files found\n";
+	# bug 6591
+	#print STDERR "No files found\n";
 	exit 0;
 }
 

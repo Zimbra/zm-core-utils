@@ -169,12 +169,18 @@ sub runCommand {
 		#my $cmdstr = "$cm $args";
 		my $cmdstr = "$cm";
 		if (open COMMAND, "$cmdstr |") {
-			print "STARTCMD: $host $cmdstr\n";
+			if ($command ne "zmqstat") {
+				# bug 6591
+				print "STARTCMD: $host $cmdstr\n";
+			}
 			while (<COMMAND>) {
 				print $_;
 			}
 			close COMMAND;
-			print "ENDCMD: $host $cmdstr\n";
+			if ($command ne "zmqstat") {
+				# bug 6591
+				print "ENDCMD: $host $cmdstr\n";
+			}
 		} else {
 			print "Can't run $cmdstr: $!\n\n";
 		}
