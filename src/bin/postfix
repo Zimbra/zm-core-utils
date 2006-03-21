@@ -36,7 +36,7 @@ rewriteconfig() {
     /opt/zimbra/libexec/zmmtaconfig mta > /dev/null 2>&1
 }
 
-if [ "x$1" = "xstart" -o "x$1" = "xreload" ]; then
+if [ $1 = "start" -o $1 = "reload" ]; then
 	if [ x$2 = "x" ]; then
 		rewriteconfig
 	fi
@@ -44,7 +44,7 @@ if [ "x$1" = "xstart" -o "x$1" = "xreload" ]; then
 	sudo ${zimbra_home}/postfix-${postfix_version}/sbin/postsuper -r ALL
 fi
 
-if [ "x$1" = "xstatus" ]; then
+if [ $1 = "status" ]; then
 	${zimbra_home}/postfix-${postfix_version}/sbin/postqueue -p > /dev/null 2>&1
 	R=$?
 	if [ x$R != "x0" ]; then
