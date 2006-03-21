@@ -118,15 +118,17 @@ sub processQ {
 		while (my ($rec, $len, $data) = get_record($fh)) {
 			#print STDERR "got $rec, $len, $data\n";
 			if ($rec eq "R") { 
-                                push(@{$qf{'RECIPS'}}, $data);
+                                push(@{$qf{RECIPS}}, $data);
                         } elsif ($rec eq "S") { 
-                                $qf{'SENDER'} = $data?$data:'MAILER-DAEMON'; 
+                                $qf{SENDER} = $data?$data:'MAILER-DAEMON'; 
+                        } elsif ($rec eq "L") {
+                                $qf{FILTER} = $data;
                         } elsif ($rec eq "A") {
                                 my ($aname, $avalue) = ($data =~ /^([^=]+)=(.*)$/);
                                 if ($aname eq "client_address" && defined($avalue)) {
-                                        $qf{'CADDR'} = $avalue;
+                                        $qf{CADDR} = $avalue;
                                 } elsif ($aname eq "client_name" && defined($avalue)) {
-                                        $qf{'CNAME'} = $avalue;
+                                        $qf{CNAME} = $avalue;
                                 }
                         }
 		}
@@ -146,6 +148,7 @@ sub processQ {
 		print "sender=", $qf{SENDER}, "\n";
 		if (defined $qf{CADDR}) { print "caddr=", $qf{CADDR}, "\n"; }
 		if (defined $qf{CNAME}) { print "cname=", $qf{CNAME}, "\n"; }
+		if (defined $qf{FILTER}) { print "filter=", $qf{FILTER},"\n"; }
 		if ($qf{'REASON'}) {
 			print "reason=", $qf{REASON}, "\n";
 		}
@@ -161,7 +164,6 @@ getLocalConfig('zimbra_home');
 
 $queue_directory = `$ENV{zimbra_home}/bin/postconf -h queue_directory`;
 chomp $queue_directory;
-
 
 $hash_queue_depth = `$ENV{zimbra_home}/bin/postconf -h hash_queue_depth`;
 chomp $hash_queue_depth;
