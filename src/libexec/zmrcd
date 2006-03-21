@@ -182,7 +182,7 @@ sub runCommand {
 				print "ENDCMD: $host $cmdstr\n";
 			}
 		} else {
-			print "Can't run $cmdstr: $!\n\n";
+			die "Can't run $cmdstr: $!\n\n";
 		}
 	}
 }
