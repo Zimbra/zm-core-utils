@@ -159,8 +159,8 @@ sub runCommand {
 		if (defined ($commands{$command}{args}{$arg}{script})) {
 			$cl = $commands{$command}{args}{$arg}{script};
 		} else {
-			print "ERROR: Unknown command $_\n";
-			return;
+			print STDERR "ERROR: Unknown command $_\n";
+			exit 1;
 		}
 	}
 
@@ -300,8 +300,8 @@ while (<>) {
 	my $hostlist = getHostList ($host);
 
 	if (!defined ($hostlist)) {
-		print "ERROR: Invalid hostlist\n";
-		last;
+		print STDERR "ERROR: Invalid hostlist\n";
+		exit 1;
 	}
 
 	foreach my $h (@$hostlist) {
