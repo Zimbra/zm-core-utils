@@ -95,7 +95,7 @@ sub processQ {
 	$qfiles++;
 	my ($cdir) = ($File::Find::dir =~ m|([^/]*)|);
 	#print STDERR "Processing $cdir - $_\n";
-	$queue_stats{$cdir}{'COUNT'}++;
+	$queue_stats{$cdir}{COUNT}++;
 	
 	if ($readfiles) {
 		my %qf = ();
@@ -103,12 +103,12 @@ sub processQ {
 		if (@st == 0) { return; }
 		my $fh = new IO::File ($_, "r") || return;
 		my ($rec, $len, $data) = get_record($fh);
-		$qf{'RECIPS'} = ();
+		$qf{TO} = ();
 		if ($rec eq "C") { # Size
-			($qf{'LENGTH'}) = ($data =~ m/\s*(\d+)\s*\d+\s*\d+/);
+			($qf{SIZE}) = ($data =~ m/\s*(\d+)\s*\d+\s*\d+/);
 			($rec, $len, $data) = get_record($fh);
 			if ($rec eq "T") {
-				$qf{'TIME'} = $data;
+				$qf{TIME} = $data;
 			} else {
 				return;
 			}
@@ -118,17 +118,17 @@ sub processQ {
 		while (my ($rec, $len, $data) = get_record($fh)) {
 			#print STDERR "got $rec, $len, $data\n";
 			if ($rec eq "R") { 
-                                push(@{$qf{RECIPS}}, $data);
+                                push(@{$qf{TO}}, $data);
                         } elsif ($rec eq "S") { 
-                                $qf{SENDER} = $data?$data:'MAILER-DAEMON'; 
+                                $qf{FROM} = $data?$data:'MAILER-DAEMON'; 
                         } elsif ($rec eq "L") {
                                 $qf{FILTER} = $data;
                         } elsif ($rec eq "A") {
                                 my ($aname, $avalue) = ($data =~ /^([^=]+)=(.*)$/);
                                 if ($aname eq "client_address" && defined($avalue)) {
-                                        $qf{CADDR} = $avalue;
+                                        $qf{ADDR} = $avalue;
                                 } elsif ($aname eq "client_name" && defined($avalue)) {
-                                        $qf{CNAME} = $avalue;
+                                        $qf{HOST} = $avalue;
                                 }
                         }
 		}
@@ -137,24 +137,22 @@ sub processQ {
 			my $dfile = getHashPath($_);
 			$fh = new IO::File ("$queue_directory/defer/$dfile/$_","r") || die "Can't open $dfile/$_: $!";
 			my @reasons = grep /^reason=/, <$fh>;
-			$qf{'REASON'} = $reasons[0];
-			chomp $qf{'REASON'};
-			$qf{'REASON'} =~ s/reason=//;
+			$qf{REASON} = $reasons[0];
+			chomp $qf{REASON};
+			$qf{REASON} =~ s/reason=//;
 		}
 
 		print "id=", $_, "\n";
 		print "time=", $qf{TIME}, "\n";
-		print "size=", $qf{LENGTH}, "\n";
-		print "sender=", $qf{SENDER}, "\n";
-		if (defined $qf{CADDR}) { print "caddr=", $qf{CADDR}, "\n"; }
-		if (defined $qf{CNAME}) { print "cname=", $qf{CNAME}, "\n"; }
+		print "size=", $qf{SIZE}, "\n";
+		print "from=", $qf{FROM}, "\n";
+		if (defined $qf{ADDR}) { print "addr=", $qf{ADDR}, "\n"; }
+		if (defined $qf{HOST}) { print "host=", $qf{HOST}, "\n"; }
 		if (defined $qf{FILTER}) { print "filter=", $qf{FILTER},"\n"; }
-		if ($qf{'REASON'}) {
+		if ($qf{REASON}) {
 			print "reason=", $qf{REASON}, "\n";
 		}
-		foreach my $recip (@{$qf{'RECIPS'}}) {
-			print "recip=", $recip, "\n";
-		} 
+                print "to=", join(',', @{$qf{TO}}), "\n";
 		print "\n";
 
 	}
