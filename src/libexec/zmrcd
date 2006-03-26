@@ -67,7 +67,7 @@ my %SIMPLE_COMMANDS =
 
 my %REGEX_CHECKED_COMMANDS =
     (
-     "postsuper" => {
+     "zmqaction" => {
                      regex => '(hold|release|requeue|delete)\s+(incoming|deferred|corrupt|active|maildrop|hold)\s+[A-FL0-9,]+', # A-F allows hex, L allows ALL
                      program => "/opt/zimbra/libexec/zmqaction"
                     },
