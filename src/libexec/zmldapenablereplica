@@ -221,7 +221,9 @@ startRemoteZimbra() {
 
 startLdap() {
 	echo -n "Starting LDAP on ${zimbra_server_hostname}..."
-	${zimbra_home}/bin/ldap start
+	${zimbra_home}/bin/ldap start > /dev/null 2>&1
+	sleep 10
+	${zimbra_home}/bin/ldap start > /dev/null 2>&1
 	echo "done"
 }
 
