@@ -230,6 +230,7 @@ startLdap() {
 if [ $ldap_master_host = $zimbra_server_hostname ]; then
 	enableSyncProv
 	${zimbra_home}/bin/ldap stop
+	sleep 5;
 	${zimbra_home}/bin/ldap start
 	exit 0
 fi
