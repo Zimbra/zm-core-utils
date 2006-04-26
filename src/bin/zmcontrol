@@ -175,6 +175,7 @@ sub doStartup {
 		my $ldapStopped = 0xffff & system("/opt/zimbra/bin/ldap status > /dev/null 2>&1");
 		if ($ldapStopped) {
 			$rrc = startLdap();
+			sleep 3;
 		}
 	}
 	if ($rrc) {
