@@ -26,6 +26,12 @@
 
 NAME=$1
 
+if [ "x$NAME" = "x--help" -o "x$NAME" = "x-h" ]; then
+	echo "Usage: $0 <servername>"
+	echo "Change the name of the Zimbra server"
+	exit 1
+fi
+
 if [ "x$NAME" = "x" ]; then
 	echo "New server name required!"
 	exit 1
