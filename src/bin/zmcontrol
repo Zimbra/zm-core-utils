@@ -60,6 +60,7 @@ my %allservices = (
 	"snmp" => "/opt/zimbra/bin/zmswatchctl", 
 	"ldap" => "/opt/zimbra/bin/ldap",
 	"spell" => "/opt/zimbra/bin/zmspellctl",
+	"imapproxy" => "/opt/zimbra/bin/zmperditionctl",
 );
 
 my %GlobalOpts = ();
