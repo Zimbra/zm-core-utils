@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2006 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -33,11 +33,6 @@ use lib "/opt/zimbra/zimbramon/lib/zimbrapm/SOAP";
 use lib "/opt/zimbra/zimbramon/lib";
 
 use Getopt::Std;
-my %options = ();
-
-unless ( getopts( 'a:', \%options ) ) { usage(); }
-
-my $account_id = $options{a};
 
 use POSIX ":sys_wait_h";
 use LWP::UserAgent;
@@ -61,7 +56,7 @@ my $START;
 my $END;
 my $PERIOD;
 
-#our %GlobalOpts;
+our %GlobalOpts;
 
 sub usage { exit 1; }
 
@@ -95,7 +90,6 @@ sub get_auth_token {
 }
 
 sub purgeMessages {
-	my $zimbraId = shift;
 	my $host = "localhost";
 	my $user = "zimbra";
 	chomp $user;
@@ -111,9 +105,6 @@ sub purgeMessages {
 
 	my $d = new Zimbra::SOAP::XmlDoc;
 	$d->start('PurgeMessagesRequest', $ADMINNS);
-	if ($zimbraId) {
-		$d->add('mbox', undef, {id => $zimbraId}, undef);
-		}
 	$d->end();
 
 	my $response = $SOAP->invoke($url, $d->root(), $context);
@@ -126,4 +117,5 @@ sub purgeMessages {
 	}
 
 }
-purgeMessages($account_id);
+
+purgeMessages();

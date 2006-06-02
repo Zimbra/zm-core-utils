@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005, 2006 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -34,7 +34,7 @@ use Soap;
 use ZimbraSoapTest;
 
 # specific to this app
-my ($searchString, $offset, $prevId, $prevSortVal, $limit, $fetch, $sortBy, $types, $convId);
+my ($searchString, $offset, $prevId, $prevSortVal, $limit, $fetch, $sortBy, $types);
 $offset = 0;
 $limit = 5;
 $fetch = 0;
@@ -45,11 +45,10 @@ $types = "message";
 my ($user, $pw, $host, $help); #standard
 GetOptions("u|user=s" => \$user,
            "t|types=s" => \$types,
-           "pw=s" => \$pw,
+           "p|port=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
            # add specific params below:
-           "conv=i" => \$convId,
            "query=s" => \$searchString,
            "sort=s" => \$sortBy,
            "offset=i" => \$offset,
@@ -63,7 +62,7 @@ GetOptions("u|user=s" => \$user,
 if (!defined($user) || !defined($searchString) || defined($help)) {
     my $usage = <<END_OF_USAGE;
     
-USAGE: $0 -u USER -q QUERYSTR [-s SORT] [-t TYPES] [-o OFFSET] [-l LIMIT] [-f FETCH] [-pi PREV-ITEM-ID -ps PREV-SORT-VALUE] [-c CONVID]
+USAGE: $0 -u USER -q QUERYSTR [-s SORT] [-t TYPES] [-o OFFSET] [-l LIMIT] [-pi PREV-ITEM-ID -ps PREV-SORT-VALUE]
     SORT = dateDesc|dateAsc|subjDesc|subjAsc|nameDesc|nameAsc|score
     TYPES = message|conversation|contact|appointment
 END_OF_USAGE
@@ -74,22 +73,12 @@ my $z = ZimbraSoapTest->new($user, $host, $pw);
 $z->doStdAuth();
 
 my $d = new XmlDoc;
-my $searchName = "SearchRequest";
-
-my %args =  ( 'types' => $types,
-              'sortBy' => $sortBy,
-              'offset' => $offset,
-              'limit' => $limit,
-              'fetch' => $fetch
-            );
-
-if (defined($convId)) {
-  $searchName = "SearchConvRequest";
-  $args{'cid'} = $convId;
-}
-
- 
-$d->start($searchName, $Soap::ZIMBRA_MAIL_NS, \%args);
+$d->start('SearchRequest', $Soap::ZIMBRA_MAIL_NS,
+          { 'types' => $types,
+            'sortBy' => $sortBy,
+            'offset' => $offset,
+            'limit' => $limit,
+            'fetch' => $fetch});
 {
     if (defined $prevId) {
         $d->add("cursor", undef, { "id" => $prevId, "sortVal" => $prevSortVal });

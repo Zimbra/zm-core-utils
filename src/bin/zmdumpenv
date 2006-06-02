@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005, 2006 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -46,7 +46,7 @@ echo "----------------"
 /sbin/ifconfig
 echo "----------------"
 
-if [ x$P = "xMACOSX" -o "x$P" = "xMACOSXx86" ]; then
+if [ x$P = "xMACOSX" ]; then
 	ls -ld /Library/Receipts/zimbra-*
 else
 	rpm -qi zimbra-core
@@ -72,3 +72,4 @@ cat /etc/resolv.conf
 echo "----------------"
 cat /etc/nsswitch.conf
 echo "----------------"
+

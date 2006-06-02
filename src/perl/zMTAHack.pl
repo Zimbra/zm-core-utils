@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 use Net::SMTP::Server;
 use Net::SMTP::Server::Client;
 use Net::SMTP::Server::Relay;
@@ -40,7 +38,7 @@ while(my $conn = $server->accept()) {
 
     foreach my $to (@{$client->{TO}}) {
 
-        if ($to =~ /.*\@$zimbra_hostname/i) {
+        if ($to =~ /.*\@$zimbra_hostname/) {
             my $lmtp = Net::LMTP->new('localhost', 7025);
 
             print "Got a local message from ".$client->{FROM}." to ".$to."\n";
