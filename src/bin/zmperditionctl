@@ -57,6 +57,14 @@ foreach my $i (`/opt/zimbra/bin/zmprov gs $ENV{zimbra_server_hostname}`) {
 	$ENV{$k} = $v;
 }
 
+if ($ENV{zimbraImapCleartextLoginEnabled} eq "TRUE") {
+	$serverKeys{imap4s} = $serverKeys{imap4};
+}
+
+if ($ENV{zimbraPop3CleartextLoginEnabled} eq "TRUE") {
+	$serverKeys{pop3s} = $serverKeys{pop3};
+}
+
 sub start {
 	if ( ! -f "/opt/zimbra/conf/perdition.conf" ) {
 		`$ENV{zimbra_home}/libexec/zmmtaconfig perdition`;
