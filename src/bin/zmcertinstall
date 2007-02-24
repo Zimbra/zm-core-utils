@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1
@@ -33,17 +33,6 @@ TOMCAT=/opt/zimbra/tomcat/conf
 CONF=/opt/zimbra/conf
 TCONF=/opt/zimbra/tomcat/conf
 
-usage() {
-  echo "$0 mta <certfile> <keyfile>"
-  echo "$0 mailbox [<certfile>]"
-  echo "  Default <certfile> is ${BASE}/server/tomcat.crt"
-  exit 1
-}
-
-if [ $# = 0 ]; then
-  usage
-fi
-
 APP=$1
 shift
 
@@ -62,7 +51,6 @@ fi
 mkdir -p ${BASE}/server
 mkdir -p ${BASE}/cert
 mkdir -p ${BASE}/ca
-
 
 getHostInfo() {
 
