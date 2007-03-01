@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1
@@ -30,16 +30,9 @@ CONF=$BASE/conf/httpd.conf
 PIDFILE=$BASE/log/httpd.pid
 
 case "$1" in
-	start)
+	start|reload)
 		if [ -f $APACHECTL ]; then
 			$APACHECTL -k $1 -f $CONF
-			exit $?
-		fi
-		exit 0
-	;;
-  reload|graceful)
-		if [ -f $APACHECTL ]; then
-			$APACHECTL -k graceful -f $CONF
 			exit $?
 		fi
 		exit 0
@@ -59,7 +52,7 @@ case "$1" in
 		exit $?
 	;;
 	*)
-		echo "$0 start|stop|reload|graceful|status"
+		echo "$0 start|stop|reload|status"
 		exit 1
 	;;
 esac
