@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w 
+#!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1
@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2006 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2004, 2005, 2006 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -24,52 +24,39 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-#
-# Simple SOAP test-harness for the AddMsg API
-#
-
 use strict;
 use lib '.';
 
 use LWP::UserAgent;
 use Getopt::Long;
-use XmlElement;
 use XmlDoc;
 use Soap;
 use ZimbraSoapTest;
 
-my ($includeSessions, $groupByAccount);
 #standard options
 my ($user, $pw, $host, $help); #standard
 GetOptions("u|user=s" => \$user,
-           "p|port=s" => \$pw,
+           "pw=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
-           "l" => \$includeSessions,
-           "g" => \$groupByAccount,
           );
 
-if (!defined($user)) {
-    die "USAGE: $0 -u USER [-p PASSWD] [-h HOST] [-l] [-a]\n\t-l = list sessions\n\t-g group sessions by accountId";
+my $usage = <<END_OF_USAGE;
+USAGE: $0 -u USER
+END_OF_USAGE
+
+if (!defined($user) || defined($help)) {
+  die $usage;
 }
 
 my $z = ZimbraSoapTest->new($user, $host, $pw);
-$z->doAdminAuth();
-
-my %args;
-
-if (defined($includeSessions)) {
-  $args{'listSessions'} = "1";
-}
-
-if (defined($groupByAccount)) {
-  $args{'groupByAccount'} = "1";
-}
+$z->doStdAuth();
 
 my $d = new XmlDoc;
-$d->add('DumpSessionsRequest', $Soap::ZIMBRA_ADMIN_NS, \%args);
 
-my $response = $z->invokeAdmin($d->root());
+$d->add("IMGatewayListRequest", $Soap::ZIMBRA_IM_NS);
+my $response = $z->invokeMail($d->root());
+
 print "REQUEST:\n-------------\n".$z->to_string_simple($d);
 print "RESPONSE:\n--------------\n".$z->to_string_simple($response);
 

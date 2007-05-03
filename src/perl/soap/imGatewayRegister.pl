@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w 
+#!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1
@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2006 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2004, 2005, 2006 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -24,52 +24,62 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-#
-# Simple SOAP test-harness for the AddMsg API
-#
-
 use strict;
 use lib '.';
 
 use LWP::UserAgent;
 use Getopt::Long;
-use XmlElement;
 use XmlDoc;
 use Soap;
 use ZimbraSoapTest;
 
-my ($includeSessions, $groupByAccount);
+# specific to this app
+my ($op, $gwName, $remName, $remPw);
+
 #standard options
 my ($user, $pw, $host, $help); #standard
 GetOptions("u|user=s" => \$user,
-           "p|port=s" => \$pw,
+           "pw=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
-           "l" => \$includeSessions,
-           "g" => \$groupByAccount,
+           # add specific params below:
+           "op=s" => \$op,
+           "gw=s" => \$gwName,
+           "rn=s" => \$remName,
+           "rp=s" => \$remPw,
           );
 
-if (!defined($user)) {
-    die "USAGE: $0 -u USER [-p PASSWD] [-h HOST] [-l] [-a]\n\t-l = list sessions\n\t-g group sessions by accountId";
+my $usage = <<END_OF_USAGE;
+USAGE: $0 -u USER -op reg -gw GATEWAY_NAME -rn REMOTE_NAME -rp REMOTE_PASSWORD
+USAGE: $0 -u USER -op unreg -gw GATEWAY_NAME
+END_OF_USAGE
+
+if (!defined($user) || !defined($gwName) || !defined($op) || defined($help)) {
+  die $usage;
+}
+
+if ($op eq "reg" && (!defined($remName) || !defined($remPw))) {
+  die $usage;
 }
 
 my $z = ZimbraSoapTest->new($user, $host, $pw);
-$z->doAdminAuth();
-
-my %args;
-
-if (defined($includeSessions)) {
-  $args{'listSessions'} = "1";
-}
-
-if (defined($groupByAccount)) {
-  $args{'groupByAccount'} = "1";
-}
+$z->doStdAuth();
 
 my $d = new XmlDoc;
-$d->add('DumpSessionsRequest', $Soap::ZIMBRA_ADMIN_NS, \%args);
 
-my $response = $z->invokeAdmin($d->root());
+my %args = (
+            'service' => $gwName,
+            'op' => $op,
+           );
+
+if ($op eq "reg") {
+  $args{'name'} = $remName;
+  $args{'password'} = $remPw;
+}
+
+$d->add("IMGatewayRegisterRequest", $Soap::ZIMBRA_IM_NS, \%args);
+my $response = $z->invokeMail($d->root());
+
 print "REQUEST:\n-------------\n".$z->to_string_simple($d);
 print "RESPONSE:\n--------------\n".$z->to_string_simple($response);
 
