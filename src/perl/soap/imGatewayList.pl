@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2004, 2005, 2006 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -24,68 +24,37 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-#
-# Simple SOAP test-harness for the AddMsg API
-#
-
-use Date::Parse;
-use Time::HiRes qw ( time );
 use strict;
-
 use lib '.';
 
 use LWP::UserAgent;
 use Getopt::Long;
-use ZimbraSoapTest;
-use XmlElement;
 use XmlDoc;
 use Soap;
-
-# specific to this app
-my ($to, $msg, $typing);
+use ZimbraSoapTest;
 
 #standard options
-my ($user, $pw, $host, $help);  #standard
-
+my ($user, $pw, $host, $help); #standard
 GetOptions("u|user=s" => \$user,
            "pw=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
-           # add specific params below:
-           "typing"=>\$typing,
-           "t=s"=>\$to,
-           "m=s"=>\$msg,
           );
 
-if (!defined($user) || !defined($to)) {
-    print "USAGE: imsend -u USER [-typing] -t (ADDRESS|THREAD) [-m MESSAGE]\n";
-    exit 1;
+my $usage = <<END_OF_USAGE;
+USAGE: $0 -u USER
+END_OF_USAGE
+
+if (!defined($user) || defined($help)) {
+  die $usage;
 }
 
 my $z = ZimbraSoapTest->new($user, $host, $pw);
 $z->doStdAuth();
 
 my $d = new XmlDoc;
-$d->start('IMSendMessageRequest', $Soap::ZIMBRA_IM_NS);
 
-if ($to =~ m/.*\@.*/) {
-    $d->start('message', undef, { "addr" => $to} );
-} else {
-    $d->start('message', undef, { "thread" => $to} );
-}
-
-if (defined($msg)) {
-  $d->add("body", undef, undef, $msg);
-}
-
-if (defined($typing)) {
-  $d->add("typing");
-}
-
-$d->end(); #message
-$d->end(); #request
-
-
+$d->add("IMGatewayListRequest", $Soap::ZIMBRA_IM_NS);
 my $response = $z->invokeMail($d->root());
 
 print "REQUEST:\n-------------\n".$z->to_string_simple($d);
