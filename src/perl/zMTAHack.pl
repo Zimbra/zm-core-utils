@@ -1,12 +1,5 @@
 #!/usr/bin/perl
 
-#
-# For windows with ActivePerl, you'll need to 'ppm install' these modules:
-#    Net-LMTP
-#    SMTP-Server
-#    Net-DNS
-#
-
 use Net::SMTP::Server;
 use Net::SMTP::Server::Client;
 use Net::SMTP::Server::Relay;
@@ -52,17 +45,17 @@ while(my $conn = $server->accept()) {
             my $lmtp = Net::LMTP->new('localhost', 7025);
 
             print "Got a local message from ".$client->{FROM}." to ".$to."\n";
-
-            $lmtp->mail($client->{FROM});
+            
+            $lmtp->mail($ENV{USER});
             $lmtp->to($to);
-
+            
             $lmtp->data();
             $lmtp->datasend($client->{MSG});
             $lmtp->dataend();
-
+            
             $lmtp->quit;
         } else {
-            print "Relaying message from ".$client->{FROM}." to ".$to."....";
+            print "Replaying message from ".$client->{FROM}." to ".$to."....";
             my @toArray;
             $toArray[0] = $to;
 

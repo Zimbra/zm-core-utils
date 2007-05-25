@@ -107,12 +107,12 @@ my %exe = (
   'ANTISPAM'      => "$config{baseDir}/bin/zmamavisdctl",
   'ANTIVIRUS'     => "$config{baseDir}/bin/zmclamdctl",
   'SASL'          => "$config{baseDir}/bin/zmsaslauthdctl",
-  'MAILBOXD'      => "$config{baseDir}/bin/zmmailboxdctl",
+  'TOMCAT'        => "$config{baseDir}/bin/tomcat",
   'SPELL'         => "$config{baseDir}/bin/zmspellctl",
   'LDAP'          => "$config{baseDir}/bin/ldap",
   'SNMP'          => "$config{baseDir}/bin/zmswatchctl",
   'LOGGER'        => "$config{baseDir}/bin/zmloggerctl",
-  'MAILBOX'       => "$config{baseDir}/bin/zmstorectl",
+  'MAILBOX'       => "$config{baseDir}/bin/zmmailboxctl",
 );
 
 my $commands = {
@@ -318,7 +318,7 @@ sub getServerConfig {
       $state->{serviceconfig}->{$v} = $k;
       # parent services
       if ($v eq "mailbox") {
-        $state->{serviceconfig}->{'mailboxd'} = $k;
+        $state->{serviceconfig}->{'tomcat'} = $k;
       } elsif ($v eq "mta") {
         $state->{serviceconfig}->{'sasl'} = $k;
       } 
