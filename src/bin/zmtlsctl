@@ -24,28 +24,45 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-JAVA_HOME=/opt/zimbra/java
 
-TOMCAT=/opt/zimbra/tomcat/conf
-
-MODE=$1
-
-
-
-h=`/opt/zimbra/bin/zmhostname`
-if [ "x$h" = "x" ]; then
-  echo "ERROR: Unable to determine zmhostname"
-  exit 1;
+if [ x`whoami` != "xzimbra" ]; then
+  echo "$0 must be run as user zimbra"
+  exit 1
 fi
 
-zmprov -l gs $h > /dev/null 2>&1
+source `dirname $0`/zmshutil || exit 1
+zmsetvars \
+  zimbra_home \
+  zimbra_server_hostname \
+  zimbra_log_directory \
+  zimbra_tmp_directory \
+  zimbra_java_home \
+  tomcat_directory 
+
+MODE=$1
+export JAVA_HOME=${zimbra_java_home}
+
+if [ "x${zimbra_server_hostname}" = "x" ]; then
+  zimbra_server_hostname=`/opt/zimbra/bin/zmhostname`
+  if [ "x${zimbra_server_hostname}" = "x" ]; then
+    echo "ERROR: Unable to determine zmhostname"
+    exit 1;
+  fi
+fi
+
+if [ "x${zimbra_tmp_directory}" = "x" ]; then
+  zimbra_tmp_directory=/tmp
+fi
+
+
+${zimbra_home}/bin/zmprov -l gs ${zimbra_server_hostname} > /dev/null 2>&1
 if [ $? != 0 ]; then
   echo "ERROR: problem reading config from ldap. Make sure ldap is running."
   exit 1
 fi
 
 if [ "x$MODE" = "x" ]; then
-	MODE=`/opt/zimbra/bin/zmprov -l gs $h 2> /dev/null | grep zimbraMailMode | sed -e 's/zimbraMailMode: //'`
+	MODE=`${zimbra_home}/bin/zmprov -l gs ${zimbra_server_hostname} 2> /dev/null | grep zimbraMailMode | sed -e 's/zimbraMailMode: //'`
 
 	if [ "x$MODE" = "x" ]; then
 		MODE="http"
@@ -62,49 +79,49 @@ updateWebConfig() {
 	if [ $MODE = "http" ]; then
 		sed -e 's/\(.*HTTPSBEGIN\).*/\1/' -e 's/.*\(HTTPSEND.*\)/\1/' \
 			-e 's/\(.*HTTPBEGIN\).*/\1 -->/' -e 's/.*\(HTTPEND.*\)/<!-- \1/' \
-			/opt/zimbra/tomcat/conf/server.xml > \
-			/tmp/server.xml.$$
-		if [ -f /opt/zimbra/cyrus-sasl/etc/saslauthd.conf.in ]; then
+			${zimbra_home}/tomcat/conf/server.xml > \
+			${zimbra_tmp_directory}/server.xml.$$
+		if [ -f ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf.in ]; then
 			sed -e 's/^zimbra_url: https:/zimbra_url: http:/' \
-				/opt/zimbra/cyrus-sasl/etc/saslauthd.conf.in > \
-				/tmp/saslauthd.conf.in.$$
+				${zimbra_home}/cyrus-sasl/etc/saslauthd.conf.in > \
+				${zimbra_tmp_directory}/saslauthd.conf.in.$$
 		fi
 	else
-		if [ -f /opt/zimbra/cyrus-sasl/etc/saslauthd.conf.in ]; then
+		if [ -f ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf.in ]; then
 			sed -e 's/^zimbra_url: http:/zimbra_url: https:/' \
-				/opt/zimbra/cyrus-sasl/etc/saslauthd.conf.in > \
-				/tmp/saslauthd.conf.in.$$
+				${zimbra_home}/cyrus-sasl/etc/saslauthd.conf.in > \
+				${zimbra_tmp_directory}/saslauthd.conf.in.$$
 		fi
 		if [ $MODE = "https" ]; then
 			sed -e 's/\(.*HTTPSBEGIN\).*/\1 -->/' -e 's/.*\(HTTPSEND.*\)/<!-- \1/' \
 				-e 's/\(.*HTTPBEGIN\).*/\1/' -e 's/.*\(HTTPEND.*\)/\1/' \
-				/opt/zimbra/tomcat/conf/server.xml > \
-				/tmp/server.xml.$$
+				${zimbra_home}/tomcat/conf/server.xml > \
+				${zimbra_tmp_directory}/server.xml.$$
 		else
 			# MIXED - enable both
 			sed -e 's/\(.*HTTPSBEGIN\).*/\1 -->/' -e 's/.*\(HTTPSEND.*\)/<!-- \1/' \
 				-e 's/\(.*HTTPBEGIN\).*/\1 -->/' -e 's/.*\(HTTPEND.*\)/<!-- \1/' \
-				/opt/zimbra/tomcat/conf/server.xml > \
-				/tmp/server.xml.$$
+				${zimbra_home}/tomcat/conf/server.xml > \
+				${zimbra_tmp_directory}/server.xml.$$
 		fi
 	fi
-	if [ -s /tmp/server.xml.$$ ]; then
-		mv -f /tmp/server.xml.$$ /opt/zimbra/tomcat/conf/server.xml
+	if [ -s ${zimbra_tmp_directory}/server.xml.$$ ]; then
+		mv -f ${zimbra_tmp_directory}/server.xml.$$ ${zimbra_home}/tomcat/conf/server.xml
 	fi
-	if [ -s /tmp/saslauthd.conf.in.$$ ]; then
-		mv -f /tmp/saslauthd.conf.in.$$ /opt/zimbra/cyrus-sasl/etc/saslauthd.conf.in
+	if [ -s ${zimbra_tmp_directory}/saslauthd.conf.in.$$ ]; then
+		mv -f ${zimbra_tmp_directory}/saslauthd.conf.in.$$ ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf.in
 	fi
 
 	sed -e "s/.*PROTOCOL MODE.*/<env-entry-value>$MODE<\/env-entry-value><!-- PROTOCOL MODE -->/" \
-		/opt/zimbra/tomcat/webapps/zimbra/WEB-INF/web.xml > /tmp/web.xml.$$
-  if [ -s /tmp/web.xml.$$ ]; then
-	  mv -f /tmp/web.xml.$$ /opt/zimbra/tomcat/webapps/zimbra/WEB-INF/web.xml
+		${zimbra_home}/tomcat/webapps/zimbra/WEB-INF/web.xml > ${zimbra_tmp_directory}/web.xml.$$
+  if [ -s ${zimbra_tmp_directory}/web.xml.$$ ]; then
+	  mv -f ${zimbra_tmp_directory}/web.xml.$$ ${zimbra_home}/tomcat/webapps/zimbra/WEB-INF/web.xml
   fi
 	
 }
 
 updateLdap() {
-	/opt/zimbra/bin/zmprov -l ms $h zimbraMailMode $MODE
+	${zimbra_home}/bin/zmprov -l ms ${zimbra_server_hostname} zimbraMailMode $MODE
 }
 
 updateWebConfig
