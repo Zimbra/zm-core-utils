@@ -54,6 +54,10 @@ if [ "x${zimbra_tmp_directory}" = "x" ]; then
   zimbra_tmp_directory=/tmp
 fi
 
+if [ ! -d ${zimbra_tmp_directory} ]; then
+  mkdir -p ${zimbra_tmp_directory}
+fi
+
 
 ${zimbra_home}/bin/zmprov -l gs ${zimbra_server_hostname} > /dev/null 2>&1
 if [ $? != 0 ]; then
