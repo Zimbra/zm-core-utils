@@ -36,7 +36,11 @@ use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Util::Common;
 use Zimbra::Mon::Logger;
 
-$SIG{CHLD} = sub { while( waitpid(-1,WNOHANG)>0 ) {} };
+if ($^O eq "darwin") {
+  $SIG{CHLD}  = \&catchSignal;
+} else {
+  $SIG{CHLD} = sub { while( waitpid(-1,WNOHANG)>0 ) {} };
+}
 $SIG{QUIT}  = \&catchSignal;
 $SIG{INT}  = \&catchSignal;
 $SIG{KILL}  = \&catchSignal;
@@ -48,11 +52,11 @@ if ($> eq 0) {
 my %config = (
   progname    => "zmmtaconfig",
   hostname    => $ENV{zimbra_server_hostname},
-  loglevel    => 3,
+  loglevel    => 5,
   watchdog    => 1,
   wd_all      => 0,
   debug       => 0,
-  interval    => 60,
+  interval    => 120,
   baseDir     => "/opt/zimbra",
   logStatus   => ( 4 => "Debug", 3 => "Info", 2 => "Warning", 1 => "Error", 0 => "Fatal"),
 );
@@ -839,7 +843,7 @@ sub processIsNotRunning($) {
 sub controlProcess($$) {
   my ($processname,$action_value) = @_;
   my $process = uc($processname);
-  my $rc=0;
+  my $rc;
   unless ( $action_value >= -1 || $action_value <= 2) {
     logMsg(1, "State must be -1,0,1");
     return;
@@ -866,8 +870,24 @@ sub controlProcess($$) {
   my $lvl = ($action eq "status" ? 4 : 3);
   my $rewrite = ($action =~ m/status|stop/ ? "norewrite" : "");
   logMsg($lvl,"CONTROL $process: $exe{$process} $action $rewrite");
-  $rc = 0xffff & system("$exe{$process} $action $rewrite > /dev/null 2>&1");
+  #$rc = 0xffff & system("$exe{$process} $action $rewrite > /dev/null 2>&1"); 
+  if ($action eq "restart") {
+    system("$exe{$process} stop $rewrite >> /tmp/zmmtaconfig.debug");
+    $rc = 0xffff & system("$exe{$process} start $rewrite >> /tmp/zmmtaconfig.debug");
+  } else {
+    $rc = 0xffff & system("$exe{$process} $action $rewrite >> /tmp/zmmtaconfig.debug");
+  }
 
+  my $msg = printf "$exe{$process} $action $rewrite returned %#04x:", $rc;
+  logMsg(4, "$msg");
+
+  if ($rc == 0xff00) {
+    logMsg(4, "$processname failed: $!");
+  } elsif (($rc & 0xff) == 0) {
+    $rc >>= 8;
+    logMsg(4, "$exe{$process} returned non-zero status $rc");
+  }
+    
   # update the state information
   if ($action eq "stop" && $rc == 0) {
     logMsg(2, "$processname was stopped removing from current state");
@@ -878,9 +898,8 @@ sub controlProcess($$) {
     $state->{current}->{services}->{$processname} = "started";
     print Dumper $state->{current}->{services};
   }
-
-  logMsg(2, "Failed to $action $processname rc=$rc") 
-    if ($rc != 0 && $action ne "status");
+  logMsg(2, "Failed to $action $processname rc=$rc");
+    #if ($rc != 0 && $action ne "status" );
   return $rc;
 }
 
