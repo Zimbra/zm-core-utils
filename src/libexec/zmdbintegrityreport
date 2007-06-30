@@ -39,18 +39,11 @@ use Getopt::Std;
 my %options = ();
 my $report = ();
 
-unless ( getopts( 'mdhv', \%options ) ) { usage(); }
+unless ( getopts( 'mndu:t:h', \%options ) ) { usage(); }
 usage() if ($options{h});
 my $debug = $options{d} ? 1 : 0;
-my $verbose = $options{v} ? 1 : 0;
-$verbose = 1 if $debug;
 
-if ($verbose && $options{m}) {
-  print STDERR "Options -m and -v are mutually exclusive\n";
-  &usage();
-}
-
-addToReport("Generating report\n") if $verbose;
+addToReport("Generating report\n");
 checkDbs();
 if ($options{m}) {
   sendEmailReport($report);
@@ -63,10 +56,8 @@ if ($options{m}) {
 #-------------
 
 sub usage {
-	print STDERR "Usage: $0 [-m] [-v] [-h]\n";
-  print STDERR "-m emails report to admin account, otherwise report is presented on stdout\n";
-  print STDERR "-v verbose output\n";
-  print STDERR "-h help\n";
+	print STDERR "Usage: $0 [ -u user ] [ -t start,end ]\n";
+	print STDERR "\ttimes in YYYYMMDD[hhmmss] format\n\n";
 
 	exit (1);
 }
@@ -87,7 +78,7 @@ sub checkDbs() {
     addToReport("$cmd\n");
     addToReport("@output");
   } else {
-    addToReport("No errors found\n") if $verbose;
+    addToReport("No errors found\n");
   }
   unless (close(CMD)) {
     addToReport("command failed $!\n");;
