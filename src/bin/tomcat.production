@@ -112,9 +112,22 @@ case "$1" in
 		difflines=`expr $newlines - $lines`
 		tail -${difflines} ${tomcat_directory}/logs/catalina.out > ${tomcat_directory}/logs/stacktrace.$$
 
-        sudo ${zimbra_home}/libexec/zmtomcatmgr stop 
-		exit 0
-        ;;
+    sudo ${zimbra_home}/libexec/zmtomcatmgr stop 
+    for ((i =0; i < 30; i++)); do
+      sleep 5
+      sudo ${zimbra_home}/libexec/zmtomcatmgr status
+      if [ $? != 0 ]; then
+        break
+      fi
+      sudo ${zimbra_home}/libexec/zmtomcatmgr stop 
+    done
+    sudo ${zimbra_home}/libexec/zmtomcatmgr status
+    if [ $? = 0 ]; then
+      exit 1
+    else 
+		  exit 0
+    fi
+    ;;
 
     'stop')
 
@@ -125,9 +138,23 @@ case "$1" in
 		difflines=`expr $newlines - $lines`
 		tail -${difflines} ${tomcat_directory}/logs/catalina.out > ${tomcat_directory}/logs/stacktrace.$$
 
-		sudo ${zimbra_home}/libexec/zmtomcatmgr stop
-		exit 0
-        ;;
+    sudo ${zimbra_home}/libexec/zmtomcatmgr stop 
+    for ((i =0; i < 30; i++)); do
+      sleep 5
+      sudo ${zimbra_home}/libexec/zmtomcatmgr status
+      if [ $? != 0 ]; then
+        break
+      fi
+      sudo ${zimbra_home}/libexec/zmtomcatmgr stop 
+    done
+    sudo ${zimbra_home}/libexec/zmtomcatmgr status
+    if [ $? = 0 ]; then
+      exit 1
+    else 
+		  exit 0
+    fi
+
+    ;;
     
     'restart')
         $0 stop
