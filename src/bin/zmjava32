@@ -28,11 +28,11 @@ source `dirname $0`/zmshutil || exit 1
 zmsetvars zimbra_home zimbra_java_home
 
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
-if [ "x$platform" = "xRHEL5_64" ]; then
-	zimbra_java_home=/opt/zimbra/jdk1.6.0_01_i386
+if [ "x$platform" = "xRHEL5_64" -o "x$platform" = "xCentOS5_64" ]; then
+	zimbra_java_home=/opt/zimbra/jdk1.5.0_08_i386
 fi
 if [ "x$platform" = "xRHEL4_64" -o "x$platform" = "xCentOS4_64" ]; then
-	zimbra_java_home=/opt/zimbra/jdk1.6.0_01_i386
+	zimbra_java_home=/opt/zimbra/jdk1.5.0_08_i386
 fi
 
 if [ -d ${zimbra_java_home}/jre ]; then
@@ -42,16 +42,11 @@ else
 fi
 zmassert -d ${JRE_EXT_DIR}
 
-case "`uname`" in
-CYGWIN*) PATHSEP=";";;
-*) PATHSEP=":";;
-esac
-
 ZIMBRA_EXTENSIONS="backup clamscanner network zimbra-license zimbrahsm zimbrasync"
 ZIMBRA_EXT_DIR="/opt/zimbra/lib/ext"
 for i in $ZIMBRA_EXTENSIONS; do
   if [ -d "/opt/zimbra/lib/ext/$i" ]; then
-   ZIMBRA_EXT_DIR="$ZIMBRA_EXT_DIR${PATHSEP}/opt/zimbra/lib/ext/$i"
+   ZIMBRA_EXT_DIR="$ZIMBRA_EXT_DIR:/opt/zimbra/lib/ext/$i"
   fi
 done 
 
@@ -59,5 +54,5 @@ exec ${zimbra_java_home}/bin/java \
      -client -Xmx256m \
      -Dzimbra.home=${zimbra_home} \
      -Djava.library.path=${zimbra_home}/lib \
-     -Djava.ext.dirs=${JRE_EXT_DIR}${PATHSEP}${zimbra_home}/lib/jars${PATHSEP}${ZIMBRA_EXT_DIR} \
+     -Djava.ext.dirs=${JRE_EXT_DIR}:${zimbra_home}/lib/jars:${ZIMBRA_EXT_DIR} \
      "$@"
