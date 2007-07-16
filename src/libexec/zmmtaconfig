@@ -898,7 +898,7 @@ sub controlProcess($$) {
     $state->{current}->{services}->{$processname} = "started";
     print Dumper $state->{current}->{services};
   }
-  logMsg(2, "Failed to $action $processname rc=$rc");
+  logMsg(2, "Failed to $action $processname rc=$rc")
     if ($rc != 0 && $action ne "status" );
   return $rc;
 }
