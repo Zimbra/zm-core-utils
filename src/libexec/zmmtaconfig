@@ -52,7 +52,7 @@ if ($> eq 0) {
 my %config = (
   progname    => "zmmtaconfig",
   hostname    => $ENV{zimbra_server_hostname},
-  loglevel    => 5,
+  loglevel    => 3,
   watchdog    => 1,
   wd_all      => 0,
   debug       => 0,
@@ -899,7 +899,7 @@ sub controlProcess($$) {
     print Dumper $state->{current}->{services};
   }
   logMsg(2, "Failed to $action $processname rc=$rc");
-    #if ($rc != 0 && $action ne "status" );
+    if ($rc != 0 && $action ne "status" );
   return $rc;
 }
 
