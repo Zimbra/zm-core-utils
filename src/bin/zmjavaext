@@ -34,14 +34,9 @@ else
 fi
 zmassert -d ${JRE_EXT_DIR}
 
-case "`uname`" in
-CYGWIN*) PATHSEP=";";;
-*) PATHSEP=":";;
-esac
-
-jardirs=${JRE_EXT_DIR}${PATHSEP}${zimbra_home}/lib/jars
+jardirs=${JRE_EXT_DIR}:${zimbra_home}/lib/jars
 if [ -e ${zimbra_home}/lib/ext-common ]; then
-    jardirs=${jardirs}${PATHSEP}${zimbra_home}/lib/ext-common
+    jardirs=${jardirs}:${zimbra_home}/lib/ext-common
 fi
 
 exec ${zimbra_java_home}/bin/java \

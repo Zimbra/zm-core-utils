@@ -39,7 +39,6 @@ chown -R zimbra:zimbra /opt/zimbra/a* /opt/zimbra/[c-ot-z]* /opt/zimbra/s[a-su-z
 
 
 chown  root:$ROOTGROUP /opt/zimbra/apache-tomcat-*
-chown  root:$ROOTGROUP /opt/zimbra/jetty-*
 
 chown -R root:$ROOTGROUP /opt/zimbra/libexec
 chown -R root:$ROOTGROUP /opt/zimbra/bin
@@ -56,6 +55,11 @@ chmod 755 /opt/zimbra/libexec/*
 chmod 755 /opt/zimbra/bin/*
 
 chmod 755 /opt/zimbra/libexec/*
+
+if [ ! -d /opt/zimbra/tomcat/conf ]; then
+	mkdir -p /opt/zimbra/tomcat/conf
+	chown zimbra:zimbra /opt/zimbra/tomcat/conf
+fi
 
 if [ -L /opt/zimbra/postfix ]; then
 
@@ -97,8 +101,8 @@ if [ -d /opt/zimbra/cyrus-sasl-2.1.22.3 ]; then
 	chown zimbra:zimbra /opt/zimbra/cyrus-sasl-2.1.22.3/state
 fi
 
-if [ -d /opt/zimbra/clamav-0.87.1 ]; then
-	chown zimbra:zimbra /opt/zimbra/clamav-0.87.1
+if [ -d /opt/zimbra/clamav-0.91.1 ]; then
+	chown zimbra:zimbra /opt/zimbra/clamav-0.91.1
 fi
 
 if [ -f /opt/zimbra/openldap/libexec/slapd ]; then
