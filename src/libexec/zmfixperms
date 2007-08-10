@@ -140,7 +140,7 @@ if [ -d ${zimbra_home}/zimbramon/lib ]; then
   chown -R ${root_user}:${root_group} ${zimbra_home}/zimbramon/lib
 fi
 
-if [ -L ${zimbra_home}/rrdtool ]; then
+if [ -L ${zimbra_home}/zimbramon/rrdtool ]; then
   chown ${root_user}:${root_group} ${zimbra_home}/zimbramon/rrdtool*
   chown -R ${root_user}:${root_group} ${zimbra_home}/zimbramon/rrdtool/*
 fi
