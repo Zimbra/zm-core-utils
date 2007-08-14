@@ -23,52 +23,24 @@
 # 
 # ***** END LICENSE BLOCK *****
 # 
-if [ x`whoami` != "xzimbra" ]; then
-  echo "$0 must be run as user zimbra"
-  exit 1
-fi
+CONF=/opt/zimbra/conf
+TCONF=/opt/zimbra/tomcat/conf
+B=/opt/zimbra/ssl
+BASE=${B}/ssl
 
-platform=`/opt/zimbra/libexec/get_plat_tag.sh 2> /dev/null` || exit 1
-source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-  zimbra_home \
-  zimbra_server_hostname \
-  zimbra_tmp_directory \
-  zimbra_java_home
+JAVA_HOME=/opt/zimbra/java
 
-zimbra_ssl_directory=${zimbra_home}/ssl/ssl
-export JAVA_HOME=${zimbra_java_home}
+TOMCAT=/opt/zimbra/tomcat/conf
 
-usage() {
-  echo "`basename $0` [zimbra_server_hostname]"
-  exit 1
-}
+mkdir -p ${BASE}/ca
+mkdir -p ${BASE}/cert
+mkdir -p ${BASE}/server
 
-zimbra_conf_directory=${zimbra_home}/conf
-zimbra_ssl_directory=${zimbra_home}/ssl/ssl
+hostname=${zimbra_server_hostname}
 
-# this avoid "unable to write 'random state' errors from openssl
-mkdir -p ${zimbra_tmp_directory}
-export RANDFILE=${zimbra_tmp_directory}/.rnd
-export HOME=${zimbra_tmp_directory}
-touch $RANDFILE
-
-mkdir -p ${zimbra_ssl_directory}/ca
-mkdir -p ${zimbra_ssl_directory}/cert
-mkdir -p ${zimbra_ssl_directory}/server
-
-case "$1" in
-  help|-help|--help)
-    usage
-    ;;
-  *)
-    zimbra_server_hostname=$1
-    shift
-    ;;
-esac
-
-if [ x"${zimbra_server_hostname}" = "x" ]; then
-  zimbra_server_hostname=`${zimbra_home}/bin/zmhostname`
+if [ "x$1" != "x" ]; then
+	hostname=$1
+	shift;
 fi
 
 createConf() {
@@ -76,14 +48,14 @@ createConf() {
 	ALTNAMES=""
 	for alt in $*; do
 		if [ "x$ALTNAMES" = "x" ]; then
-			ALTNAMES="subjectAltName = DNS:${zimbra_server_hostname},DNS:${alt}"
+			ALTNAMES="subjectAltName = DNS:${hostname},DNS:${alt}"
 		else
 			ALTNAMES="${ALTNAMES},DNS:${alt}"
 		fi
 	done
 
-	cat ${zimbra_conf_directory}/zmssl.cnf.in | sed -e "s/@@HOSTNAME@@/$zimbra_server_hostname/" \
-		-e "s/@@ALTNAMES@@/$ALTNAMES/" > ${zimbra_ssl_directory}/zmssl.cnf
+	cat ${CONF}/zmssl.cnf.in | sed -e "s/@@HOSTNAME@@/$hostname/" \
+		-e "s/@@ALTNAMES@@/$ALTNAMES/" > ${BASE}/zmssl.cnf
 }
 
 createKey() {
@@ -91,9 +63,8 @@ createKey() {
 	echo "** Creating CA private key"
 	echo
 
-	openssl req -batch -config ${zimbra_ssl_directory}/zmssl.cnf \
-    -new -newkey rsa:1024 -nodes -out ${zimbra_ssl_directory}/ca/ca.csr \
-    -keyout ${zimbra_ssl_directory}/ca/ca.key
+	openssl req -batch -config ${BASE}/zmssl.cnf -new -newkey \
+		rsa:1024 -nodes -out ${BASE}/ca/ca.csr -keyout ${BASE}/ca/ca.key
 
 }
 
@@ -102,9 +73,8 @@ createCert() {
 	echo "** Creating CA cert"
 	echo
 
-	openssl x509 -trustout -signkey ${zimbra_ssl_directory}/ca/ca.key \
-    -days 365 -req -in ${zimbra_ssl_directory}/ca/ca.csr \
-    -out ${zimbra_ssl_directory}/ca/ca.pem
+	openssl x509 -trustout -signkey ${BASE}/ca/ca.key -days 365 \
+		-req -in ${BASE}/ca/ca.csr -out ${BASE}/ca/ca.pem
 
 }
 
@@ -114,4 +84,4 @@ createKey
 
 createCert
 
-chmod -R 700 ${zimbra_ssl_directory}
+chmod -R 700 ${B}

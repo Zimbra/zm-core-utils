@@ -72,7 +72,6 @@ if [ -L ${zimbra_home}/dspam ]; then
   chown ${root_user}:${root_group} ${zimbra_home}/dspam-*
   chown -R ${root_user}:${root_group} ${zimbra_home}/dspam/*
 fi
-chown  root:$ROOTGROUP /opt/zimbra/jetty-*
 
 if [ -L ${zimbra_home}/httpd ]; then
   chown ${root_user}:${root_group} ${zimbra_home}/httpd-*
