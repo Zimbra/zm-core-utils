@@ -63,6 +63,7 @@ my %startorder = (
 	"snmp" 		=> 6,
 	"spell" 	=> 7,
 	"mta" 		=> 8,
+	"stats"		=> 9,
 );
 
 my %allservices = ( 
@@ -75,6 +76,7 @@ my %allservices = (
 	"ldap" => "/opt/zimbra/bin/ldap",
 	"spell" => "/opt/zimbra/bin/zmspellctl",
 	"imapproxy" => "/opt/zimbra/bin/zmperditionctl",
+	"stats" => "/opt/zimbra/bin/zmstatctl",
 );
 
 my %rewrites = ( 
