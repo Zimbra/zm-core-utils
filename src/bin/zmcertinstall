@@ -34,21 +34,40 @@ CONF=/opt/zimbra/conf
 TCONF=/opt/zimbra/tomcat/conf
 
 usage() {
+  echo "$0 ldap <certfile> <keyfile>"
   echo "$0 mta <certfile> <keyfile>"
   echo "$0 mailbox [<certfile>]"
   echo "  Default <certfile> is ${BASE}/server/tomcat.crt"
   exit 1
 }
 
-if [ $# = 0 ]; then
+case "$1" in
+  mta|mailbox|ldap)
+    APP=$1
+    CERTFILE=$2
+    KEYFILE=$3
+    ;;
+  help|-help|--help)
+    usage
+    exit 0
+  ;;
+  *)
+    usage
+    exit 1
+  ;;
+esac
+
+# ldap requires 2 args
+if [ x"$APP" = "xldap" ] && [ x"${CERTFILE}" = "x" -o x"${KEYFILE}" = "x" ]; then
   usage
+  exit 1
 fi
 
-APP=$1
-shift
-
-CERTFILE=$1
-KEYFILE=$2
+# mta requires 2 args
+if [ x"$APP" = "xmta" ] && [ x"${CERTFILE}" = "x" -o x"${KEYFILE}" = "x" ]; then
+  usage
+  exit 1
+fi
 
 if [ "x$CERTFILE" = "x" ]; then
 	CERTFILE=${BASE}/server/tomcat.crt
@@ -93,6 +112,9 @@ importCert() {
 	if [ $APP = "mailbox" ]; then
 		keytool -import -alias tomcat -keystore ${TCONF}/keystore \
 			-trustcacerts -file ${CERTFILE} -storepass zimbra
+        elif [ $APP = "ldap" ]; then
+          cp -f $CERTFILE ${CONF}/slapd.crt
+          cp -f $KEYFILE ${CONF}/slapd.key
 	else
 		cp -f $CERTFILE ${CONF}/smtpd.crt
 		cp -f $KEYFILE ${CONF}/smtpd.key
