@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005, 2007 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -110,7 +110,7 @@ fi
 
 #
 # Change the password in local config.  TODO: notify app server that
-# the password has changed, for now you will have to restart tomcat
+# the password has changed, for now you will have to restart mailboxd
 #
 if ! ${zimbra_home}/bin/zmlocalconfig -f -e "${password_key}=${newpassword}"; then
     echo Error: command failed: ${zimbra_home}/bin/zmlocalconfig -f -e ${password_key}='#'

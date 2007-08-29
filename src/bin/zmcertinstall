@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005, 2006 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -24,28 +24,44 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-BASE=/opt/zimbra/ssl/ssl
 
-JAVA_HOME=/opt/zimbra/java
+if [ x`whoami` != "xzimbra" ]; then
+  echo "$0 must be run as user zimbra"
+  exit 1
+fi
 
-TOMCAT=/opt/zimbra/tomcat/conf
+platform=`/opt/zimbra/libexec/get_plat_tag.sh 2> /dev/null` || "unknown"
+source `dirname $0`/zmshutil || exit 1
+zmsetvars \
+  zimbra_home \
+  zimbra_log_directory \
+  zimbra_tmp_directory \
+  zimbra_java_home \
+  mailboxd_directory \
+  mailboxd_keystore \
+  mailboxd_server \
+  postfix_smtpd_tls_cert_file \
+  postfix_smtpd_tls_key_file
 
-CONF=/opt/zimbra/conf
-TCONF=/opt/zimbra/tomcat/conf
+
+
+zimbra_ssl_directory=${zimbra_home}/ssl/ssl
+export JAVA_HOME=$zimbra_java_home
+zimbra_conf_directory=${zimbra_home}/conf
 
 usage() {
   echo "$0 ldap <certfile> <keyfile>"
   echo "$0 mta <certfile> <keyfile>"
   echo "$0 mailbox [<certfile>]"
-  echo "  Default <certfile> is ${BASE}/server/tomcat.crt"
-  exit 1
+  echo "$0 proxy <certfile> <keyfile>"
+  echo "  Default <certfile> is ${zimbra_ssl_directory}/server/mailboxd.crt"
 }
 
 case "$1" in
-  mta|mailbox|ldap)
+  mta|mailbox|proxy|ldap)
     APP=$1
-    CERTFILE=$2
-    KEYFILE=$3
+    zimbra_tls_certfile=$2
+    zimbra_tls_keysfile=$3
     ;;
   help|-help|--help)
     usage
@@ -58,43 +74,45 @@ case "$1" in
 esac
 
 # ldap requires 2 args
-if [ x"$APP" = "xldap" ] && [ x"${CERTFILE}" = "x" -o x"${KEYFILE}" = "x" ]; then
+if [ x"$APP" = "xldap" ] && [ x"${zimbra_tls_certfile}" = "x" -o x"${zimbra_tls_keysfile}" = "x" ]; then
   usage
   exit 1
 fi
 
 # mta requires 2 args
-if [ x"$APP" = "xmta" ] && [ x"${CERTFILE}" = "x" -o x"${KEYFILE}" = "x" ]; then
+if [ x"$APP" = "xmta" ] && [ x"${zimbra_tls_certfile}" = "x" -o x"${zimbra_tls_keysfile}" = "x" ]; then
   usage
   exit 1
 fi
 
-if [ "x$CERTFILE" = "x" ]; then
-	CERTFILE=${BASE}/server/tomcat.crt
+# proxy requires 2 args
+if [ x"$APP" = "xproxy" ] && [ x"${zimbra_tls_certfile}" = "x" -o x"${zimbra_tls_keysfile}" = "x" ]; then
+  usage
+  exit 1
 fi
 
-if [ ! -f $CERTFILE ]; then
-	echo "ERROR - $CERTFILE not found!"
+if [ "x${zimbra_tls_certfile}" = "x" ]; then
+	zimbra_tls_certfile=${zimbra_ssl_directory}/server/mailboxd.crt
+fi
+
+if [ ! -f "${zimbra_tls_certfile}" ]; then
+	echo "ERROR - ${zimbra_tls_certfile} not found!"
 	exit 1
 fi
 
-mkdir -p ${BASE}/server
-mkdir -p ${BASE}/cert
-mkdir -p ${BASE}/ca
+mkdir -p ${zimbra_ssl_directory}/server
+mkdir -p ${zimbra_ssl_directory}/cert
+mkdir -p ${zimbra_ssl_directory}/ca
 
 
 getHostInfo() {
 
-	platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 	if [ "x$platform" = "xMACOSX" -o "x$platform" = "xMACOSXx86" ]; then
 		HH=`hostname`
 		return
 	else
 		H=`hostname --fqdn`
 	fi
-
-	# $H=$H.zimbrasys.com
-
 	HH=`echo $H | grep '\.'`
 
 	if [ "x$HH" = "x" ]; then
@@ -110,14 +128,20 @@ importCert() {
 	echo
 
 	if [ $APP = "mailbox" ]; then
-		keytool -import -alias tomcat -keystore ${TCONF}/keystore \
-			-trustcacerts -file ${CERTFILE} -storepass zimbra
+		keytool -import -alias ${mailboxd_server} -keystore ${mailboxd_keystore} \
+			-trustcacerts -file ${zimbra_tls_certfile} -storepass zimbra
+	elif [ $APP = "mta" ]; then
+          cp -f ${zimbra_tls_certfile} ${postfix_smtpd_tls_cert_file}
+          cp -f ${zimbra_tls_keysfile} ${postfix_smtpd_tls_key_file}
         elif [ $APP = "ldap" ]; then
-          cp -f $CERTFILE ${CONF}/slapd.crt
-          cp -f $KEYFILE ${CONF}/slapd.key
-	else
-		cp -f $CERTFILE ${CONF}/smtpd.crt
-		cp -f $KEYFILE ${CONF}/smtpd.key
+          cp -f ${zimbra_tls_certfile} "/opt/zimbra/conf/slapd.crt"
+          cp -f ${zimbra_tls_keysfile} "/opt/zimbra/conf/slapd.key"
+        elif [ $APP = "proxy" ]; then
+          cp -f ${zimbra_tls_certfile} "/opt/zimbra/conf/nginx.crt"
+          cp -f ${zimbra_tls_keysfile} "/opt/zimbra/conf/nginx.key"
+        else
+          echo "ERROR: Unknown application $APP"
+          exit
 	fi
 
 }

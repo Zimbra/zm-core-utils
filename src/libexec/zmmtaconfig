@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005, 2006 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -56,7 +56,7 @@ my %config = (
   watchdog    => 1,
   wd_all      => 0,
   debug       => 0,
-  interval    => 120,
+  interval    => 60,
   baseDir     => "/opt/zimbra",
   logStatus   => ( 4 => "Debug", 3 => "Info", 2 => "Warning", 1 => "Error", 0 => "Fatal"),
 );
@@ -111,12 +111,12 @@ my %exe = (
   'ANTISPAM'      => "$config{baseDir}/bin/zmamavisdctl",
   'ANTIVIRUS'     => "$config{baseDir}/bin/zmclamdctl",
   'SASL'          => "$config{baseDir}/bin/zmsaslauthdctl",
-  'TOMCAT'        => "$config{baseDir}/bin/tomcat",
+  'MAILBOXD'      => "$config{baseDir}/bin/zmmailboxdctl",
   'SPELL'         => "$config{baseDir}/bin/zmspellctl",
   'LDAP'          => "$config{baseDir}/bin/ldap",
   'SNMP'          => "$config{baseDir}/bin/zmswatchctl",
   'LOGGER'        => "$config{baseDir}/bin/zmloggerctl",
-  'MAILBOX'       => "$config{baseDir}/bin/zmmailboxctl",
+  'MAILBOX'       => "$config{baseDir}/bin/zmstorectl",
 );
 
 my $commands = {
@@ -322,7 +322,7 @@ sub getServerConfig {
       $state->{serviceconfig}->{$v} = $k;
       # parent services
       if ($v eq "mailbox") {
-        $state->{serviceconfig}->{'tomcat'} = $k;
+        $state->{serviceconfig}->{'mailboxd'} = $k;
       } elsif ($v eq "mta") {
         $state->{serviceconfig}->{'sasl'} = $k;
       } 
@@ -773,6 +773,18 @@ sub rewriteConfig {
         } else {
           $rep = 0;
         }
+      } elsif ($sr =~ m/^truefalse/) {
+        my ($cmd, $key) = ($sr =~ m/truefalse ([^:]+):(\S+)/);
+        $val = lookUpConfig($cmd, $key);
+        logMsg(5, "$cmd $key $val");
+        if (lc($val) eq "true" || lc($val) eq "yes") {
+          $rep = "true";
+        } elsif (lc($val) eq "false" || lc($val) eq "no" || $val eq "") {
+          $rep = "false";
+        } else {
+          $rep = "true";
+        }
+        logMsg(5, "$cmd $key $rep");
       } elsif ($sr =~ m/^range/) {
         my ($cmd, $key, $lo, $hi) = 
           ($sr =~ m/range ([^:]+):(\S+)\s+(\S+)\s+(\S+)/);
@@ -809,7 +821,10 @@ sub rewriteConfig {
         }
       } else {
         $rep=lookUpConfig("VAR", $sr);
+        $rep=lookUpConfig("LOCAL", $sr)
+          if ($rep eq "");
       }
+      logMsg(5, "Substituting $sr=$rep");
       my $qr = quotemeta($sr);
       $sline =~ s/%%$qr%%/$rep/;
     }
@@ -851,7 +866,7 @@ sub processIsNotRunning($) {
 sub controlProcess($$) {
   my ($processname,$action_value) = @_;
   my $process = uc($processname);
-  my $rc;
+  my $rc=0;
   unless ( $action_value >= -1 || $action_value <= 2) {
     logMsg(1, "State must be -1,0,1");
     return;
@@ -878,24 +893,8 @@ sub controlProcess($$) {
   my $lvl = ($action eq "status" ? 4 : 3);
   my $rewrite = ($action =~ m/status|stop/ ? "norewrite" : "");
   logMsg($lvl,"CONTROL $process: $exe{$process} $action $rewrite");
-  #$rc = 0xffff & system("$exe{$process} $action $rewrite > /dev/null 2>&1"); 
-  if ($action eq "restart") {
-    system("$exe{$process} stop $rewrite >> /tmp/zmmtaconfig.debug");
-    $rc = 0xffff & system("$exe{$process} start $rewrite >> /tmp/zmmtaconfig.debug");
-  } else {
-    $rc = 0xffff & system("$exe{$process} $action $rewrite >> /tmp/zmmtaconfig.debug");
-  }
+  $rc = 0xffff & system("$exe{$process} $action $rewrite > /dev/null 2>&1");
 
-  my $msg = printf "$exe{$process} $action $rewrite returned %#04x:", $rc;
-  logMsg(4, "$msg");
-
-  if ($rc == 0xff00) {
-    logMsg(4, "$processname failed: $!");
-  } elsif (($rc & 0xff) == 0) {
-    $rc >>= 8;
-    logMsg(4, "$exe{$process} returned non-zero status $rc");
-  }
-    
   # update the state information
   if ($action eq "stop" && $rc == 0) {
     logMsg(2, "$processname was stopped removing from current state");
@@ -906,8 +905,9 @@ sub controlProcess($$) {
     $state->{current}->{services}->{$processname} = "started";
     print Dumper $state->{current}->{services};
   }
-  logMsg(2, "Failed to $action $processname rc=$rc")
-    if ($rc != 0 && $action ne "status" );
+
+  logMsg(2, "Failed to $action $processname rc=$rc") 
+    if ($rc != 0 && $action ne "status");
   return $rc;
 }
 

@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005, 2007 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -63,7 +63,7 @@ $d->end();
 
 {
     print "\nOUTGOING XML:\n-------------\n";
-    my $out =  $d->to_string("pretty"),"\n";
+    my $out =  $d->to_string("pretty")."\n";
     $out =~ s/ns0\://g;
     print $out."\n";
 }
@@ -94,7 +94,7 @@ if ($token ne "") {
 $d->end(); # 'SyncRequest';'
 
 print "\nOUTGOING XML:\n-------------\n";
-my $out =  $d->to_string("pretty"),"\n";
+my $out =  $d->to_string("pretty")."\n";
 $out =~ s/ns0\://g;
 print $out."\n";
 
@@ -103,7 +103,7 @@ my $response;
 $response = $SOAP->invoke($url, $d->root(), $context);
 
 print "\nRESPONSE:\n--------------\n";
-$out =  $response->to_string("pretty"),"\n";
+$out =  $response->to_string("pretty")."\n";
 $out =~ s/ns0\://g;
 print $out."\n";
 

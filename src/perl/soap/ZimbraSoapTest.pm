@@ -15,7 +15,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2006 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2006, 2007 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -114,6 +114,12 @@ sub invokeAdmin
 {
     my ($self, $document) = @_;
     return $self->soap()->invoke($self->adminUrl(), $document, $self->{CONTEXT}, $self->{OPTIONS});
+}
+
+sub setAuthContext
+{
+  my ($self, $authtoken, $sessionId, $opts) = @_;
+  $self->{CONTEXT} = $self->soap()->zimbraContext($authtoken, $sessionId, 1, $opts);
 }
 
 
