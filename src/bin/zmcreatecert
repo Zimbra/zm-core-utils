@@ -80,9 +80,13 @@ importCA() {
 	echo "** Importing CA"
 	echo
 
-	keytool -import -noprompt -keystore \
-		${CACERTS} -file \
-		${BASE}/ca/ca.pem -alias my_ca -storepass changeit
+  keytool -list -noprompt -alias my_ca -keystore ${CACERTS} -storepass ${tomcat_truststore_password} > /dev/null 2>&1
+  if [ $? = 0 ]; then
+    keytool -delete -alias my_ca -noprompt -keystore ${CACERTS} -storepass ${tomcat_truststore_password} > /dev/null 2>&1
+  fi
+
+	keytool -import -noprompt -keystore ${CACERTS} -file ${BASE}/ca/ca.pem \
+    -alias my_ca -storepass ${tomcat_truststore_password}
 }
 
 createKeyStore() {
@@ -94,7 +98,7 @@ createKeyStore() {
 
 	keytool -validity 730 -genkey -dname "CN=$hostname, OU=Zimbra, O=Zimbra, L=NA, S=NA, C=US" \
 		-alias tomcat -keyalg RSA -keysize 1024 -keystore ${TCONF}/keystore \
-		-storetype JKS -storepass zimbra -keypass zimbra
+		-storetype JKS -storepass ${tomcat_keystore_password} -keypass ${tomcat_keystore_password}
 
 }
 
@@ -109,7 +113,7 @@ createCertReq() {
 
 	keytool -certreq -keyalg RSA -alias tomcat -file \
 		${BASE}/server/tomcat.csr -keystore \
-		${TCONF}/keystore -storepass zimbra
+		${TCONF}/keystore -storepass ${tomcat_keystore_password}
 
 	cp ${BASE}/server/tomcat.csr /tmp/tomcat.csr.$$
 	cat /tmp/tomcat.csr.$$ | sed -e \
