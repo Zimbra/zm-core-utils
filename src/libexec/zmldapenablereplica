@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005, 2006 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -70,11 +70,7 @@ verifyLdap() {
 
 enableSyncProv() {
 	echo -n "Enabling sync provider..."
-	sed -i.pre-replica -e '/syncprov/ s/#//g' -e '/accesslog/ s/###//g' ${zimbra_home}/conf/slapd.conf.in
-	mkdir -p ${zimbra_home}/openldap-data/accesslog/db
-	mkdir -p ${zimbra_home}/openldap-data/accesslog/logs
-	cp -p ${zimbra_home}/openldap/etc/openldap/master-accesslog.conf ${zimbra_home}/conf/
-	cp -p ${zimbra_home}/openldap/etc/openldap/master-accesslog-overlay.conf ${zimbra_home}/conf/
+	sed -i.pre-replica -e '/syncprov/ s/#//g' ${zimbra_home}/conf/slapd.conf.in
 	echo "succeeded"
 }
 
@@ -122,10 +118,6 @@ syncrepl rid=${ldap_replica_rid}
 	bindmethod=simple
 	binddn="uid=zimbra,cn=admins,cn=zimbra"
 	credentials=${ldap_root_password}
-	logbase="cn=accesslog"
-	logfilter="(&(objectClass=auditWriteObject)(reqResult=0))"
-	syncdata="accesslog"
-
 updateref  ${ldap_master_url}
 EOF
 

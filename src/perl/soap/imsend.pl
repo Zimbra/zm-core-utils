@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005, 2007 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -35,59 +35,73 @@ use strict;
 use lib '.';
 
 use LWP::UserAgent;
-use Getopt::Long;
-use ZimbraSoapTest;
+
 use XmlElement;
 use XmlDoc;
 use Soap;
 
-# specific to this app
-my ($to, $msg, $typing);
+my $userId;
+my $to;
+my $msg;
 
-#standard options
-my ($user, $pw, $host, $help);  #standard
-
-GetOptions("u|user=s" => \$user,
-           "pw=s" => \$pw,
-           "h|host=s" => \$host,
-           "help|?" => \$help,
-           # add specific params below:
-           "typing"=>\$typing,
-           "t=s"=>\$to,
-           "m=s"=>\$msg,
-          );
-
-if (!defined($user) || !defined($to)) {
-    print "USAGE: imsend -u USER [-typing] -t (ADDRESS|THREAD) [-m MESSAGE]\n";
+if (defined $ARGV[2] && $ARGV[2] ne "") {
+    $userId = shift(@ARGV);
+    $to = shift(@ARGV);
+    $msg = shift(@ARGV);
+} else {
+    print "USAGE: imsend USERID ADDRESS|THREAD MESSAGE\n";
     exit 1;
 }
 
-my $z = ZimbraSoapTest->new($user, $host, $pw);
-$z->doStdAuth();
+my $ACCTNS = "urn:zimbraAccount";
+my $MAILNS = "urn:zimbraIM";
 
+my $url = "http://localhost:7070/service/soap/";
+
+my $SOAP = $Soap::Soap12;
 my $d = new XmlDoc;
-$d->start('IMSendMessageRequest', $Soap::ZIMBRA_IM_NS);
+$d->start('AuthRequest', $ACCTNS);
+$d->add('account', undef, { by => "name"}, $userId);
+$d->add('password', undef, undef, "test123");
+$d->end();
+
+my $authResponse = $SOAP->invoke($url, $d->root());
+
+print "AuthResponse = ".$authResponse->to_string("pretty")."\n";
+
+my $authToken = $authResponse->find_child('authToken')->content;
+print "authToken($authToken)\n";
+
+my $sessionId = $authResponse->find_child('sessionId')->content;
+print "sessionId = $sessionId\n";
+
+my $context = $SOAP->zimbraContext($authToken, $sessionId);
+
+my $contextStr = $context->to_string("pretty");
+print("Context = $contextStr\n");
+
+$d = new XmlDoc;
+$d->start('IMSendMessageRequest', $MAILNS);
 
 if ($to =~ m/.*\@.*/) {
-    $d->start('message', undef, { "addr" => $to} );
+    $d->start('message', $MAILNS, { "addr" => $to} );
 } else {
-    $d->start('message', undef, { "thread" => $to} );
+    $d->start('message', $MAILNS, { "thread" => $to} );
 }
 
-if (defined($msg)) {
-  $d->add("body", undef, undef, $msg);
-}
-
-if (defined($typing)) {
-  $d->add("typing");
-}
+$d->add("body", $MAILNS, undef, $msg);
 
 $d->end(); #message
 $d->end(); #request
 
+print "\nOUTGOING XML:\n-------------\n";
+my $out =  $d->to_string("pretty")."\n";
+$out =~ s/ns0\://g;
+print $out."\n";
 
-my $response = $z->invokeMail($d->root());
-
-print "REQUEST:\n-------------\n".$z->to_string_simple($d);
-print "RESPONSE:\n--------------\n".$z->to_string_simple($response);
+my $response = $SOAP->invoke($url, $d->root(), $context);
+print "\nRESPONSE:\n--------------\n";
+$out =  $response->to_string("pretty")."\n";
+$out =~ s/ns0\://g;
+print $out."\n";
 
