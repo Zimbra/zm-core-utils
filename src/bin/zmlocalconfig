@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005, 2006 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -38,11 +38,6 @@ else
     java=java
 fi
 
-case "`uname`" in
-CYGWIN*) PATHSEP=";";;
-*) PATHSEP=":";;
-esac
-
-CP=${ZMROOT}/lib/jars/zimbracommon.jar${PATHSEP}${ZMROOT}/lib/jars/commons-logging.jar${PATHSEP}${ZMROOT}/lib/jars/commons-cli-2.0.jar${PATHSEP}${ZMROOT}/lib/jars/dom4j-1.5.jar${PATHSEP}${ZMROOT}/lib/jars/log4j-1.2.8.jar${PATHSEP}${ZMROOT}/lib/jars/commons-httpclient-2.0.1.jar
+CP=${ZMROOT}/lib/jars/zimbracommon.jar:${ZMROOT}/lib/jars/commons-logging.jar:${ZMROOT}/lib/jars/commons-cli-2.0.jar:${ZMROOT}/lib/jars/dom4j-1.5.jar:${ZMROOT}/lib/jars/log4j-1.2.8.jar:${ZMROOT}/lib/jars/commons-httpclient-2.0.1.jar
 exec ${java} -client -Dzimbra.home="${ZMROOT}" -cp "$CP" \
     com.zimbra.common.localconfig.Main "$@"

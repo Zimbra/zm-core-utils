@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2004, 2005, 2006 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -49,7 +49,7 @@ case "$1" in
       kill -0 $pid 2> /dev/null
       if [ $? = 0 ]; then
         echo "mysqld_safe already running with pid $pid"
-        exit 0
+        exit 1
       fi
     fi
     cd ${mysql_directory}; \
