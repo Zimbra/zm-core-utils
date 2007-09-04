@@ -24,6 +24,9 @@
 # ***** END LICENSE BLOCK *****
 # 
 
+source /opt/zimbra/bin/zmshutil || exit 1
+zmsetvars
+
 BASE=/opt/zimbra/ssl/ssl
 
 JAVA_HOME=/opt/zimbra/java
@@ -111,7 +114,7 @@ importCert() {
 
 	if [ $APP = "mailbox" ]; then
 		keytool -import -alias tomcat -keystore ${TCONF}/keystore \
-			-trustcacerts -file ${CERTFILE} -storepass zimbra
+			-trustcacerts -file ${CERTFILE} -storepass ${tomcat_keystore_password}
         elif [ $APP = "ldap" ]; then
           cp -f $CERTFILE ${CONF}/slapd.crt
           cp -f $KEYFILE ${CONF}/slapd.key
