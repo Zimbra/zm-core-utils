@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005, 2006 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -76,7 +76,6 @@ if [ -L ${zimbra_home}/dspam ]; then
   chown ${root_user}:${root_group} ${zimbra_home}/dspam-*
   chown -R ${root_user}:${root_group} ${zimbra_home}/dspam/*
 fi
-chown  root:$ROOTGROUP /opt/zimbra/jetty-*
 
 if [ -L ${zimbra_home}/httpd ]; then
   chown ${root_user}:${root_group} ${zimbra_home}/httpd-*
