@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2005, 2006 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -34,7 +34,7 @@ use strict;
 #
 my %SIMPLE_COMMANDS =
     (
-     "start mailbox"    => "/opt/zimbra/bin/zmstorectl start",
+     "start mailbox"    => "/opt/zimbra/bin/zmmailboxctl start",
      "start ldap"       => "/opt/zimbra/bin/ldap start",
      "start mta"        => "/opt/zimbra/bin/zmmtactl start",
      "start antispam"   => "/opt/zimbra/bin/zmantispamctl start",
@@ -42,7 +42,7 @@ my %SIMPLE_COMMANDS =
      "start snmp"       => "/opt/zimbra/bin/zmswatchctl start",
      "start spell"      => "/opt/zimbra/bin/zmspellctl start",
      
-     "stop mailbox"     => "/opt/zimbra/bin/zmstorectl stop",
+     "stop mailbox"     => "/opt/zimbra/bin/zmmailboxctl stop",
      "stop ldap"        => "/opt/zimbra/bin/ldap stop",
      "stop mta"         => "/opt/zimbra/bin/zmmtactl stop",
      "stop antispam"    => "/opt/zimbra/bin/zmantispamctl stop",
@@ -57,18 +57,13 @@ my %SIMPLE_COMMANDS =
      "msgtrace"         => "/opt/zimbra/bin/zmmsgtrace",
      "flushqueue"       => "/opt/zimbra/postfix/sbin/postqueue -f",
      "showqueue"        => "/opt/zimbra/postfix/sbin/postqueue -p",
-	   "slapcat"          => "/opt/zimbra/openldap/sbin/slapcat -f /opt/zimbra/conf/slapd.conf -b ''",
-     #"zmcertmgr"        => "/opt/zimbra/bin/zmcertmgr  &> /tmp/cert.log.`date +%Y%m%d%H%M%S`",
+     "slapcat"          => "/opt/zimbra/openldap/sbin/slapcat -f /opt/zimbra/conf/slapd.conf -b ''",
      "zmqstat all"      => "sudo /opt/zimbra/libexec/zmqstat",
      "zmqstat incoming" => "sudo /opt/zimbra/libexec/zmqstat incoming",
      "zmqstat hold"     => "sudo /opt/zimbra/libexec/zmqstat hold",
      "zmqstat active"   => "sudo /opt/zimbra/libexec/zmqstat active",
      "zmqstat deferred" => "sudo /opt/zimbra/libexec/zmqstat deferred",
      "zmqstat corrupt" => "sudo /opt/zimbra/libexec/zmqstat corrupt",
-          
-     "zmcollectconfigfiles" => "tar cv /opt/zimbra/conf | gzip -cf",
-     "zmcollectldapzimbra" => "/opt/zimbra/openldap/sbin/slapcat -f /opt/zimbra/conf/slapd.conf -b '' -s cn=zimbra | gzip -cf",      
-     
     );
 
 my %REGEX_CHECKED_COMMANDS =
@@ -77,29 +72,13 @@ my %REGEX_CHECKED_COMMANDS =
                      regex => '(hold|release|requeue|delete)\s+(incoming|deferred|corrupt|active|maildrop|hold)\s+[A-FL0-9,]+', # A-F allows hex, L allows ALL
                      program => "/opt/zimbra/libexec/zmqaction"
                     },
-     "zmbackupldap" => {
-                     regex => '[a-zA-Z0-9\\/\\.\\-_:@ ]*',
-                         # typcial back destination path:
-                         # alphanumeric, slash, dot, dash, underscore, colon, at, space
-                     program => "/opt/zimbra/libexec/zmbackupldap"
-                     },
-     "zmcertmgr" => {
-     				regex => '(view|gencsr|install|viewcsr|verifycrt)\s*(mailbox|server|self|comm)?\s*.*',
-     				program => "sudo /opt/zimbra/bin/zmcertmgr"
-     				#Need to run as sudo in Production mode
-     				},                
     );
 
 my %allhosts = ();
 my $gothosts = 0;
 
-sub trim($) {
-    my $val = shift;
-    $val =~ s/[\r\n]*$//;  # Windows-safe
-    return $val;
-}
-
-my $thishost = trim(`/opt/zimbra/bin/zmlocalconfig -m nokey zimbra_server_hostname`);
+my $thishost = `/opt/zimbra/bin/zmlocalconfig -m nokey zimbra_server_hostname`;
+chomp $thishost;
 
 sub runRemoteCommand {
     my $host = shift;
@@ -153,14 +132,14 @@ sub runCommand {
     }
 
     if (open(COMMAND, "$cmdstr |")) {
-       if (($command ne "zmqstat") && ($command ne "zmcollectconfigfiles") && ($command ne "zmcollectldapzimbra")) {
+        if ($command ne "zmqstat") {
             print "STARTCMD: $host $cmdstr\n";
         }
         while (<COMMAND>) {
             print $_;
         }
         close COMMAND;
-        if (($command ne "zmqstat") && ($command ne "zmcollectconfigfiles")  && ($command ne "zmcollectldapzimbra")) {
+        if ($command ne "zmqstat") {
             print "ENDCMD: $host $cmdstr\n";
         }
     } else {
@@ -178,14 +157,14 @@ sub getHostsByService {
         open CMD, "/opt/zimbra/bin/zmprov -l gas |" or return undef;
         my @hl = <CMD>;
         close CMD;
+        chomp @hl;
         foreach my $h (@hl) {
-            $h = trim($h);
             alarm(120);
             open CMD, "/opt/zimbra/bin/zmprov -l gs $h | grep zimbraServiceEnabled | sed -e 's/zimbraServiceEnabled: //'|" or return undef;
             my @sl = <CMD>;
             close CMD;
+            chomp @sl;
             foreach my $s (@sl) {
-                $s = trim($s);
                 $allhosts{$h}{$s} = $s;
             }
             alarm(0);
@@ -261,11 +240,9 @@ sub handleALRM {
 $| = 1;
 
 $SIG{ALRM} = \&handleALRM;
-#open(LOG, ">/opt/zimbra/log/zmrcd.log");
-#open(STDERR, ">&LOG");
 
 while (<>) {
-    trim($_);
+    chomp;
     my ($host, $command, $args) = split (' ', $_, 3);
 
     if ($host eq "?") {
@@ -283,7 +260,6 @@ while (<>) {
     foreach my $h (@$hostlist) {
         runCommand ($h, $command, $args);
     }
-   # close(LOG);
     exit 0;
 
 }

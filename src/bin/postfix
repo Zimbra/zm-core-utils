@@ -16,7 +16,7 @@
 # The Original Code is: Zimbra Collaboration Suite Server.
 # 
 # The Initial Developer of the Original Code is Zimbra, Inc.
-# Portions created by Zimbra are Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
+# Portions created by Zimbra are Copyright (C) 2004, 2005, 2006 Zimbra, Inc.
 # All Rights Reserved.
 # 
 # Contributor(s):
@@ -58,13 +58,8 @@ if [ "x$1" = "xstart" -o "x$1" = "xreload" ]; then
 	if [ x$2 = "x" ]; then
 		rewriteconfig
 	fi
-  postfix_header_checks=${zimbra_home}/conf/postfix_header_checks
-  TEMPFILE=`mktemp ${postfix_header_checks}.XXXXX` && cp -f ${postfix_header_checks} ${TEMPFILE}
-  if [ $? = 0 -a -s "$TEMPFILE" ]; then
-	  ${zimbra_home}/postfix-${postfix_version}/sbin/postmap ${TEMPFILE} && mv -f ${TEMPFILE}.db ${postfix_header_checks}.db
-    rm -f ${TEMPFILE}
-  fi
-    
+	${zimbra_home}/postfix-${postfix_version}/sbin/postmap ${zimbra_home}/conf/postfix_header_checks
+	#sudo ${zimbra_home}/postfix-${postfix_version}/sbin/postsuper -r ALL
 fi
 
 if [ -f /etc/aliases ]; then
