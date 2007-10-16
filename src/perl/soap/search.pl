@@ -1,9 +1,8 @@
 #!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2004, 2005, 2006 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -27,7 +25,6 @@ use ZimbraSoapTest;
 
 # specific to this app
 my ($searchString, $offset, $prevId, $prevSortVal, $endSortVal, $limit, $fetch, $sortBy, $types, $convId, $tz, $locale, $field);
-my ($calExpandInstStart, $calExpandInstEnd);
 $offset = 0;
 $limit = 5;
 $fetch = 0;
@@ -37,25 +34,23 @@ $types = "message";
 #standard options
 my ($user, $pw, $host, $help); #standard
 GetOptions("u|user=s" => \$user,
+           "t|types=s" => \$types,
            "pw=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
            # add specific params below:
-           "t|types=s" => \$types,
            "conv=i" => \$convId,
            "query=s" => \$searchString,
            "sort=s" => \$sortBy,
            "offset=i" => \$offset,
            "limit=i" => \$limit,
-           "fetch=s" => \$fetch,
+           "fetch" => \$fetch,
            "pi=s" => \$prevId,
            "ps=s" => \$prevSortVal,
            "es=s" => \$endSortVal,
            "tz=s" => \$tz,
            "locale=s" => \$locale,
            "field=s" => \$field,
-           "calExpandInstStart=s" => \$calExpandInstStart,
-           "calExpandInstEnd=s" => \$calExpandInstEnd,
           );
 
 
@@ -63,7 +58,7 @@ GetOptions("u|user=s" => \$user,
 if (!defined($user) || !defined($searchString) || defined($help)) {
     my $usage = <<END_OF_USAGE;
     
-USAGE: $0 -u USER -q QUERYSTR [-s SORT] [-t TYPES] [-o OFFSET] [-l LIMIT] [-fetch FETCH] [-pi PREV-ITEM-ID -ps PREV-SORT-VALUE] [-es END-SORT-VALUE] [-conv CONVID] [-tz TZID] [-l LOCALE] [-calExpandInstStart STARTTIME -calExpandInstEnd ENDTIME]
+USAGE: $0 -u USER -q QUERYSTR [-s SORT] [-t TYPES] [-o OFFSET] [-l LIMIT] [-f FETCH] [-pi PREV-ITEM-ID -ps PREV-SORT-VALUE] [-es END-SORT-VALUE] [-c CONVID] [-tz TZID] [-l LOCALE]
     SORT = dateDesc|dateAsc|subjDesc|subjAsc|nameDesc|nameAsc|score
     TYPES = message|conversation|contact|appointment
 END_OF_USAGE
@@ -82,12 +77,6 @@ my %args =  ( 'types' => $types,
               'limit' => $limit,
               'fetch' => $fetch
             );
-
-if (defined($calExpandInstStart)) {
-  $args{'calExpandInstStart'} = $calExpandInstStart;
-  $args{'calExpandInstEnd'} = $calExpandInstEnd;
-}
-  
 
 if (defined($convId)) {
   $searchName = "SearchConvRequest";

@@ -1,7 +1,6 @@
 #!/bin/bash 
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,12 +11,10 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 # This may not be there, but we don't want to break the zimbramta package
 # if it's installed.
-shopt -s nullglob
 
 root_user=root
 zimbra_home=/opt/zimbra

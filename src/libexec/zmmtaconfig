@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -48,7 +46,7 @@ my %config = (
   watchdog    => 1,
   wd_all      => 0,
   debug       => 0,
-  interval    => 60,
+  interval    => 120,
   baseDir     => "/opt/zimbra",
   logStatus   => ( 4 => "Debug", 3 => "Info", 2 => "Warning", 1 => "Error", 0 => "Fatal"),
 );
@@ -61,7 +59,7 @@ $config{interval}   = 10 if $config{debug};
 my $sectionMap = { 
   sasl       => "mta", 
   webxml     => "mailbox",
-  nginx  => "imapproxy"
+  perdition  => "imapproxy"
 };
 my $state = {
   firstRun      => 1,
@@ -103,12 +101,12 @@ my %exe = (
   'ANTISPAM'      => "$config{baseDir}/bin/zmamavisdctl",
   'ANTIVIRUS'     => "$config{baseDir}/bin/zmclamdctl",
   'SASL'          => "$config{baseDir}/bin/zmsaslauthdctl",
-  'MAILBOXD'      => "$config{baseDir}/bin/zmmailboxdctl",
+  'TOMCAT'        => "$config{baseDir}/bin/tomcat",
   'SPELL'         => "$config{baseDir}/bin/zmspellctl",
   'LDAP'          => "$config{baseDir}/bin/ldap",
   'SNMP'          => "$config{baseDir}/bin/zmswatchctl",
   'LOGGER'        => "$config{baseDir}/bin/zmloggerctl",
-  'MAILBOX'       => "$config{baseDir}/bin/zmstorectl",
+  'MAILBOX'       => "$config{baseDir}/bin/zmmailboxctl",
 );
 
 my $commands = {
@@ -314,7 +312,7 @@ sub getServerConfig {
       $state->{serviceconfig}->{$v} = $k;
       # parent services
       if ($v eq "mailbox") {
-        $state->{serviceconfig}->{'mailboxd'} = $k;
+        $state->{serviceconfig}->{'tomcat'} = $k;
       } elsif ($v eq "mta") {
         $state->{serviceconfig}->{'sasl'} = $k;
       } 
@@ -598,7 +596,7 @@ sub compileActions {
       next unless (exists $state->{forcedconfig}->{$section->{name}});
     }
 
-    if ($section->{changed} or exists $state->{forcedconfig}->{$section->{name}}) {
+    if ($section->{changed} || exists $state->{forcedconfig}->{$section->{name}}) {
       logMsg(5, "Section $section->{name} changed compiling rewrites");
       foreach my $rewrite (keys %{$section->{config}->{rewrites}}) {
         logMsg(5, "Adding rewrite $rewrite");
@@ -765,18 +763,6 @@ sub rewriteConfig {
         } else {
           $rep = 0;
         }
-      } elsif ($sr =~ m/^truefalse/) {
-        my ($cmd, $key) = ($sr =~ m/truefalse ([^:]+):(\S+)/);
-        $val = lookUpConfig($cmd, $key);
-        logMsg(5, "$cmd $key $val");
-        if (lc($val) eq "true" || lc($val) eq "yes") {
-          $rep = "true";
-        } elsif (lc($val) eq "false" || lc($val) eq "no" || $val eq "") {
-          $rep = "false";
-        } else {
-          $rep = "true";
-        }
-        logMsg(5, "$cmd $key $rep");
       } elsif ($sr =~ m/^range/) {
         my ($cmd, $key, $lo, $hi) = 
           ($sr =~ m/range ([^:]+):(\S+)\s+(\S+)\s+(\S+)/);
@@ -813,10 +799,7 @@ sub rewriteConfig {
         }
       } else {
         $rep=lookUpConfig("VAR", $sr);
-        $rep=lookUpConfig("LOCAL", $sr)
-          if ($rep eq "");
       }
-      logMsg(5, "Substituting $sr=$rep");
       my $qr = quotemeta($sr);
       $sline =~ s/%%$qr%%/$rep/;
     }
@@ -858,7 +841,7 @@ sub processIsNotRunning($) {
 sub controlProcess($$) {
   my ($processname,$action_value) = @_;
   my $process = uc($processname);
-  my $rc=0;
+  my $rc;
   unless ( $action_value >= -1 || $action_value <= 2) {
     logMsg(1, "State must be -1,0,1");
     return;
@@ -885,8 +868,24 @@ sub controlProcess($$) {
   my $lvl = ($action eq "status" ? 4 : 3);
   my $rewrite = ($action =~ m/status|stop/ ? "norewrite" : "");
   logMsg($lvl,"CONTROL $process: $exe{$process} $action $rewrite");
-  $rc = 0xffff & system("$exe{$process} $action $rewrite > /dev/null 2>&1");
+  #$rc = 0xffff & system("$exe{$process} $action $rewrite > /dev/null 2>&1"); 
+  if ($action eq "restart") {
+    system("$exe{$process} stop $rewrite >> /tmp/zmmtaconfig.debug");
+    $rc = 0xffff & system("$exe{$process} start $rewrite >> /tmp/zmmtaconfig.debug");
+  } else {
+    $rc = 0xffff & system("$exe{$process} $action $rewrite >> /tmp/zmmtaconfig.debug");
+  }
 
+  my $msg = printf "$exe{$process} $action $rewrite returned %#04x:", $rc;
+  logMsg(4, "$msg");
+
+  if ($rc == 0xff00) {
+    logMsg(4, "$processname failed: $!");
+  } elsif (($rc & 0xff) == 0) {
+    $rc >>= 8;
+    logMsg(4, "$exe{$process} returned non-zero status $rc");
+  }
+    
   # update the state information
   if ($action eq "stop" && $rc == 0) {
     logMsg(2, "$processname was stopped removing from current state");
@@ -897,9 +896,8 @@ sub controlProcess($$) {
     $state->{current}->{services}->{$processname} = "started";
     print Dumper $state->{current}->{services};
   }
-
-  logMsg(2, "Failed to $action $processname rc=$rc") 
-    if ($rc != 0 && $action ne "status");
+  logMsg(2, "Failed to $action $processname rc=$rc")
+    if ($rc != 0 && $action ne "status" );
   return $rc;
 }
 

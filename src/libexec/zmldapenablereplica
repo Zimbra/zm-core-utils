@@ -1,7 +1,6 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -30,6 +28,7 @@ zmsetvars -f\
 	ldap_master_url \
 	ldap_port \
 	ldap_root_password \
+  ldap_replica_rid \
 	zimbra_ldap_userdn
 
 ldap_master_host=`echo ${ldap_master_url} | sed -e 's|ldaps*://\([^:]*\):*.*|\1|'`
@@ -82,7 +81,9 @@ createLdapConfig() {
 		echo "ERROR - LDAP config creation failed - exiting"
 	fi
 
-	ldap_replica_rid=100
+  if [ x"${ldap_replica_rid}" = "x" ]; then
+    ldap_replica_rid=100
+  fi
 
 	if [ -f "/opt/zimbra/lib/conf/zimbra-ext.schema" ]; then
 		plat=`/opt/zimbra/libexec/get_plat_tag.sh`
@@ -109,7 +110,7 @@ syncrepl rid=${ldap_replica_rid}
 	schemachecking=off
 	searchbase=""
 	bindmethod=simple
-	binddn=${zimbra_ldap_userdn}
+	binddn="uid=zimbra,cn=admins,cn=zimbra"
 	credentials=${ldap_root_password}
 	logbase="cn=accesslog"
 	logfilter="(&(objectClass=auditWriteObject)(reqResult=0))"
@@ -121,6 +122,34 @@ EOF
 	/opt/zimbra/libexec/zmconfigure /opt/zimbra/conf/slapd.conf.in /opt/zimbra/conf/slapd.conf
 
 	echo "succeeded"
+}
+
+createReplicaUser() {
+	echo -n "Setting up replication ldap user..."
+
+	root_sha=`${zimbra_home}/openldap/sbin/slappasswd -s ${ldap_root_password}`
+	
+	cat > /tmp/replicauser.ldif <<EOF
+dn: uid=zimbrareplication,cn=admins,cn=zimbra
+uid: zimbrareplication
+objectclass: zimbraAccount
+objectclass: organizationalPerson
+cn: zimbrareplication
+sn: zimbrareplication
+zimbraAccountStatus: active
+zimbraIsAdminAccount: TRUE
+zimbraId: e0fafd89-1360-11d9-8661-000a95d98ef3
+description: The zimbra replication account
+userPassword: ${root_sha}
+EOF
+
+	${zimbra_home}/openldap/bin/ldapadd -w ${ldap_root_password} -D ${zimbra_ldap_userdn} \
+		-x -f /tmp/replicauser.ldif -H ${ldap_master_url} > /dev/null 2>&1
+
+	# Ignore failures, user may already exist?
+	echo "succeeded"
+	
+	/bin/rm -f /tmp/replicauser.ldif
 }
 
 enableLdapService() {
@@ -227,6 +256,7 @@ fi
 verifyLdapInstalled
 verifyLdap
 createLdapConfig
+createReplicaUser
 enableLdapService
 #stopZimbra
 #stopRemoteZimbra

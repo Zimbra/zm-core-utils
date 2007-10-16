@@ -1,7 +1,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2006 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -104,12 +104,6 @@ sub invokeAdmin
 {
     my ($self, $document) = @_;
     return $self->soap()->invoke($self->adminUrl(), $document, $self->{CONTEXT}, $self->{OPTIONS});
-}
-
-sub setAuthContext
-{
-  my ($self, $authtoken, $sessionId, $opts) = @_;
-  $self->{CONTEXT} = $self->soap()->zimbraContext($authtoken, $sessionId, 1, $opts);
 }
 
 
