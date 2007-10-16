@@ -1,9 +1,8 @@
 #!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2007 Zimbra, Inc.
+# Copyright (C) 2005, 2006 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -93,14 +91,14 @@ $d->start('m', undef, undef, undef);
     
 # $d->add('e', undef,
 #         {
-#             'a' => "user2\@domain.com",
+#             'a' => "user2\@curple.com",
 #             't' => "t"
 #             } );
 
 # if ($mode < 2) {
 #     $d->add('e', undef,
 #             {
-#                 'a' => "user3\@domain.com",
+#                 'a' => "user3\@curple.com",
 #                 't' => "t"
 #                 } );
 
@@ -130,16 +128,16 @@ $d->add('s', undef, { 'd', => $startTime, });
 $d->add('e', undef, { 'd', => $endTime, });
 
 
-    $d->add('or', undef, { 'd' => "user1", 'a' => "user1\@example.zimbra.com" } );
+    $d->add('or', undef, { 'd' => "user1", 'a' => "user1\@timbre.example.zimbra.com" } );
 
     $d->add('at', undef, { 'd' => "user2",
-                           'a' => "user2\@example.zimbra.com",
+                           'a' => "user2\@timbre.example.zimbra.com",
                            'role' => "REQ",
                            'ptst' => "NE",
                        });
 
     $d->add('at', undef, { 'd' => "user3",
-                           'a' => "user3\@domain.com",
+                           'a' => "user3\@curple.com",
                            'role' => "REQ",
                            'ptst' => "NE",
                        });

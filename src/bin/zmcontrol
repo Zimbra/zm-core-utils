@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -55,12 +53,12 @@ my %allservices = (
 	"antivirus" => "/opt/zimbra/bin/zmantivirusctl", 
 	"antispam" => "/opt/zimbra/bin/zmantispamctl", 
 	"mta" => "/opt/zimbra/bin/zmmtactl", 
-	"mailbox" => "/opt/zimbra/bin/zmstorectl", 
+	"mailbox" => "/opt/zimbra/bin/zmmailboxctl", 
 	"logger" => "/opt/zimbra/bin/zmloggerctl", 
 	"snmp" => "/opt/zimbra/bin/zmswatchctl", 
 	"ldap" => "/opt/zimbra/bin/ldap",
 	"spell" => "/opt/zimbra/bin/zmspellctl",
-	"imapproxy" => "/opt/zimbra/bin/zmproxyctl",
+	"imapproxy" => "/opt/zimbra/bin/zmperditionctl",
 	"stats" => "/opt/zimbra/bin/zmstatctl",
 );
 
@@ -69,7 +67,7 @@ my %rewrites = (
 	"antispam" => "antispam", 
 	"mta" => "antispam antivirus mta sasl", 
 	"mailbox" => "webxml mailbox", 
-	"imapproxy" => "imapproxy",
+	"perdition" => "perdition",
 );
 
 my %GlobalOpts = ();

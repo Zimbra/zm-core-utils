@@ -1,0 +1,151 @@
+#!/bin/bash
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# 
+# The contents of this file are subject to the Yahoo! Public License
+# Version 1.0 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
+# 
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# ***** END LICENSE BLOCK *****
+# 
+
+source /opt/zimbra/bin/zmshutil || exit 1
+zmsetvars
+
+CONF=/opt/zimbra/conf
+TCONF=/opt/zimbra/tomcat/conf
+B=/opt/zimbra/ssl
+BASE=${B}/ssl
+
+JAVA_HOME=${zimbra_java_home}
+if [ -f "${JAVA_HOME}/lib/security/cacerts" ]; then
+	CACERTS=${JAVA_HOME}/lib/security/cacerts
+else
+	CACERTS=${JAVA_HOME}/jre/lib/security/cacerts
+fi
+
+
+TOMCAT=/opt/zimbra/tomcat/conf
+
+rm -rf ${BASE}/newCA
+mkdir -p ${BASE}/ca
+mkdir -p ${BASE}/newCA/newcerts
+touch ${BASE}/newCA/index.txt
+mkdir -p ${BASE}/cert
+mkdir -p ${BASE}/server
+
+mkdir -p ${TCONF}
+
+hostname=${zimbra_server_hostname}
+
+if [ "x$1" != "x" ]; then
+	hostname=$1
+	shift;
+fi
+
+createConf() {
+	ALTNAMES=""
+	for alt in $*; do
+		if [ "x$ALTNAMES" = "x" ]; then
+			ALTNAMES="subjectAltName = DNS:${hostname},DNS:${alt}"
+		else
+			ALTNAMES="${ALTNAMES},DNS:${alt}"
+		fi
+	done
+	cat ${CONF}/zmssl.cnf.in | sed -e "s/@@HOSTNAME@@/$hostname/" \
+		-e "s/@@ALTNAMES@@/$ALTNAMES/" > ${BASE}/zmssl.cnf
+}
+
+createSerial() {
+  SER=`date "+%s"`
+	echo "$SER" > ${BASE}/ca/ca.srl
+}
+
+importCA() {
+	echo "** Importing CA"
+	echo
+
+  keytool -list -noprompt -alias my_ca -keystore ${CACERTS} -storepass ${tomcat_truststore_password} > /dev/null 2>&1
+  if [ $? = 0 ]; then
+    keytool -delete -alias my_ca -noprompt -keystore ${CACERTS} -storepass ${tomcat_truststore_password} > /dev/null 2>&1
+  fi
+
+	keytool -import -noprompt -keystore ${CACERTS} -file ${BASE}/ca/ca.pem \
+    -alias my_ca -storepass ${tomcat_truststore_password}
+}
+
+createKeyStore() {
+
+	echo "** Creating keystore"
+	echo
+
+	rm -f ${TCONF}/keystore
+
+	keytool -validity 730 -genkey -dname "CN=$hostname, OU=Zimbra, O=Zimbra, L=NA, S=NA, C=US" \
+		-alias tomcat -keyalg RSA -keysize 1024 -keystore ${TCONF}/keystore \
+		-storetype JKS -storepass ${tomcat_keystore_password} -keypass ${tomcat_keystore_password}
+
+}
+
+createCertReq() {
+
+	echo "** Creating server cert request"
+	echo
+
+	openssl req -new -nodes -out ${BASE}/server/server.csr \
+		-keyout ${BASE}/server/server.key -newkey rsa:1024 \
+		-config ${BASE}/zmssl.cnf -batch
+
+	keytool -certreq -keyalg RSA -alias tomcat -file \
+		${BASE}/server/tomcat.csr -keystore \
+		${TCONF}/keystore -storepass ${tomcat_keystore_password}
+
+	cp ${BASE}/server/tomcat.csr /tmp/tomcat.csr.$$
+	cat /tmp/tomcat.csr.$$ | sed -e \
+		's/NEW CERTIFICATE REQUEST/CERTIFICATE REQUEST/' \
+		> ${BASE}/server/tomcat.csr
+
+}
+
+signCertReq() {
+
+	echo "** Signing cert request"
+	echo
+
+	openssl ca -out ${BASE}/server/server.crt -notext \
+		-config ${BASE}/zmssl.cnf -in ${BASE}/server/server.csr \
+		-keyfile ${BASE}/ca/ca.key -cert ${BASE}/ca/ca.pem -batch
+
+	openssl x509 -CA ${BASE}/ca/ca.pem -CAkey ${BASE}/ca/ca.key \
+		-CAserial ${BASE}/ca/ca.srl -req -in ${BASE}/server/tomcat.csr \
+		-extensions v3_req -extfile ${BASE}/zmssl.cnf \
+		-out ${BASE}/server/tomcat.crt -days 365
+
+	cp ${BASE}/server/server.crt ${CONF}/slapd.crt
+	cp ${BASE}/server/server.key ${CONF}/slapd.key
+	cp ${BASE}/server/server.crt ${CONF}/perdition.pem
+	cp ${BASE}/server/server.key ${CONF}/perdition.key
+	mkdir -p ${CONF}/ca
+	cp ${BASE}/ca/ca.key ${CONF}/ca/ca.key
+	cp ${BASE}/ca/ca.pem ${CONF}/ca/ca.pem
+
+}
+
+createConf $@
+
+createSerial
+
+importCA
+
+createKeyStore
+
+createCertReq
+
+signCertReq
+
+chmod -R 700 ${B}

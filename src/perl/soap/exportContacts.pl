@@ -1,9 +1,8 @@
 #!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2006 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -26,22 +24,38 @@ use Soap;
 use ZimbraSoapTest;
 
 # specific to this app
-my ($format);
+my ($searchString, $offset, $prevId, $prevSortVal, $limit, $fetch, $sortBy, $types, $convId);
+$offset = 0;
+$limit = 5;
+$fetch = 0;
+$sortBy = "dateDesc";
+$types = "message";
 
 #standard options
 my ($user, $pw, $host, $help); #standard
 GetOptions("u|user=s" => \$user,
-           "f|format=s" => \$format,
+           "t|types=s" => \$types,
            "pw=s" => \$pw,
            "h|host=s" => \$host,
-           "help|?" => \$help,);
+           "help|?" => \$help,
+           # add specific params below:
+           "conv=i" => \$convId,
+           "query=s" => \$searchString,
+           "sort=s" => \$sortBy,
+           "offset=i" => \$offset,
+           "limit=i" => \$limit,
+           "fetch" => \$fetch,
+           "pi=s" => \$prevId,
+           "ps=s" => \$prevSortVal);
 
 
 
 if (!defined($user) || defined($help)) {
     my $usage = <<END_OF_USAGE;
     
-USAGE: $0 -u USER -f FORMAT 
+USAGE: $0 -u USER -q QUERYSTR [-s SORT] [-t TYPES] [-o OFFSET] [-l LIMIT] [-f FETCH] [-pi PREV-ITEM-ID -ps PREV-SORT-VALUE] [-c CONVID]
+    SORT = dateDesc|dateAsc|subjDesc|subjAsc|nameDesc|nameAsc|score
+    TYPES = message|conversation|contact|appointment
 END_OF_USAGE
     die $usage;
 }
@@ -51,7 +65,7 @@ $z->doStdAuth();
 
 my $d = new XmlDoc;
            
-$d->start("ExportContactsRequest", $Soap::ZIMBRA_MAIL_NS, { 'ct' => "csv", 'csvfmt' => "$format" });
+$d->start("ExportContactsRequest", $Soap::ZIMBRA_MAIL_NS, { 'ct' => "csv" });
 $d->end();
 
 my $response = $z->invokeMail($d->root());

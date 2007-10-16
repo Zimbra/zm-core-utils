@@ -1,7 +1,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2004, 2005, 2006 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -59,7 +59,7 @@ our $LogResponse = 0;
 our $ZIMBRA_ACCT_NS = "urn:zimbraAccount";
 our $ZIMBRA_MAIL_NS = "urn:zimbraMail";
 our $ZIMBRA_ADMIN_NS = "urn:zimbraAdmin";
-our $ZIMBRA_IM_NS = "urn:zimbraIM";
+
 
 sub setLogLevel {
     shift(); 
@@ -214,8 +214,8 @@ sub getAdminUrl
 # returns a ZimbraContext
 #
 sub stdAuthByName {
-  my ($self, $url, $acctName, $passwd, $opts) = @_;
-    return $self->doAuthByName($url, $ZIMBRA_ACCT_NS, $acctName, $passwd, $opts);
+  my ($self, $url, $acctName, $passwd, $session, $notify) = @_;
+    return $self->doAuthByName($url, $ZIMBRA_ACCT_NS, $acctName, $passwd, $session, $notify);
 }
     
 
@@ -223,8 +223,8 @@ sub stdAuthByName {
 # returns a ZimbraContext
 #
 sub adminAuthByName {
-  my ($self, $url, $acctName, $passwd, $opts) = @_;
-  return $self->doAuthByName($url, $ZIMBRA_ADMIN_NS, $acctName, $passwd, $opts);
+  my ($self, $url, $acctName, $passwd, $session, $notify) = @_;
+  return $self->doAuthByName($url, $ZIMBRA_ADMIN_NS, $acctName, $passwd, $session, $notify);
 }
 
 #    
@@ -232,28 +232,20 @@ sub adminAuthByName {
 # 
 sub doAuthByName {
   my ($self, $url, $namespace, $acctName, $passwd, $opts) = @_;
-
-  my $sessionId;
-  if (defined($opts) && defined($opts->{SESSIONID})) {
-    $sessionId = $opts->{SESSIONID};
-  }
-
-  my $ctxt = new XmlElement("context", "urn:zimbra");
-  if (!defined($opts) || !defined($opts->{NOTIFY})) {
-    $ctxt->add_child(new XmlElement("nosession"));
-  }
-
-  my $d = new XmlDoc;
   
+  my $d = new XmlDoc;
   $d->start('AuthRequest', $namespace);
-  {
-    $d->add('account', undef, { by => "name"}, $acctName);
-    $d->add('name', undef, undef, $acctName);
-    $d->add('password', undef, undef, $passwd);
-    
-  } $d->end();
+  $d->add('account', undef, { by => "name"}, $acctName);
+  $d->add('name', undef, undef, $acctName);
+  $d->add('password', undef, undef, $passwd);
 
-  my $authResponse = $self->invoke($url, $d->root(), $ctxt);
+  if (!defined($opts) || !defined($opts->{NOTIFY})) {
+    $d->add('nonotify');
+  }
+    
+  $d->end();
+
+  my $authResponse = $self->invoke($url, $d->root());
 
   # get auth token
   my $elt = $authResponse->find_child('authToken');
@@ -264,15 +256,15 @@ sub doAuthByName {
   }
   my $authToken = $elt->content;
 
-  if (!defined($sessionId)) {
-    $elt = $authResponse->find_child('sessionId');
-    if (!defined($elt)) {
-      print "AuthRequest: ".$d->to_string("pretty")."\n";
-      print "AuthResponse: ".$authResponse->to_string("pretty")."\n";
-      #    die "Could not find sessionId in AuthToken";
-    } else {
-      $sessionId = $elt->content;
-    }
+  # find sessionId
+  $elt = $authResponse->find_child('sessionId');
+  my $sessionId;
+  if (!defined($elt)) {
+    print "AuthRequest: ".$d->to_string("pretty")."\n";
+    print "AuthResponse: ".$authResponse->to_string("pretty")."\n";
+#    die "Could not find sessionId in AuthToken";
+  } else {
+    $sessionId = $elt->content;
   }
   
   my $wantcontext;
@@ -280,39 +272,25 @@ sub doAuthByName {
     $wantcontext = 1;
   }
   
-  return $self->zimbraContext($authToken, $sessionId, $wantcontext, $opts);
+  return $self->zimbraContext($authToken, $sessionId, $wantcontext);
 }
 
 sub zimbraContext {
-	my ($self, $authtoken, $sessionId, $wantcontext, $opts) = @_;
-
-    my $notSeq = '0';
-    if (defined($opts) && defined($opts->{NOTSEQ})) {
-      $notSeq = $opts->{NOTSEQ};
-    }
-    
+	my ($self, $authtoken, $session, $wantcontext) = @_;
 	my $context = new XmlElement("context", "urn:zimbra");
 	my $auth = new XmlElement("authToken");
 	$auth->content($authtoken);
 	$context->add_child($auth);
-    if (defined($sessionId) && $sessionId ne "") {
+    if ($session ne "") {
         my $sessionElt = new XmlElement("sessionId");
-        if (defined ($wantcontext) && $wantcontext) {
-          $sessionElt->attrs({'notify' => '1' });
-        }
-        $sessionElt->content($sessionId);
+        $sessionElt->content($session);
         $context->add_child($sessionElt);
     }
-	if (! defined ($wantcontext) ) {
-		my $want = new XmlElement("nosession");
+	if (! defined ($wantcontext) || ! $wantcontext) {
+		my $want = new XmlElement("nonotify");
 		$want->content("");
 		$context->add_child($want);
-	} else {
-      print "****************notSeq = $notSeq***************************\n\n";
-      my $want = new XmlElement("notify");
-      $want->attrs({ 'seq' => $notSeq });
-      $context->add_child($want);
-    }
+	}
 	return $context;		
 }
 
