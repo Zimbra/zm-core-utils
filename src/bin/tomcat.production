@@ -88,6 +88,11 @@ case "$1" in
         mkdir -p ${tomcat_directory}/work/Catalina/localhost/zimbraAdmin/org/apache/jsp/public_
         mkdir -p ${tomcat_directory}/work/Catalina/localhost/manager
         mkdir -p ${tomcat_directory}/work/Catalina/localhost/host-manager
+
+      tomcat_thread_stack_size=${mailboxd_thread_stack_size:=256k}
+      if [ -z "`echo ${tomcat_java_options} | grep Xss`" ]; then
+        tomcat_java_options="${tomcat_java_options} -Xss${tomcat_thread_stack_size}"
+      fi
                 
         sudo ${zimbra_home}/libexec/zmtomcatmgr start \
 	       -Xms${jm}m -Xmx${jm}m ${tomcat_java_options} > /dev/null < /dev/null 2>&1
