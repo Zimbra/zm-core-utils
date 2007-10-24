@@ -15,6 +15,7 @@
 # 
 # This may not be there, but we don't want to break the zimbramta package
 # if it's installed.
+shopt -s nullglob
 
 root_user=root
 zimbra_home=/opt/zimbra
