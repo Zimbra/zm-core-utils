@@ -102,7 +102,6 @@ createLdapConfig() {
 	fi
 
 	cat >> ${zimbra_home}/conf/slapd.conf.in <<EOF
-overlay syncprov
 syncrepl rid=${ldap_replica_rid}
 	provider=${ldap_master_url}
 	retry="60 +"
@@ -117,6 +116,7 @@ syncrepl rid=${ldap_replica_rid}
 	syncdata="accesslog"
 
 updateref  ${ldap_master_url}
+overlay syncprov
 EOF
 
 	/opt/zimbra/libexec/zmconfigure /opt/zimbra/conf/slapd.conf.in /opt/zimbra/conf/slapd.conf
