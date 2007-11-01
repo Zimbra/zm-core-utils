@@ -30,9 +30,8 @@ usage() {
     cat<<EOF
 Usage: $ zmldappasswd [ --root ] newpassword
 
-By default, this script changes zimbra_ldap_password.  If the --root
-option is specified, then ldap_root_passwd is changed.  In both cases,
-slapd.conf is modified and zimbra.ldif reloaded.
+This script changes zimbra_ldap_password and ldap_root_passwd.
+Also slapd.conf is modified and zimbra.ldif reloaded.
 
 EOF
 }
@@ -46,10 +45,7 @@ if [ "x$1" = "x-h" -o "x$1" = "x--help" ]; then
 fi
 
 if [ "x$1" = "x--root" ]; then
-    password_key="ldap_root_password"
     shift # lose --root option
-else
-    password_key="zimbra_ldap_password"
 fi
 
 if [ $# -ne 1 ]; then
