@@ -71,7 +71,13 @@ if ($ENV{zimbraPop3CleartextLoginEnabled} eq "TRUE") {
 
 sub start {
 	if ( ! -f "/opt/zimbra/conf/perdition.conf" ) {
-		`$ENV{zimbra_home}/libexec/zmmtaconfig perdition`;
+		print "creating perdition conf\n";
+		my $rc = 0xffff & system("$ENV{zimbra_home}/libexec/zmmtaconfig perdition");
+		if ($rc != 0) {
+			print "Creating perdition.conf failed.\nPlease manually run $ENV{zimbra_home}/libexec/zmmtaconfig perdition\n";
+			print "Then run zmperditionctl start.\n";
+			exit;
+		}
 	}
 	foreach my $k (sort keys %proxyKeys) {
 		if ($ENV{$proxyKeys{$k}} ne "" && $ENV{$proxyKeys{$k}} > 0) {
