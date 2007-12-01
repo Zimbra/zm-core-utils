@@ -24,6 +24,9 @@ fi
 if [ "x$platform" = "xRHEL4_64" -o "x$platform" = "xCentOS4_64" ]; then
 	zimbra_java_home=/opt/zimbra/jdk1.6.0_02_i386
 fi
+if [ "x$platform" = "xSLES10_64" ]; then
+	zimbra_java_home=/opt/zimbra/jdk1.6.0_02_i386
+fi
 
 if [ -d ${zimbra_java_home}/jre ]; then
     JRE_EXT_DIR=${zimbra_java_home}/jre/lib/ext
