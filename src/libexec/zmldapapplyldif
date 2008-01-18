@@ -19,7 +19,7 @@ source /opt/zimbra/bin/zmshutil || exit 1
 source_config_dir=/opt/zimbra/openldap/etc/openldap
 config_dir=/opt/zimbra/conf
 
-zmsetvars zimbra_ldap_userdn zimbra_ldap_password ldap_root_password zimbra_server_hostname
+zmsetvars zimbra_ldap_userdn zimbra_ldap_password ldap_root_password zimbra_server_hostname ldap_is_master
 
 root_sha=`/opt/zimbra/openldap/sbin/slappasswd -s ${ldap_root_password}`
 zimbra_sha=`/opt/zimbra/openldap/sbin/slappasswd -s ${zimbra_ldap_password}`
@@ -42,6 +42,17 @@ rm -f ${config_dir}/zimbra.ldif
 sed -e "s|^userPassword.*|userPassword: ${zimbra_sha}|" \
         ${source_config_dir}/zimbra.ldif > ${config_dir}/zimbra.ldif
 
+#bug 23764 -- We must enable replication before updating the master.
+if [ -f "/opt/zimbra/.enable_replica" ]; then
+  /opt/zimbra/libexec/zmldapenablereplica
+  ldap stop
+  ldap start
+fi
+
+if [ x"$ldap_is_master" != "xtrue" ]; then
+  exit 0;
+fi
+
 ldap start
 
 ${zimbra_home}/openldap/bin/ldapmodify -a -c -H ${ldap_master_url} -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f ${config_dir}/zimbra.ldif
@@ -52,10 +63,3 @@ ${zimbra_home}/openldap/bin/ldapmodify -a -c -H ${ldap_master_url} -w ${ldap_roo
 for i in `ls /opt/zimbra/lib/conf/*ldif`; do
     ${zimbra_home}/openldap/bin/ldapmodify -a -c -H ${ldap_master_url} -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f $i
 done
-
-if [ -f "/opt/zimbra/.enable_replica" ]; then
-  /opt/zimbra/libexec/zmldapenablereplica
-  ldap stop
-  ldap start
-fi
-
