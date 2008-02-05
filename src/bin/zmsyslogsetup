@@ -25,7 +25,7 @@ fi
 
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
-if [ x"$(uname -s 2> /dev/null)" = "xDarwin" ]; then
+if [ x$platform = "xMACOSX" -o "x$platform" = "xMACOSXx86" ]; then
 	logfile="/var/log/zimbra.log"
 	LOCALHOST=`hostname`
 else
