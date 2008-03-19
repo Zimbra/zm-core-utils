@@ -1,7 +1,6 @@
 #!/bin/bash
 #
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 
 ID=`id -u`
@@ -25,7 +23,7 @@ fi
 
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
-if [ x"$(uname -s 2> /dev/null)" = "xDarwin" ]; then
+if [ x$platform = "xMACOSX" -o "x$platform" = "xMACOSXx86" ]; then
 	logfile="/var/log/zimbra.log"
 	LOCALHOST=`hostname`
 else
@@ -74,14 +72,9 @@ fi
 
 cp -f /etc/syslog.conf /etc/syslog.conf.bak
 
-# Remove existing entries that we may have added.
-grep -v "^local0\.\*" /etc/syslog.conf > /tmp/syslog.zimbra
+#cat /etc/syslog.conf | sed -e 's:\(^local0.*\):#\1:' > /tmp/syslog.zimbra
+grep -v local0 /etc/syslog.conf > /tmp/syslog.zimbra
 sed -i -e '/^auth\.\* /d' /tmp/syslog.zimbra
-sed -i -e 's/;local0.none//g' /tmp/syslog.zimbra
-sed -i -e 's/;auth.none//g' /tmp/syslog.zimbra
-
-# Don't log local0 and auth twice 
-sed -i -e 's/^*.info/*.info;local0.none;auth.none/' /tmp/syslog.zimbra
 
 if [ $TYPE = "remote" ]; then
       echo "local0.*                @$LOGHOST" >> /tmp/syslog.zimbra
@@ -102,12 +95,8 @@ echo "mail.*                $logfile" >> /tmp/syslog.zimbra2
 
 cp -f /tmp/syslog.zimbra2 /etc/syslog.conf
 
-if [ x"$platform" = "xUBUNTU6" -o x"$platform" = "xUBUNTU6_64" -o x"$platform" = "xDEBIAN4.0" ]; then
-  if [ -e "/etc/init.d/sysklogd" ]; then
-    /etc/init.d/sysklogd restart > /dev/null 2>&1 
-  else 
-    echo "Unable to restart syslog.  Please do it manually."
-  fi
+if [ x"$platform" = "xUBUNTU6" -o x"$platform" = "xDEBIAN4.0" ]; then
+  /etc/init.d/sysklogd restart 
 else 
   killall -HUP syslogd
 fi

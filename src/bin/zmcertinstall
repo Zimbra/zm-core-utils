@@ -1,0 +1,120 @@
+#!/bin/bash
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# 
+# The contents of this file are subject to the Yahoo! Public License
+# Version 1.0 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
+# 
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# ***** END LICENSE BLOCK *****
+# 
+
+source /opt/zimbra/bin/zmshutil || exit 1
+zmsetvars
+
+BASE=/opt/zimbra/ssl/ssl
+
+JAVA_HOME=/opt/zimbra/java
+
+TOMCAT=/opt/zimbra/tomcat/conf
+
+CONF=/opt/zimbra/conf
+TCONF=/opt/zimbra/tomcat/conf
+
+usage() {
+  echo "$0 ldap <certfile> <keyfile>"
+  echo "$0 mta <certfile> <keyfile>"
+  echo "$0 mailbox [<certfile>]"
+  echo "  Default <certfile> is ${BASE}/server/tomcat.crt"
+  exit 1
+}
+
+case "$1" in
+  mta|mailbox|ldap)
+    APP=$1
+    CERTFILE=$2
+    KEYFILE=$3
+    ;;
+  help|-help|--help)
+    usage
+    exit 0
+  ;;
+  *)
+    usage
+    exit 1
+  ;;
+esac
+
+# ldap requires 2 args
+if [ x"$APP" = "xldap" ] && [ x"${CERTFILE}" = "x" -o x"${KEYFILE}" = "x" ]; then
+  usage
+  exit 1
+fi
+
+# mta requires 2 args
+if [ x"$APP" = "xmta" ] && [ x"${CERTFILE}" = "x" -o x"${KEYFILE}" = "x" ]; then
+  usage
+  exit 1
+fi
+
+if [ "x$CERTFILE" = "x" ]; then
+	CERTFILE=${BASE}/server/tomcat.crt
+fi
+
+if [ ! -f $CERTFILE ]; then
+	echo "ERROR - $CERTFILE not found!"
+	exit 1
+fi
+
+mkdir -p ${BASE}/server
+mkdir -p ${BASE}/cert
+mkdir -p ${BASE}/ca
+
+
+getHostInfo() {
+
+	platform=`/opt/zimbra/libexec/get_plat_tag.sh`
+	if [ "x$platform" = "xMACOSX" -o "x$platform" = "xMACOSXx86" ]; then
+		HH=`hostname`
+		return
+	else
+		H=`hostname --fqdn`
+	fi
+
+	# $H=$H.zimbrasys.com
+
+	HH=`echo $H | grep '\.'`
+
+	if [ "x$HH" = "x" ]; then
+		echo "Error - fully qualified host name not found - please correct"
+		exit
+	fi
+
+}
+
+importCert() {
+
+	echo "** Importing server cert"
+	echo
+
+	if [ $APP = "mailbox" ]; then
+		keytool -import -alias tomcat -keystore ${TCONF}/keystore \
+			-trustcacerts -file ${CERTFILE} -storepass ${tomcat_keystore_password}
+        elif [ $APP = "ldap" ]; then
+          cp -f $CERTFILE ${CONF}/slapd.crt
+          cp -f $KEYFILE ${CONF}/slapd.key
+	else
+		cp -f $CERTFILE ${CONF}/smtpd.crt
+		cp -f $KEYFILE ${CONF}/smtpd.key
+	fi
+
+}
+
+getHostInfo
+
+importCert

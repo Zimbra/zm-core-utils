@@ -1,7 +1,6 @@
-#!/usr/bin/perl
+#!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,263 +11,90 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
-# Add entries to or update master LDAP server
 #
 # Exit values
 #
 # 0 - success
 # 1 - ldap start failed
 # 2 - ldapmodify failed
+#
 
-use strict;
-use lib "/opt/zimbra/zimbramon/lib";
-use Zimbra::Util::Common;
-use Getopt::Std;
-use Net::LDAP;
-use Net::LDAP::LDIF;
-use Net::LDAP::Entry;
-use Crypt::SaltedHash;
-use MIME::Base64;
-use File::Grep qw (fgrep);
+source `dirname $0`/../bin/zmshutil || exit 1
+zmsetvars zimbra_home
 
-our %options=();
-our %loaded=();
-our %saved=();
+source_config_dir=/opt/zimbra/openldap/etc/openldap
+config_dir=/opt/zimbra/conf
 
-my $zimbra_home=getLocalConfig("zimbra_home");
-my $ldap_master_url=getLocalConfig("ldap_master_url");
-my $source_config_dir="/opt/zimbra/openldap/etc/openldap";
-my $config_dir="/opt/zimbra/conf";
+ldap_pw=$1
 
-if ($#ARGV== -1) {
-	setLocalConfigRandom("ldap_root_password");
-	setLocalConfigRandom("zimbra_ldap_password");
-} elsif ($#ARGV == 1) {
-	my $ldap_root_pw = shift;
-	my $ldap_admin_pw = shift;
-	setLocalConfig("ldap_root_password", "$ldap_root_pw");
-	setLocalConfig("zimbra_ldap_password", "$ldap_admin_pw");
-} else {
-	print "Wrong number of arguments, exiting\n";
-	exit;
-}
+if [ x$ldap_pw = "x" ]; then
+	${zimbra_home}/bin/zmlocalconfig -f -e -r zimbra_ldap_password
+	${zimbra_home}/bin/zmlocalconfig -f -e -r ldap_root_password
+else
+	${zimbra_home}/bin/zmlocalconfig -f -e zimbra_ldap_password=$ldap_pw
+	${zimbra_home}/bin/zmlocalconfig -f -e ldap_root_password=$ldap_pw
+fi
 
-setLocalConfig("ldap_is_master","true");
+${zimbra_home}/bin/zmlocalconfig -e ldap_is_master="true"
 
-my $zimbra_ldap_userdn=getLocalConfig("zimbra_ldap_userdn");
-my $zimbra_ldap_password=getLocalConfig("zimbra_ldap_password");
-my $ldap_root_password=getLocalConfig("ldap_root_password");
-my $zimbra_server_hostname=getLocalConfig("zimbra_server_hostname");
+zmsetvars -f zimbra_ldap_userdn zimbra_ldap_password ldap_root_password zimbra_server_hostname
 
-# Get the SHA password.
-my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-1');
-$ctx->add("$ldap_root_password");
-my $root_ssha_password = $ctx->generate;
-
-$ctx = Crypt::SaltedHash->new(algorithm => 'SHA-1');
-$ctx->add("$zimbra_ldap_password");
-my $zimbra_ssha_password = $ctx->generate;
+root_sha=`/opt/zimbra/openldap/sbin/slappasswd -s ${ldap_root_password}`
+zimbra_sha=`/opt/zimbra/openldap/sbin/slappasswd -s ${zimbra_ldap_password}`
 
 # Update slapd.conf
-#
-my $infile="$source_config_dir/slapd.conf";
-my $outfile="$config_dir/slapd.conf.in";
-open(IN,"<$infile");
-open(OUT,">$outfile");
-while (<IN>) {
-  if ($_ =~ /^rootpw/) {
-    $_ =~ s|^rootpw.*|rootpw $root_ssha_password|;
-    print OUT $_;
-  } else {
-    print OUT $_;
-  }
-}
-close IN;
-close OUT;
 
-if ( -f "/opt/zimbra/lib/conf/zimbra-ext.schema") {
-   if ( !fgrep { /zimbra-ext.schema/ } "${config_dir}/slapd.conf.in" ) {
-      $infile="${config_dir}/slapd.conf.in";
-      $outfile="/tmp/slapd.conf.$$";
+sed -e "s|^rootpw.*|rootpw ${root_sha}|" \
+	${source_config_dir}/slapd.conf > ${config_dir}/slapd.conf.in
 
-      open(IN,"<$infile");
-      open(OUT,">$outfile");
-      while (<IN>) {
-         if ($_ =~ /\/opt\/zimbra\/openldap\/etc\/openldap\/schema\/zimbra.schema/) {
-            print OUT $_;
-            print OUT "include\t\t\"/opt/zimbra/lib/conf/zimbra-ext.schema\"";
-            print OUT "\n";
-         } else {
-            print OUT $_;
-         }
-      }
-      close OUT;
-      close IN;
-      if ( -s $outfile ) {
-         my $rc=0xffff & system("/bin/mv -f $infile $infile.bak");
-         if ($rc != 0) {
-            print "Warning: Failed to backup $infile\n";
-         }
-         $rc=0xffff & system("/bin/mv -f $outfile $infile");
-         if ($rc != 0) {
-            print "Failed to move $outfile to $infile\nRestoring old configuration\n";
-            $rc=0xffff & system("/bin/mv -f $infile.bak $infile");
-            if ($rc != 0) {
-               print "Failed to restore backup\n";
-            }
-         } else {
-            system("/bin/rm -f $infile.bak");
-         }
-      }
-   }
-}
+if [ -f "/opt/zimbra/lib/conf/zimbra-ext.schema" ]; then
+	plat=`/opt/zimbra/libexec/get_plat_tag.sh`
+	sed -e '\|/opt/zimbra/openldap/etc/openldap/schema/zimbra.schema| a\
+include		"/opt/zimbra/lib/conf/zimbra-ext.schema"' ${config_dir}/slapd.conf.in > /tmp/slapd.conf
+	mv -f /tmp/slapd.conf ${config_dir}/slapd.conf.in
+fi
 
 # Update zimbra.ldif
-$infile = "$source_config_dir/zimbra.ldif";
-$outfile = "$config_dir/zimbra.ldif";
-my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
-my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
-while( not $ldifin->eof()) {
-  my $entry = $ldifin->read_entry ( );
-  if ( $ldifin->error ( ) ) {
-    print "Error msg: ", $ldifin->error ( ), "\n";
-    print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-  } else {
-      if ($entry->dn() eq "uid=zimbra,cn=admins,cn=zimbra") {
-        $entry->replace (
-          userPassword => "$zimbra_ssha_password",
-        );
-      }
-    $ldifout->write($entry);
-  }
-}
-$ldifin->done ( );
-$ldifout->done ( );
+
+sed -e "s|^userPassword.*|userPassword: ${zimbra_sha}|" \
+	${source_config_dir}/zimbra.ldif > ${config_dir}/zimbra.ldif
 
 # Start ldap
 
-my $rc=`${zimbra_home}/bin/ldap start`;
+${zimbra_home}/bin/ldap start
 
-if ( $rc eq 0 ) {
-	exit 1;
-}
+if [ $? -ne 0 ]; then
+	exit 1
+fi
 
-my $ldap = Net::LDAP->new("$ldap_master_url")  or  die "$@";
+${zimbra_home}/openldap/bin/ldapmodify -a -c -H ${ldap_master_url} -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f ${config_dir}/zimbra.ldif
+${zimbra_home}/openldap/bin/ldapmodify -a -c -H ${ldap_master_url} -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f ${source_config_dir}/zimbra_globalconfig.ldif 
+${zimbra_home}/openldap/bin/ldapmodify -a -c -H ${ldap_master_url} -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f ${source_config_dir}/zimbra_defaultcos.ldif
 
-# startTLS Operation
-my $mesg;
-if ($ldap_master_url !~ /^ldaps/i) {
-   $mesg = $ldap->start_tls(
-        verify => 'none',
-        capath => "$zimbra_home/conf/ca",
-        ) or die "start_tls: $@";
-   $mesg->code && die "TLS: " . $mesg->error . "\n";
-}
+if [ $? -ne 0 ]; then
+	exit 2
+fi
 
-$mesg = $ldap->bind("cn=config", password=>"$ldap_root_password");
+${zimbra_home}/openldap/bin/ldapmodify -a -c -H ${ldap_master_url} -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f ${source_config_dir}/zimbra_mimehandlers.ldif
 
-$infile = "$config_dir/zimbra.ldif";
-$ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
-while ( not $ldifin->eof() ) {
-    my $entry = $ldifin->read_entry();
-    if ( $ldifin->error() ) {
-      print "Error msg: ", $ldifin->error ( ), "\n";
-      print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-    } else {
-      $entry->changetype("add");
-      $entry->update($ldap);
-    }
-}
+if [ $? -ne 0 ]; then
+	exit 2
+fi
 
-$infile = "$source_config_dir/zimbra_globalconfig.ldif";
-$ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
-while ( not $ldifin->eof() ) {
-    my $entry = $ldifin->read_entry();
-    if ( $ldifin->error() ) {
-      print "Error msg: ", $ldifin->error ( ), "\n";
-      print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-    } else {
-      $entry->changetype("add");
-      $entry->update($ldap);
-    }
-}
+if [ -d "/opt/zimbra/lib/conf/" ]; then
+	L=`ls /opt/zimbra/lib/conf/*ldif 2>/dev/null`
+	if [ "x$L" != "x" ]; then
+		for i in $L; do
+			${zimbra_home}/openldap/bin/ldapmodify -a -c -H ${ldap_master_url} -w ${ldap_root_password} -D "${zimbra_ldap_userdn}" -x -f $i
 
-$infile = "$source_config_dir/zimbra_defaultcos.ldif";
-$ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
-while ( not $ldifin->eof() ) {
-    my $entry = $ldifin->read_entry();
-    if ( $ldifin->error() ) {
-      print "Error msg: ", $ldifin->error ( ), "\n";
-      print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-    } else {
-      $entry->changetype("add");
-      $entry->update($ldap);
-    }
-}
+			if [ $? -ne 0 ]; then
+				exit 2
+			fi
+		done
+	fi
+fi
 
-$infile = "$source_config_dir/zimbra_mimehandlers.ldif";
-$ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
-while ( not $ldifin->eof() ) {
-    my $entry = $ldifin->read_entry();
-    if ( $ldifin->error() ) {
-      print "Error msg: ", $ldifin->error ( ), "\n";
-      print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-    } else {
-      $entry->changetype("add");
-      $entry->update($ldap);
-    }
-}
-
-if ( -d "/opt/zimbra/lib/conf/" ) {
-    opendir(DIR, "/opt/zimbra/lib/conf") || die "can't opendir /opt/zimbra/lib/conf: $!";
-    while (my $file = readdir(DIR)) {
-       next unless (-f "/opt/zimbra/lib/conf/$file");
-       next unless ( $file =~ m/ldif$/);
-       $infile = "/opt/zimbra/lib/conf/$file";
-       $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
-       while ( not $ldifin->eof() ) {
-            my $entry = $ldifin->read_entry();
-            if ( $ldifin->error() ) {
-              print "Error msg: ", $ldifin->error ( ), "\n";
-              print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-            } else {
-              $entry->update($ldap);
-            }
-       }
-    }
-    closedir DIR;
-}
-
-exit 0;
-
-sub setLocalConfig {
-  my $key = shift;
-  my $val = shift;
-
-  if (exists $main::saved{lc}{$key} && $main::saved{lc}{$key} eq $val) {
-    return;
-  }
-  $main::saved{lc}{$key} = $val;
-  `/opt/zimbra/bin/zmlocalconfig -f -e ${key}=\'${val}\' 2> /dev/null`;
-}
-
-sub setLocalConfigRandom {
-  my $key = shift;
-  `/opt/zimbra/bin/zmlocalconfig -f -e -r ${key} 2> /dev/null`;
-}
-
-sub getLocalConfig {
-  my $key = shift;
-
-  return $main::loaded{lc}{$key}
-    if (exists $main::loaded{lc}{$key});
-
-  my $val = `/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null`;
-  chomp $val;
-  $main::loaded{lc}{$key} = $val;
-  return $val;
-}
+exit 0

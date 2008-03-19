@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -38,7 +36,6 @@ my $cache_file = "${zimbra_home}/log/.zmcontrol.cache";
 my $localHostName = getHostName();
 my $ldapMasterHere = isLdapMaster();
 my $services;
-my %devicesChecked;
 my %startorder = ( 
 	"ldap" 		=> 0,
 	"logger" 	=> 1,
@@ -46,34 +43,31 @@ my %startorder = (
 	"imapproxy" => 3,
 	"antispam" 	=> 4,
 	"antivirus" => 5,
-  "archiving" => 6,
-	"snmp" 		=> 7,
-	"spell" 	=> 8,
-	"mta" 		=> 9,
-	"stats"		=> 10,
+	"snmp" 		=> 6,
+	"spell" 	=> 7,
+	"mta" 		=> 8,
+	"stats"		=> 9,
 );
 
 my %allservices = ( 
 	"antivirus" => "/opt/zimbra/bin/zmantivirusctl", 
 	"antispam" => "/opt/zimbra/bin/zmantispamctl", 
-  "archiving" => "/opt/zimbra/bin/zmarchivectl",
 	"mta" => "/opt/zimbra/bin/zmmtactl", 
-	"mailbox" => "/opt/zimbra/bin/zmstorectl", 
+	"mailbox" => "/opt/zimbra/bin/zmmailboxctl", 
 	"logger" => "/opt/zimbra/bin/zmloggerctl", 
 	"snmp" => "/opt/zimbra/bin/zmswatchctl", 
 	"ldap" => "/opt/zimbra/bin/ldap",
 	"spell" => "/opt/zimbra/bin/zmspellctl",
-	"imapproxy" => "/opt/zimbra/bin/zmproxyctl",
+	"imapproxy" => "/opt/zimbra/bin/zmperditionctl",
 	"stats" => "/opt/zimbra/bin/zmstatctl",
 );
 
 my %rewrites = ( 
-	"antivirus" => "antivirus amavis", 
-	"antispam" => "antispam amavis", 
-  "archiving" => "archiving amavis", 
-	"mta" => "amavis antispam antivirus mta sasl", 
+	"antivirus" => "antivirus", 
+	"antispam" => "antispam", 
+	"mta" => "antispam antivirus mta sasl", 
 	"mailbox" => "webxml mailbox", 
-	"imapproxy" => "imapproxy",
+	"perdition" => "perdition",
 );
 
 my %GlobalOpts = ();
@@ -243,16 +237,10 @@ sub doStartup {
 
 	doRewrite (sort keys %{$services});
 
-  checkAvailableSpace();
 	foreach (sort {$startorder{$a} <=> $startorder{$b}} keys %{$services}) {
 		if ($_ eq "ldap") {next;}
-    checkAvailableServiceSpace($_);
 		Zimbra::Mon::Logger::Log ("info", "Starting $_");
 		print "\tStarting $_...";
-    unless (-x "$allservices{$_}") {
-      print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
-      next;
-    }
 		$rrc = 0xffff & system ("$allservices{$_} start norewrite > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
@@ -281,10 +269,6 @@ sub doShutdown {
 		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
 		if ($_ eq "mailbox" && !(-d "/opt/zimbra/db/data") ) { next; }
 		print "\tStopping $_...";
-    unless (-x "$allservices{$_}") {
-      print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
-      next;
-    }
 		$rrc = 0xffff & system ("$allservices{$_} stop > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
@@ -411,60 +395,6 @@ sub displayVersion {
 		else { $string .= " NETWORK edition"; }
 	}
 	print "\n\n$string\n\n";
-}
-
-sub checkAvailableSpace {
-  my ($service) = @_;
-
-  my @dirs = ("/opt/zimbra");
-  foreach my $dir (@dirs) {
-    if (-e "$dir") {
-      print "\tWARNING: Disk space below threshold for $dir.\n"
-        unless hasAvailableSpace($dir);
-    }
-  }
-}
-sub checkAvailableServiceSpace {
-  my ($service) = @_;
-
-  my %serviceDirs = ( 
-    mailbox => ["/opt/zimbra/store", "/opt/zimbra/db", "/opt/zimbra/index", "/opt/zimbra/redolog"],
-    logger => ["/opt/zimbra/logger/db"],
-    mta => ["/opt/zimbra/data/postfix/spool"]
-  );  
-  my @dirs = ();
-  @dirs = (@dirs, @{$serviceDirs{$service}})
-    if (defined $serviceDirs{$service});
-  foreach my $dir (@dirs) {
-    if (-e "$dir") {
-      print "\tWARNING: Disk space below threshold for $dir.\n"
-        unless hasAvailableSpace($dir);
-    }
-  }
-}
-
-sub hasAvailableSpace() {
-  my ($dir,$freeMbytes) = @_;
-    return undef unless (-e "$dir");
-  $freeMbytes = getLocalConfig("zimbra_disk_threshold") || 100
-    unless $freeMbytes;
-  my $zimbra_home = "/opt/zimbra";
-  my $platform=`${zimbra_home}/libexec/get_plat_tag.sh`;
-  chomp $platform;
-
-  my $DFCMD = ($platform =~ /MACOSX/ ? "df -ml " : "df -mlP ");
-
-  open DF, "$DFCMD $dir | tail -1 |" or die "Can't open $DFCMD: $!";
-  my @df = <DF>;
-  close DF;
-  my ($device, $total, undef, $avail) = split(/\s+/, $df[0]);
-  return 1 if (defined($devicesChecked{$device})); 
-  $devicesChecked{$device} = $avail;
-  if ($avail < $freeMbytes) { 
-	  Zimbra::Mon::Logger::Log ("info", "Availble disk space on $dir is below threshold of $freeMbytes.  $avail Mbytes available.");
-  }
-
-  return ($avail > $freeMbytes) ? 1 : undef;
 }
 
 sub usage {

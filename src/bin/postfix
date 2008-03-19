@@ -1,7 +1,6 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -50,13 +48,8 @@ if [ "x$1" = "xstart" -o "x$1" = "xreload" ]; then
 	if [ x$2 = "x" ]; then
 		rewriteconfig
 	fi
-  postfix_header_checks=${zimbra_home}/conf/postfix_header_checks
-  TEMPFILE=`mktemp ${postfix_header_checks}.XXXXXX` && cp -f ${postfix_header_checks} ${TEMPFILE}
-  if [ $? = 0 -a -s "$TEMPFILE" ]; then
-	  ${zimbra_home}/postfix-${postfix_version}/sbin/postmap ${TEMPFILE} && mv -f ${TEMPFILE}.db ${postfix_header_checks}.db
-    rm -f ${TEMPFILE}
-  fi
-    
+	${zimbra_home}/postfix-${postfix_version}/sbin/postmap ${zimbra_home}/conf/postfix_header_checks
+	#sudo ${zimbra_home}/postfix-${postfix_version}/sbin/postsuper -r ALL
 fi
 
 if [ -f /etc/aliases ]; then

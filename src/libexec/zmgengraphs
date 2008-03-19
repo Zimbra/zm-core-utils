@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -431,10 +429,6 @@ sub checkPID {
     open PID, "$pid_file";
     my $p = <PID>;
     close PID;
-    if ($p eq "") {
-      unlink($pid_file);
-      return
-    }
     if (kill (0, $p)){
       warn("$0 already running with pid $p\n");
       exit;

@@ -1,7 +1,6 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -59,7 +57,7 @@ case "$1" in
       echo -n "Killing mysqld with pid $pid "
       kill $pid
       # wait for mysqld pid file to be removed
-      for ((i = 0; i < 30; i++)); do
+      for ((i = 0; i < 300; i++)); do
         sleep 2;
         kill -0 $pid 2> /dev/null
         if [ $? != 0 ]; then
@@ -71,6 +69,22 @@ case "$1" in
       done 
       if [ -s ${mysql_pidfile} ]; then 
         echo " gave up waiting!"
+        ${zimbra_home}/bin/mysqladmin -s ping 2> /dev/null
+        if [ $? = 0 ]; then
+          DEBUGLOG=/opt/zimbra/log/zmmysql.debug.log
+          echo "Failed to stop mysql $pid after 10mins." >> $DEBUGLOG
+          echo `date` >> $DEBUGLOG 
+          echo "#### mysqladmin status" >> $DEBUGLOG
+          ${zimbra_home}/bin/mysqladmin status >> $DEBUGLOG 2>&1
+          echo "#### mysqladmin processlist" >> $DEBUGLOG
+          ${zimbra_home}/bin/mysqladmin processlist >> $DEBUGLOG 2>&1
+          echo "#### mysqladmin extended-status" >> $DEBUGLOG
+          ${zimbra_home}/bin/mysqladmin extended-status >> $DEBUGLOG 2>&1
+          echo "Finished debug output for $pid" >> $DEBUGLOG
+          ${zimbra_home}/bin/mysqladmin shutdown >> $DEBUGLOG 2>&1
+        else 
+          echo "Unable to ping mysqld to get debug info"
+        fi
         exit 1
       else
         echo " done."

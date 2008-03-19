@@ -1,7 +1,6 @@
-#!/usr/bin/perl
+#!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 #
@@ -20,240 +18,101 @@
 # ldap_root_password.  Updates both the Zimbra local config file and
 # ldap configs, and reruns zimbra.ldif
 #
-
-use strict;
-use lib "/opt/zimbra/zimbramon/lib";
-use Zimbra::Util::Common;
-use Getopt::Std;
-use Net::LDAP;
-use Net::LDAP::LDIF;
-use Net::LDAP::Entry;
-use Crypt::SaltedHash;
-use MIME::Base64;
-
-our %options = ();
-our %loaded = ();
-our %saved = ();
-
-my $zimbra_home = getLocalConfig("zimbra_home");
-my $cur_rootdn_passwd = getLocalConfig("ldap_root_password");
-
-getopts('arlph',\%options) or die "Unable to set options\n";
-
-if ($options{h})  {
-   usage();
-   exit 1;
-}
-
-if ( $options{r} + $options{p} + $options{l} + $options{a} > 1) {
-    usage();
-    exit 1;
-}
-
-if ($#ARGV == -1) {
-    usage();
-    exit 1;
-
-}
-
-my $password = $ARGV[0];
-
-# Get the SHA password.
-my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-1');
-$ctx->add("$password");
-my $ssha_password = $ctx->generate;
-
-# Get the LDAP Master
-my $ldap_master = getLocalConfig("ldap_master_url");
-
-print "Updating local config and directory\n";
-my $ldap = Net::LDAP->new("$ldap_master")  or  die "$@";
-
-# startTLS Operation, add later
-#$mesg = $ldap->start_tls(
-#        verify => 'require',
-#        capath => "$zimbra_home/conf/ca",
-#        ) or die "start_tls: $@";
-#
-#$mesg->code && die "TLS: " . $mesg->error . "\n";
-
-if ( $options{r}) {
-    setLocalConfig("ldap_root_password", "$password");
-    my $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    my $entry = Net::LDAP::Entry->new;
-    $entry->changetype ( "modify" );
-    $entry->dn('olcDatabase={0}config,cn=config'); 
-    $entry->replace(
-        olcRootPW=> "$ssha_password",
-    );
-    $entry->update($ldap);
-
-    # Update slapd.conf
-    #
-    print "Updating slapd.conf\n";
-    my $infile="$zimbra_home/conf/slapd.conf.in";
-    my $outfile="/tmp/slapd.conf.$$";
-    open(IN,"<$infile");
-    open(OUT,">$outfile");
-    while (<IN>) {
-      if ($_ =~ /^rootpw/) {
-        $_ =~ s|^rootpw.*|rootpw $ssha_password|;
-        print OUT $_;
-      } else {
-        print OUT $_;
-      }
-    }
-    rename($outfile, $infile) or system("mv -f", $outfile, $infile);
-
-} elsif ( $options{l} ) {
-    setLocalConfig("ldap_replication_password", "$password");
-    my $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    $mesg = $ldap->modify('uid=zmreplica,cn=admins,cn=zimbra',
-                           replace => [ userPassword => $password] );
-    my $infile = "$zimbra_home/conf/zimbra.ldif";
-    my $outfile = "/tmp/zimbra.ldif.$$";
-    my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
-    my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
-    my $entry;
-    while( not $ldifin->eof ( ) ) {
-      $entry = $ldifin->read_entry ( );
-      if ( $ldifin->error ( ) ) {
-        print "Error msg: ", $ldifin->error ( ), "\n";
-        print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-      } else {
-          if ($entry->dn() eq "uid=zmreplica,cn=admins,cn=zimbra") {
-            $entry->replace (
-              userPassword => "$ssha_password",
-            );
-          }
-        $ldifout->write($entry);
-      }
-    }
-    $ldifin->done ( ); 
-    $ldifout->done ( );
-    rename($outfile, $infile) or system("mv -f", $outfile, $infile);
-} elsif ( $options{p} ) {
-    setLocalConfig("ldap_postfix_password", "$password");
-    my $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    $mesg = $ldap->modify('uid=zmpostfix,cn=appaccts,cn=zimbra',
-                           replace => [ userPassword => $password ] );
-    my $infile = "$zimbra_home/conf/zimbra.ldif";
-    my $outfile = "/tmp/zimbra.ldif.$$";
-    my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
-    my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
-    my $entry;
-    while( not $ldifin->eof ( ) ) {
-      $entry = $ldifin->read_entry ( );
-      if ( $ldifin->error ( ) ) {
-        print "Error msg: ", $ldifin->error ( ), "\n";
-        print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-      } else {
-          if ($entry->dn() eq "uid=zmpostfix,cn=appaccts,cn=zimbra") {
-            $entry->replace (
-              userPassword => "$ssha_password",
-            );
-          }
-        $ldifout->write($entry);
-      }
-    }
-    $ldifin->done ( ); 
-    $ldifout->done ( );
-    rename($outfile, $infile) or system("mv -f", $outfile, $infile);
-} elsif ( $options{a} ) {
-    setLocalConfig("ldap_amavis_password", "$password");
-    my $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    $mesg = $ldap->modify('uid=zmamavis,cn=appaccts,cn=zimbra',
-                           replace  => [ userPassword => $password ] );
-    my $infile = "$zimbra_home/conf/zimbra.ldif";
-    my $outfile = "/tmp/zimbra.ldif.$$";
-    my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
-    my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
-    my $entry;
-    while( not $ldifin->eof ( ) ) {
-      $entry = $ldifin->read_entry ( );
-      if ( $ldifin->error ( ) ) {
-        print "Error msg: ", $ldifin->error ( ), "\n";
-        print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-      } else {
-          if ($entry->dn() eq "uid=zmamavis,cn=appaccts,cn=zimbra") {
-            $entry->replace (
-              userPassword => "$ssha_password",
-            );
-          }
-        $ldifout->write($entry);
-      }
-    }
-    $ldifin->done ( ); 
-    $ldifout->done ( );
-    rename($outfile, $infile) or system("mv -f", $outfile, $infile);
-} else {
-    my $zimbra_ldap_userdn = getLocalConfig("zimbra_ldap_userdn");
-    setLocalConfig("zimbra_ldap_password", "$password");
-    my $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    $mesg = $ldap->modify("$zimbra_ldap_userdn",
-                           replace => [ userPassword => $password ] );
-    my $infile = "$zimbra_home/conf/zimbra.ldif";
-    my $outfile = "/tmp/zimbra.ldif.$$";
-    my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
-    my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
-    my $entry;
-    while( not $ldifin->eof ( ) ) {
-      $entry = $ldifin->read_entry ( );
-      if ( $ldifin->error ( ) ) {
-        print "Error msg: ", $ldifin->error ( ), "\n";
-        print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-      } else {
-          if ($entry->dn() eq "$zimbra_ldap_userdn") {
-            $entry->replace (
-              userPassword => "$ssha_password",
-            );
-          }
-        $ldifout->write($entry);
-      }
-    }
-    $ldifin->done ( ); 
-    $ldifout->done ( );
-    rename($outfile, $infile) or system("mv -f", $outfile, $infile);
-}
-$ldap->unbind();
-$ldap->disconnect();
+source `dirname $0`/zmshutil || exit 1
+zmsetvars \
+    zimbra_home \
+    zimbra_ldap_userdn
 
 #
 # Usage.
 #
-sub usage() {
+usage() {
+    cat<<EOF
+Usage: $ zmldappasswd [ --root ] newpassword
 
-  print "Usage: $0 [-h] [-r] [-p] [-l] newpassword\n";
-  print "\t-h: display this help message\n";
-  print "\t-a: change ldap_amavis_password\n";
-  print "\t-l: change ldap_replication_password\n";
-  print "\t-p: change ldap_postfix_password\n";
-  print "\t-r: change ldap_root_passwd\n";
-  print "\tOnly one of a, l, p, or r may be specified\n";
-  print "\tWithout options zimbra_ldap_password is changed\n\n";
-  exit 1;
+This script changes zimbra_ldap_password and ldap_root_passwd.
+Also slapd.conf is modified and zimbra.ldif reloaded.
 
+EOF
 }
 
-sub setLocalConfig {
-  my $key = shift;
-  my $val = shift;
+#
+# Parse command line
+#
+if [ "x$1" = "x-h" -o "x$1" = "x--help" ]; then
+	usage
+	exit 1
+fi
 
-  if (exists $main::saved{lc}{$key} && $main::saved{lc}{$key} eq $val) {
-    return;
-  }
-  $main::saved{lc}{$key} = $val;
-  `/opt/zimbra/bin/zmlocalconfig -f -e ${key}=\'${val}\' 2> /dev/null`;
-}
+if [ "x$1" = "x--root" ]; then
+    shift # lose --root option
+fi
 
-sub getLocalConfig {
-  my $key = shift;
+if [ $# -ne 1 ]; then
+    usage
+    exit 1
+fi
+newpassword="$1"
 
-  return $main::loaded{lc}{$key}
-    if (exists $main::loaded{lc}{$key});
+#
+# Change the password in the config file.
+# TODO: notify app server that the password has changed,
+# for now you will have to restart tomcat
+#
+# MEM 2/9/2006 - apparently, these passwords have to be in sync.
+echo "Updating local config"
+if ! ${zimbra_home}/bin/zmlocalconfig -f -e ldap_root_password=${newpassword}; then
+    echo Error: command failed: ${zimbra_home}/bin/zmlocalconfig -e ldap_root_password='#'
+    exit 1
+fi
+if ! ${zimbra_home}/bin/zmlocalconfig -f -e zimbra_ldap_password=${newpassword}; then
+    echo Error: command failed: ${zimbra_home}/bin/zmlocalconfig -e zimbra_ldap_password='#'
+    exit 1
+fi
 
-  my $val = `/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null`;
-  chomp $val;
-  $main::loaded{lc}{$key} = $val;
-  return $val;
-}
+#
+# Stop ldap
+#
+echo "Stopping ldap"
+${zimbra_home}/bin/ldap stop
+
+#
+# Get the SHA password.  We have modified one of these above.
+#
+zmsetvars -f ldap_root_password zimbra_ldap_password
+root_sha=`${zimbra_home}/openldap/sbin/slappasswd -s ${ldap_root_password}`
+#zimbra_sha=`${zimbra_home}/openldap/sbin/slappasswd -s ${zimbra_ldap_password}`
+config_dir="${zimbra_home}/openldap/etc/openldap"
+
+#
+# Update slapd.conf
+#
+echo "Updating ldap configuration"
+sed -e "s|^rootpw.*|rootpw ${root_sha}|" \
+	/opt/zimbra/conf/slapd.conf.in > /tmp/slapd.conf.$$
+mv -f /tmp/slapd.conf.$$ /opt/zimbra/conf/slapd.conf.in
+
+#
+# Start ldap
+#
+echo "Starting ldap"
+${zimbra_home}/bin/ldap start > /dev/null 2>&1
+
+#
+# Update zimbra.ldif
+#
+echo "Updating zimbra.ldif"
+sed -e "s|^userPassword.*|userPassword: ${zimbra_sha}|" \
+	${config_dir}/zimbra.ldif > /tmp/zimbra.ldif.$$
+mv -f /tmp/zimbra.ldif.$$ ${zimbra_home}/openldap/etc/openldap/zimbra.ldif
+
+#
+# Rerun zimbra.ldif
+#
+echo "Running ldappasswd"
+ldappasswd -H "${ldap_url}"  -w ${ldap_root_password} -D ${zimbra_ldap_userdn} \
+	-x -s ${zimbra_ldap_password} ${zimbra_ldap_userdn} > /dev/null 2>&1
+echo "Password change complete."
+echo ""
+echo "You may need to restart tomcat, if it is running."
+echo ""

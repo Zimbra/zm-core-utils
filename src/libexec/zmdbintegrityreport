@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -54,7 +52,7 @@ if ($options{m}) {
 #-------------
 
 sub usage {
-	print STDERR "Usage: $0 [-m] [-v] [-h] [-r]\n";
+	print STDERR "Usage: $0 [-m] [-v] [-h]\n";
   print STDERR "-m emails report to admin account, otherwise report is presented on stdout\n";
   print STDERR "-v verbose output\n";
   print STDERR "-r attempt auto repair of tables\n";
@@ -124,7 +122,7 @@ sub sendEmailReport {
   my $from_address = getLocalConfig("smtp_source");
   my $to_address = getLocalConfig("smtp_destination");
   my $smtphost = getLdapConfigValue("zimbraSmtpHostname");
-  return if (scalar @$msg == 0);
+
   print "Sending daily report to $to_address via $smtphost\n" if $debug;
   eval { 
     my $mailer = Mail::Mailer->new("smtp", Server => $smtphost);

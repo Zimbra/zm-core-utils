@@ -1,7 +1,6 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,35 +11,56 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
 BASE=/opt/zimbra
-SCRIPTS="zmmtaconfigctl zmamavisdctl"
+START_ORDER="zmmtaconfigctl mysql.server tomcat "
+STOP_ORDER="zmmtaconfigctl tomcat mysql.server"
 
-source /opt/zimbra/.bashrc
+STATUS=0
 
 case "$1" in 
 	start)
-		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i start $2
+		if [ x$2 = "x" ]; then
+			/opt/zimbra/libexec/zmmtaconfig mailbox
+		fi
+		for i in $START_ORDER; do
+			/opt/zimbra/bin/$i start norewrite
+			R=$?
+			if [ $R -ne "0" ]; then
+				STATUS=$R
+			fi
 		done
+		exit $STATUS
 	;;
 	stop)
-		for i in $SCRIPTS; do
+		for i in $STOP_ORDER; do
 			/opt/zimbra/bin/$i stop
+			R=$?
+			if [ $R -ne "0" ]; then
+				STATUS=$R
+			fi
 		done
+		exit $STATUS
 	;;
-	reload)
-		for i in $SCRIPTS; do
+	restart)
+		for i in $START_ORDER; do
 			/opt/zimbra/bin/$i restart
+			R=$?
+			if [ $R -ne "0" ]; then
+				STATUS=$R
+			fi
 		done
+		exit $STATUS
 	;;
 	status)
-		STATUS=0
-		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i status
+		for i in $START_ORDER; do
+			if [ $i = "mysql.server" ]; then
+				/opt/zimbra/bin/mysqladmin status > /dev/null 2>&1
+			else
+				/opt/zimbra/bin/$i status
+			fi
 			R=$?
 			if [ $R -ne "0" ]; then
 				echo "$i is not running"
@@ -50,7 +70,7 @@ case "$1" in
 		exit $STATUS
 	;;
 	*)
-		echo "$0 start|stop|reload|status"
+		echo "$0 start|stop|restart|status"
 		exit 1
 	;;
 esac

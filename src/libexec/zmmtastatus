@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -39,7 +37,7 @@ my $verbose = $options{v} ? 1 : 0;
 $verbose = 1 if $debug;
 
 
-my $pidFile="${zimbra_home}/data/postfix/spool/pid/master.pid";
+my $pidFile="${zimbra_home}/postfix/spool/pid/master.pid";
 
 exit (mtaIsRunning() ? 0 : 1);
 

@@ -1,0 +1,51 @@
+#!/bin/bash
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2006, 2007 Zimbra, Inc.
+# 
+# The contents of this file are subject to the Yahoo! Public License
+# Version 1.0 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
+# 
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# ***** END LICENSE BLOCK *****
+# 
+
+source `dirname $0`/zmshutil || exit 1
+zmsetvars zimbra_home zimbra_java_home
+
+platform=`/opt/zimbra/libexec/get_plat_tag.sh`
+if [ "x$platform" = "xRHEL5_64" -o "x$platform" = "xCentOS5_64" ]; then
+	zimbra_java_home=/opt/zimbra/jdk1.6.0_04_i386
+fi
+if [ "x$platform" = "xRHEL4_64" -o "x$platform" = "xCentOS4_64" ]; then
+	zimbra_java_home=/opt/zimbra/jdk1.6.0_04_i386
+fi
+if [ "x$platform" = "xSLES10_64" ]; then
+	zimbra_java_home=/opt/zimbra/jdk1.6.0_04_i386
+fi
+
+if [ -d ${zimbra_java_home}/jre ]; then
+    JRE_EXT_DIR=${zimbra_java_home}/jre/lib/ext
+else
+    JRE_EXT_DIR=${zimbra_java_home}/lib/ext
+fi
+zmassert -d ${JRE_EXT_DIR}
+
+ZIMBRA_EXTENSIONS="backup clamscanner network zimbra-license zimbrahsm zimbrasync"
+ZIMBRA_EXT_DIR="/opt/zimbra/lib/ext"
+for i in $ZIMBRA_EXTENSIONS; do
+  if [ -d "/opt/zimbra/lib/ext/$i" ]; then
+   ZIMBRA_EXT_DIR="$ZIMBRA_EXT_DIR:/opt/zimbra/lib/ext/$i"
+  fi
+done 
+
+exec ${zimbra_java_home}/bin/java \
+     -client -Xmx256m \
+     -Dzimbra.home=${zimbra_home} \
+     -Djava.library.path=${zimbra_home}/lib \
+     -Djava.ext.dirs=${JRE_EXT_DIR}:${zimbra_home}/lib/jars:${ZIMBRA_EXT_DIR} \
+     "$@"

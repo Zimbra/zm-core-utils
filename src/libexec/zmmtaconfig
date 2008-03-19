@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -44,38 +42,31 @@ if ($> eq 0) {
 my %config = (
   progname    => "zmmtaconfig",
   hostname    => $ENV{zimbra_server_hostname},
+  loglevel    => 3,
+  watchdog    => 1,
   wd_all      => 0,
   debug       => 0,
+  interval    => 120,
   baseDir     => "/opt/zimbra",
   logStatus   => ( 4 => "Debug", 3 => "Info", 2 => "Warning", 1 => "Error", 0 => "Fatal"),
 );
-
-# make sure hostname was defined.
-chomp($config{hostname} = `/opt/zimbra/bin/zmhostname`)
-  if ($config{hostname} eq "");
- 
-logMsg(0, "Can't determine server hostname") 
-  if ($config{hostname} eq ""); 
-chomp($config{hostname} = `/opt/zimbra/bin/zmhostname`)
-  if ($config{hostname} eq "");
- 
-logMsg(0, "Can't determine server hostname") 
-  if ($config{hostname} eq ""); 
+$config{configFile} = "$config{baseDir}/conf/zmmta.cf";
+$config{logFile}    = "$config{baseDir}/log/$config{progname}.log";
+$config{pidFile}    = "$config{baseDir}/log/$config{progname}.pid";
+$config{interval}   = 10 if $config{debug};
+@{$config{wd_list}} = qw(antivirus);
 
 my $sectionMap = { 
-  amavis     => "mta",
   sasl       => "mta", 
   webxml     => "mailbox",
-  nginx  => "imapproxy"
+  perdition  => "imapproxy"
 };
-
 my $state = {
   firstRun      => 1,
   anyFailed     => 0,
   forced        => 0,
   localconfig      => (),
   globalconfig     => (),
-  miscconfig     => (),
   serverconfig     => (),
   serviceconfig    => (),
   forcedconfig     => (),
@@ -94,25 +85,28 @@ my $state = {
                       },
 };
 
+
+# make sure hostname was defined.
+chomp($config{hostname} = `/opt/zimbra/bin/zmhostname`)
+  if ($config{hostname} eq "");
+ 
+logMsg(0, "Can't determine server hostname") 
+  if ($config{hostname} eq ""); 
 my %exe = (
   "POSTCONF"      => "$config{baseDir}/postfix/sbin/postconf -e",
   "ZMPROV"        => "$config{baseDir}/bin/zmprov -l",
   "ZMLOCALCONFIG" => "$config{baseDir}/bin/zmlocalconfig",
   'PERDITION'     => "$config{baseDir}/bin/zmperditionctl",
-  'IMAPPROXY'     => "$config{baseDir}/bin/zmproxyctl",
-  'STATS'         => "$config{baseDir}/bin/zmstatctl",
-  'ARCHIVING'     => "$config{baseDir}/bin/zmamavisdctl",
   'MTA'           => "$config{baseDir}/bin/postfix",
   'ANTISPAM'      => "$config{baseDir}/bin/zmamavisdctl",
-  'AMAVIS'        => "$config{baseDir}/bin/zmamavisdctl",
   'ANTIVIRUS'     => "$config{baseDir}/bin/zmclamdctl",
   'SASL'          => "$config{baseDir}/bin/zmsaslauthdctl",
-  'MAILBOXD'      => "$config{baseDir}/bin/zmmailboxdctl",
+  'TOMCAT'        => "$config{baseDir}/bin/tomcat",
   'SPELL'         => "$config{baseDir}/bin/zmspellctl",
   'LDAP'          => "$config{baseDir}/bin/ldap",
   'SNMP'          => "$config{baseDir}/bin/zmswatchctl",
   'LOGGER'        => "$config{baseDir}/bin/zmloggerctl",
-  'MAILBOX'       => "$config{baseDir}/bin/zmstorectl",
+  'MAILBOX'       => "$config{baseDir}/bin/zmmailboxctl",
 );
 
 my $commands = {
@@ -136,49 +130,8 @@ my $commands = {
     'name' => "gacf",
     'cmd'  => "$exe{ZMPROV} gacf | grep -v InheritedAttr",
   },
-  "gamau" => {
-    'desc' => "All MTA Authentication Target URLs",
-    'name' => "getAllMtaAuthURLs",
-    'cmd'  => "$exe{ZMPROV} gamau",
-  },
-  "garpu" => {
-    'desc' => "All Reverse Proxy URLs",
-    'name' => "getAllReverseProxyURLs",
-    'cmd'  => "$exe{ZMPROV} garpu",
-  },
-  "garpb" => {
-    'desc' => "All Reverse Proxy Backends",
-    'name' => "getAllReverseProxyBackends",
-    'cmd'  => "$exe{ZMPROV} garpb",
-  },
-  "gamcs" => {
-    'desc' => "All Memcached Servers",
-    'name' => "getAllMemcachedServers",
-    'cmd'  => "$exe{ZMPROV} gamcs",
-  },
 };
 
-my @miscCommands = qw(garpu garpb gamcs gamau);
-
-# get some of our config from localconfig
-getLocalConfig();
-#print Dumper $state->{localconfig};
-
-$config{loglevel} = $state->{localconfig}->{zmmtaconfig_log_level} || 3;
-$config{interval} = $state->{localconfig}->{zmmtaconfig_interval} || 60;
-$config{debug} = $state->{localconfig}->{zmmtaconfig_debug} || 0;
-$config{watchdog} = 
-  ($state->{localconfig}->{zmmtaconfig_watchdog} eq "FALSE") ? 0 : 1;
-$config{configFile} = "$config{baseDir}/conf/zmmta.cf";
-$config{logFile}    = "$config{baseDir}/log/$config{progname}.log";
-$config{pidFile}    = "$config{baseDir}/log/$config{progname}.pid";
-$config{interval}   = 10 if $config{debug};
-if (exists $state->{localconfig}->{zmmtaconfig_watchdog_services}) {
-  @{$config{wd_list}} =  
-    split(/ /, $state->{localconfig}->{zmmtaconfig_watchdog_services});
-} else {
-  @{$config{wd_list}} = qw(antivirus);
-}
 
 
 
@@ -199,7 +152,6 @@ while (1) {
   # read all the configs 
   getLocalConfig();
   getGlobalConfig();
-  getMiscConfigs();
   getServerConfig();
 
   # try again if one of the lookups failed
@@ -269,15 +221,6 @@ sub getLocalConfig {
     logMsg(1, "$ref->{name} @{$ref->{error}}");
     return undef;
   }
-
-  # if no output was returned we have a potential avoid stopping all services
-  if (scalar(@{$ref->{output}}) == 0 || !validLCData($ref)) {
-    logMsg(2, "Skipping $ref->{desc} No data returned.");
-    $ref->{status} = 1;
-    $state->{anyFailed}++;
-    return;
-  }
-
   $state->{configSet}->{localconfig}=1;
 
   while (scalar(@{$ref->{output}}) > 0)  {
@@ -295,64 +238,8 @@ sub getLocalConfig {
       $state->{localconfig}->{$k} = $v;
     }
   }
-  $config{loglevel} = $state->{localconfig}->{zmmtaconfig_log_level} || 3;
-  $config{interval} = $state->{localconfig}->{zmmtaconfig_interval} || 60;
-  $config{debug} = $state->{localconfig}->{zmmtaconfig_debug} || 0;
-  $config{watchdog} = 
-    ($state->{localconfig}->{zmmtaconfig_watchdog} eq "no") ? 0 : 1;
-  if (exists $state->{localconfig}->{zmmtaconfig_watchdog_services}) {
-    @{$config{wd_list}} =  
-      split(/ /, $state->{localconfig}->{zmmtaconfig_watchdog_services});
-  } else {
-    @{$config{wd_list}} = qw(antivirus);
-  }
-
   logMsg(4, "Leaving Function");
 }
-
-sub validLCData {
-  my ($ref) = @_;
-  my @data = @{$ref->{output}};
-  my $foundValid=0;
-  my $cnt = scalar @data;
-  while (scalar(@data) > 0)  {
-    chomp(my $line = shift(@data));
-    $foundValid++ if $line =~ m/^(\w+)\s=\s(.*)/;
-    while ($data[0] !~ m/^\w+\s=\s.*/ && scalar(@data) > 0) {;
-      shift(@data);
-    }
-  }
-  my $percent = 0;
-  if ($cnt != 0 && $foundValid != 0) {
-    $percent = int((1-($foundValid/$cnt))*100);
-    logMsg(5, "foundValid:$foundValid cnt:$cnt percent:$percent");
-    $foundValid = 0 if ($percent > 50); 
-  }
-  logMsg(4, "Validating LC $percent data found $foundValid entries out of $cnt lines.");
-  return $foundValid;
-}
-
-sub validProvData {
-  my ($ref) = @_;
-  my @data = @{$ref->{output}};
-  my $foundValid=0;
-  my $cnt = scalar @data;
-  while (scalar(@data) > 0)  {
-    chomp(my $line = shift(@data));
-    $foundValid++ if $line =~ m/^(\w+):\s(.*)/;
-    while ($data[0] !~ m/^\w+:\s.*/ && scalar(@data) > 0) {;
-      shift(@data);
-    }
-  }
-  if ($cnt != 0 && $foundValid != 0) {
-    my $percent = int((1-($foundValid/$cnt))*100);
-    logMsg(5, "foundValid:$foundValid cnt:$cnt percent:$percent");
-    $foundValid = 0 if ($percent > 50); 
-  }
-  logMsg(4, "Validating LC data found $foundValid entries out of $cnt lines.");
-  return $foundValid;
-}
-
 
 sub getGlobalConfig {
   my ($var) = @_;
@@ -368,15 +255,7 @@ sub getGlobalConfig {
     logMsg(1, "$ref->{name} @{$ref->{error}}");
     return;
   }
-
-  # if no output was returned we have a potential avoid stopping all services
-  if (scalar(@{$ref->{output}}) == 0 || !validProvData($ref)) {
-    logMsg(2, "Skipping $ref->{desc} No data returned.");
-    $ref->{status} = 1;
-    $state->{anyFailed}++;
-    return;
-  }
-
+  my $next=0;
   while (scalar(@{$ref->{output}}) > 0)  {
     chomp(my $line = shift(@{$ref->{output}}));
     my ($k, $v) = $line =~ m/^(\w+):\s(.*)/;
@@ -398,48 +277,6 @@ sub getGlobalConfig {
   logMsg(4, "Leaving Function");
 }
 
-sub getMiscConfigs{
-  my ($var) = @_;
-  logMsg(4, "Entering function $var");
-  #return if $state->{configSet}->{globalconfig};
-  $state->{miscconfig} = {};
-
-  foreach my $miscCmd (@miscCommands) {
-    my $ref = undef;
-    $ref = $commands->{"$miscCmd"};
-    logMsg(5, "$miscCmd $ref->{name} $ref->{cmd}\n");
-    
-    executeCommand($ref);
-    if ($ref->{status} ne 0) {
-      logMsg(1, "Skipping $ref->{desc} update.");
-      logMsg(1, "Skipping $ref->{name} @{$ref->{error}}");
-      $state->{anyFailed}++;
-      next;
-    }
-  
-    # if no output was returned we have a potential avoid stopping all services
-    if (scalar(@{$ref->{output}}) == 0) {
-      logMsg(2, "Skipping $ref->{desc} No data returned.");
-      $ref->{status} = 1;
-      next;;
-    }
-  
-    while (scalar(@{$ref->{output}}) > 0)  {
-      my ($v);
-      chomp($v .= shift(@{$ref->{output}}));
-      
-      logMsg(5, "$miscCmd=$v");
-      if (exists $state->{miscconfig}->{$ref->{name}}) {
-        $state->{miscconfig}->{$ref->{name}} = "$state->{miscconfig}->{$ref->{name}} $v";
-      } else {
-        $state->{miscconfig}->{$ref->{name}} = $v;
-      }
-    }
-  }
-  $state->{configSet}->{miscconfig}=1;
-  logMsg(4, "Leaving Function");
-}
-
 sub getServerConfig {
   my ($var) = @_;
   logMsg(4, "Entering function $var");
@@ -454,15 +291,6 @@ sub getServerConfig {
     logMsg(1, "$ref->{name} @{$ref->{error}}");
     return;
   }
-
-  # if no output was returned we have a potential avoid stopping all services
-  if (scalar(@{$ref->{output}}) == 0 || !validProvData($ref)) {
-    logMsg(2, "Skipping $ref->{desc} No data returned.");
-    $ref->{status} = 1;
-    $state->{anyFailed}++;
-    return;
-  }
-
   while (scalar(@{$ref->{output}}) > 0)  {
     chomp(my $line = shift(@{$ref->{output}}));
     my ($k, $v) = $line =~ m/^(\w+):\s(.*)/;
@@ -484,7 +312,7 @@ sub getServerConfig {
       $state->{serviceconfig}->{$v} = $k;
       # parent services
       if ($v eq "mailbox") {
-        $state->{serviceconfig}->{'mailboxd'} = $k;
+        $state->{serviceconfig}->{'tomcat'} = $k;
       } elsif ($v eq "mta") {
         $state->{serviceconfig}->{'sasl'} = $k;
       } 
@@ -559,8 +387,6 @@ sub lookUpConfig($$) {
   if ($type eq "VAR") {
    $value = $state->{globalconfig}->{$key}
       if (defined $state->{globalconfig}->{$key});
-   $value = $state->{miscconfig}->{$key}
-      if (defined $state->{miscconfig}->{$key});
    $value = $state->{serverconfig}->{$key}
       if (defined $state->{serverconfig}->{$key});
   } elsif ($type eq "LOCAL") {
@@ -731,19 +557,12 @@ sub compareKeys {
       logMsg(5, "Checking $key=$val");
       if (defined $val) {
         if ($prev ne $val) {
-          logMsg(3, "Var $key changed from \'$prev\' -> \'$val\'")
-            unless ($state->{firstRun} == 1);
+          logMsg(3, "Var $key changed from \'$prev\' -> \'$val\'");
           $state->{current}->{config}->{$ref->{name}}->{$type}->{$key} = "$val";
           $ref->{changed} += 1;
         }
       } else {
         logMsg(4, "Required key is not defined $key=\'$val\'");
-        if (defined $prev) {
-          logMsg(3, "Var $key changed from \'$prev\' to no longer defined.")
-            unless ($state->{firstRun} == 1);
-          delete $state->{current}->{config}->{$ref->{name}}->{$type}->{$key};
-          $ref->{changed} += 1;
-        }
       }
     }
   } 
@@ -777,7 +596,7 @@ sub compileActions {
       next unless (exists $state->{forcedconfig}->{$section->{name}});
     }
 
-    if ($section->{changed} or exists $state->{forcedconfig}->{$section->{name}}) {
+    if ($section->{changed} || exists $state->{forcedconfig}->{$section->{name}}) {
       logMsg(5, "Section $section->{name} changed compiling rewrites");
       foreach my $rewrite (keys %{$section->{config}->{rewrites}}) {
         logMsg(5, "Adding rewrite $rewrite");
@@ -810,18 +629,6 @@ sub watchdog() {
   return unless $config{watchdog};
   return if ($state->{firstRun});
 
-  logMsg(4, "Watchdog enabled checking services");
-
-  # piggyback for snmp status.
-  foreach my $service (keys %{$state->{current}->{services}}) {
-    my $prevStatus = $state->{previous}->{services}->{$service};
-    my $curStatus = $state->{current}->{services}->{$service};
-    $curStatus = (processIsRunning($service) ? "running" : "stopped");
-    Zimbra::Mon::Logger::Log ("err", "Service status change: $config{hostname} $service changed from $prevStatus to $curStatus")
-      if ($curStatus ne $prevStatus && $prevStatus ne "");
-    $state->{previous}->{services}->{$service} = $curStatus;
-  }
-
   if ($config{wd_all}) {
     foreach my $service (keys %{$state->{current}->{services}}) {
       if (lookUpConfig("SERVICE", $service) && processIsNotRunning($service)) {
@@ -831,7 +638,6 @@ sub watchdog() {
     }
   } else {
     foreach my $service (@{$config{wd_list}}) {
-      logMsg(3, "Watchdog checking service $service");
       if (lookUpConfig("SERVICE", $service) && processIsNotRunning($service)) {
         logMsg(2, "Watchdog adding $service to restart list");
         $state->{current}->{restarts}->{$service} = -1;
@@ -957,18 +763,6 @@ sub rewriteConfig {
         } else {
           $rep = 0;
         }
-      } elsif ($sr =~ m/^truefalse/) {
-        my ($cmd, $key) = ($sr =~ m/truefalse ([^:]+):(\S+)/);
-        $val = lookUpConfig($cmd, $key);
-        logMsg(5, "$cmd $key $val");
-        if (lc($val) eq "true" || lc($val) eq "yes") {
-          $rep = "true";
-        } elsif (lc($val) eq "false" || lc($val) eq "no" || $val eq "") {
-          $rep = "false";
-        } else {
-          $rep = "true";
-        }
-        logMsg(5, "$cmd $key $rep");
       } elsif ($sr =~ m/^range/) {
         my ($cmd, $key, $lo, $hi) = 
           ($sr =~ m/range ([^:]+):(\S+)\s+(\S+)\s+(\S+)/);
@@ -1005,10 +799,7 @@ sub rewriteConfig {
         }
       } else {
         $rep=lookUpConfig("VAR", $sr);
-        $rep=lookUpConfig("LOCAL", $sr)
-          if ($rep eq "");
       }
-      logMsg(5, "Substituting $sr=$rep");
       my $qr = quotemeta($sr);
       $sline =~ s/%%$qr%%/$rep/;
     }
@@ -1047,23 +838,10 @@ sub processIsNotRunning($) {
   return (controlProcess($process, '2') ? 1 : 0);
 }
 
-sub compileDependancyRestarts($) {
-  my ($processname) = @_;
-  foreach my $ref (@{$state->{sections}}) {
-    next unless ($ref->{name} eq $processname);
-    foreach my $depend (keys %{$ref->{config}->{depends}}) {
-      if ( lookUpConfig("SERVICE", $depend) || $depend eq "amavis") {
-        logMsg(3, "Adding restart for dependancy $depend");
-        $state->{current}->{restarts}->{$depend} = -1;
-      }
-    }
-  } 
-}
-
 sub controlProcess($$) {
   my ($processname,$action_value) = @_;
   my $process = uc($processname);
-  my $rc=0;
+  my $rc;
   unless ( $action_value >= -1 || $action_value <= 2) {
     logMsg(1, "State must be -1,0,1");
     return;
@@ -1081,37 +859,45 @@ sub controlProcess($$) {
   # -1 = restart norewrite  0 = stop  1 = start
   # -2 = restart            
   my $action = ("restart", "stop", "start", "status")[$action_value+1];
-  my $lvl = ($action eq "status" ? 4 : 3);
 
   # return if it's already running and we are trying to start it.
-  if ($action eq "start" && processIsRunning($processname)) {
-    $state->{current}->{services}->{$processname} = "running";
-    logMsg($lvl,"$processname was already running adding to current state.");
-    compileDependancyRestarts($processname);
-    return 0;
-  }
+  return 0 if ($action eq "start" && processIsRunning($processname));
 
   # Postfix, unique to the end.
   $action = "reload" if ($action eq "restart" && $process eq "MTA");
+  my $lvl = ($action eq "status" ? 4 : 3);
   my $rewrite = ($action =~ m/status|stop/ ? "norewrite" : "");
   logMsg($lvl,"CONTROL $process: $exe{$process} $action $rewrite");
-  $rc = 0xffff & system("$exe{$process} $action $rewrite > /dev/null 2>&1");
+  #$rc = 0xffff & system("$exe{$process} $action $rewrite > /dev/null 2>&1"); 
+  if ($action eq "restart") {
+    system("$exe{$process} stop $rewrite >> /tmp/zmmtaconfig.debug");
+    $rc = 0xffff & system("$exe{$process} start $rewrite >> /tmp/zmmtaconfig.debug");
+  } else {
+    $rc = 0xffff & system("$exe{$process} $action $rewrite >> /tmp/zmmtaconfig.debug");
+  }
 
+  my $msg = printf "$exe{$process} $action $rewrite returned %#04x:", $rc;
+  logMsg(4, "$msg");
+
+  if ($rc == 0xff00) {
+    logMsg(4, "$processname failed: $!");
+  } elsif (($rc & 0xff) == 0) {
+    $rc >>= 8;
+    logMsg(4, "$exe{$process} returned non-zero status $rc");
+  }
+    
   # update the state information
   if ($action eq "stop" && $rc == 0) {
     logMsg(2, "$processname was stopped removing from current state");
-    compileDependancyRestarts($processname);
     delete $state->{current}->{services}->{$processname};
-    #print Dumper $state->{current}->{services};
+    print Dumper $state->{current}->{services};
   } elsif ($action eq "start" && $rc == 0) {
     logMsg(2, "$processname was started adding to current state");
-    compileDependancyRestarts($processname);
     $state->{current}->{services}->{$processname} = "started";
-    #print Dumper $state->{current}->{services};
+    print Dumper $state->{current}->{services};
   }
-
-  logMsg(2, "Failed to $action $processname rc=$rc") 
-    if ($rc != 0 && $action ne "status");
+  logMsg(2, "Failed to $action $processname rc=$rc")
+    if ($rc != 0 && $action ne "status" );
   return $rc;
 }
 
@@ -1163,10 +949,7 @@ sub logMsg($$) {
   my $tstamp = localtime(time);
   print STDERR "$tstamp $trace $msg\n"
     if ($lvl <= $config{loglevel}); 
-  Zimbra::Mon::Logger::Log("info", "$config{progname}: $msg")
-    if ($lvl <= 2);
   if ($lvl == 0) {
-    Zimbra::Mon::Logger::Log("crit", "$config{progname}: shutting down");
     print STDERR "$config{progname} shutting down\n";
     exit 1;
   }
@@ -1201,21 +984,17 @@ sub executeCommand($) {
   @error = <$efh>;
   waitpid($pid,0);
   if ($? == -1) {
-    #$state->{sigchld}++;
-    #if ($state->{sigchld} >= 15) {
-      #logMsg(2, "CHLD processes are being reaped automatically ignoring them now.");
-      #$SIG{CHLD}  = \&catchSignal;
-    #}
-
-    $rc = $? >> 8;
-    @{$ref->{'output'}} = @output;
-    @{$ref->{'error'}} = @error;
-    $ref->{status} = $rc;
-    if (scalar(@error) != 0) {
-      $ref->{status} = 1;
-    } elsif (scalar(@output) != 0) {
+    if ($#output != 0) {
+      @{$ref->{'output'}} = @output;
+      @{$ref->{'error'}} = @error;
       $ref->{status} = 0;
-      $rc=0;
+      $rc = 0;
+    } elsif (scalar @error eq 0) {
+      $ref->{status} = 1;
+      push(@{$ref->{error}}, "$ref->{cmd} failed to execute: $!");
+      push(@{$ref->{error}}, "@{$ref->{output}} failed to execute: $!");
+    } else {
+      @$ref->{error} = @error;
     }
   } elsif ($? & 127) {
     $rc = $? & 127;

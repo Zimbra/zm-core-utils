@@ -1,9 +1,8 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2005, 2006 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 #
@@ -30,15 +28,6 @@ else
     java=java
 fi
 
-if [ -f ".hotspot_compiler" ]; then
-  cd $ZMROOT
-fi
-
-case "`uname`" in
-CYGWIN*) PATHSEP=";";;
-*) PATHSEP=":";;
-esac
-
-CP=${ZMROOT}/lib/jars/zimbracommon.jar${PATHSEP}${ZMROOT}/lib/jars/commons-logging.jar${PATHSEP}${ZMROOT}/lib/jars/commons-cli-2.0.jar${PATHSEP}${ZMROOT}/lib/jars/dom4j-1.5.jar${PATHSEP}${ZMROOT}/lib/jars/log4j-1.2.8.jar${PATHSEP}${ZMROOT}/lib/jars/commons-httpclient-2.0.1.jar
+CP=${ZMROOT}/lib/jars/zimbracommon.jar:${ZMROOT}/lib/jars/commons-logging.jar:${ZMROOT}/lib/jars/commons-cli-2.0.jar:${ZMROOT}/lib/jars/dom4j-1.5.jar:${ZMROOT}/lib/jars/log4j-1.2.8.jar:${ZMROOT}/lib/jars/commons-httpclient-2.0.1.jar
 exec ${java} -client -Dzimbra.home="${ZMROOT}" -cp "$CP" \
     com.zimbra.common.localconfig.Main "$@"

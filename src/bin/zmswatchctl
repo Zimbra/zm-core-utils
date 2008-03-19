@@ -1,7 +1,6 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,14 +11,12 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
 BASE=/opt/zimbra
 CONFIG=$BASE/conf/swatchrc
-PIDFILE=${BASE}/log/swatch.pid
-LOGFILE=${BASE}/log/zmswatch.out
+PIDFILE=/opt/zimbra/log/swatch.pid
 
 if [ -f $PIDFILE ]; then
 	PID=`cat $PIDFILE`
@@ -42,10 +39,10 @@ case "$1" in
       fi
 			$BASE/libexec/swatch --config-file=$BASE/conf/swatchrc \
 			--use-cpan-file-tail \
-			--script-dir=/tmp -t /var/log/zimbra.log > $LOGFILE 2>&1 &
+			--script-dir=/tmp -t /var/log/zimbra.log >/tmp/swatch.out 2>&1 &
 			PID=$!
 			echo $PID > $PIDFILE
-			chmod 644 $LOGFILE
+			chmod 777 /tmp/swatch.out
 			if [ x$PID != 'x' ]; then
 				kill -0 $PID
 				exit $?

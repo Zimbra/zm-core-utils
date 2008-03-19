@@ -1,7 +1,6 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -66,7 +64,7 @@ checkrunning()
 
 doDebugStart() {
   TIMEOUT=60 # timelimit for command
-	sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 -u zimbra -h "$my_url" \
+	sudo /opt/zimbra/openldap/libexec/slapd -l LOCAL0 -4 -u zimbra -h "$my_url" \
 			-f /opt/zimbra/conf/slapd.conf -d 1 2>&1 | egrep "failed|error" &
   cmd_pid=$!
   sleep $TIMEOUT | (
@@ -107,13 +105,13 @@ start()
 		# Our ldap url should be the first in the list in localconfig
 		my_url=`echo ${ldap_url} | awk '{print $1}'`
 		/opt/zimbra/libexec/zmconfigure /opt/zimbra/conf/slapd.conf.in /opt/zimbra/conf/slapd.conf
-		sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 \
+		sudo /opt/zimbra/openldap/libexec/slapd -l LOCAL0 -4 \
       -u zimbra -h "$my_url" -f /opt/zimbra/conf/slapd.conf
     sleep 5
     for ((i =0; i < 6; i++)); do
       checkrunning
       if [ $RUNNING = 0 ]; then
-		    sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 \
+		    sudo /opt/zimbra/openldap/libexec/slapd -l LOCAL0 -4 \
           -u zimbra -h "$my_url" -f /opt/zimbra/conf/slapd.conf
       else 
         break

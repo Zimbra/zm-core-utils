@@ -1,7 +1,6 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,21 +11,19 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
-umask 027
+
+if [ x`whoami` != xzimbra ]; then
+	echo Error: must be run as zimbra user
+	exit 1
+fi
+
 source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars \
 	zimbra_home 
 
-u=`id -un`
-if [ $u != ${zimbra_user} ]; then
-    echo "Error: must be run as ${zimbra_user} user"
-    exit 1
-fi
-
-if [[ ! -L ${zimbra_home}/openldap && ! -d ${zimbra_home}/openldap ]]; then
+if [ ! -L ${zimbra_home}/openldap ]; then
 	# No ldap - exit gracefully
 	exit 0
 fi
@@ -42,4 +39,3 @@ mkdir -p $DEST
 D=`date +%Y%m%d%H%M%S`
 ${zimbra_home}/openldap/sbin/slapcat -f ${zimbra_home}/conf/slapd.conf -b "" -l $DEST/ldap.bak.${D}
 cp -f ${DEST}/ldap.bak.${D} ${DEST}/ldap.bak
-

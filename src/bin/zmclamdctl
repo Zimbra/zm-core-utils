@@ -1,7 +1,6 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -29,10 +27,6 @@ zmsetvars \
   zimbra_log_directory
 
 pidfile=${zimbra_log_directory}/clamd.pid
-
-if [ ! -d "/opt/zimbra/data/clamav/db" ]; then
-    mkdir -p /opt/zimbra/data/clamav/db
-fi
 
 rewriteconfig() {
   /opt/zimbra/libexec/zmmtaconfig antivirus > /dev/null 2>&1
@@ -71,12 +65,12 @@ case "$1" in
       exit 0
     fi
 
-    if [ ! -f ${zimbra_home}/data/clamav/db/daily.cvd ]; then
+    if [ ! -f ${zimbra_home}/clamav/db/daily.cvd ]; then
       # Start with the files we ship.
       cp -f ${zimbra_home}/clamav/db/daily.cvd.init \
-        ${zimbra_home}/data/clamav/db/daily.cvd
+        ${zimbra_home}/clamav/db/daily.cvd
       cp -f ${zimbra_home}/clamav/db/main.cvd.init \
-        ${zimbra_home}/data/clamav/db/main.cvd
+        ${zimbra_home}/clamav/db/main.cvd
       # Init the db
       ${zimbra_home}/clamav/bin/freshclam \
         --config-file=${zimbra_home}/conf/freshclam.conf &
@@ -90,7 +84,7 @@ case "$1" in
         >> ${zimbra_log_directory}/freshclam.log 2>&1 &
 
     ${zimbra_home}/clamav/sbin/clamd \
-      --config-file=${zimbra_home}/conf/clamd.conf \
+      --config-file ${zimbra_home}/conf/clamd.conf \
         >> ${zimbra_log_directory}/clamd.log 2>&1 &
 
     for ((i = 0; i < 12; i++)); do

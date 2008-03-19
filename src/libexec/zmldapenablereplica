@@ -1,7 +1,6 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -30,22 +28,10 @@ zmsetvars -f\
 	ldap_master_url \
 	ldap_port \
 	ldap_root_password \
-	zimbra_ldap_password \
-	zimbra_ldap_userdn \
-	ldap_replication_password
-
-u=`id -un`
-if [ $u != ${zimbra_user} ]; then
-    echo "Error: must be run as ${zimbra_user} user"
-    exit 1
-fi
+  ldap_replica_rid \
+	zimbra_ldap_userdn
 
 ldap_master_host=`echo ${ldap_master_url} | sed -e 's|ldaps*://\([^:]*\):*.*|\1|'`
-
-toLower() { 
-  
-        echo $1 | tr "[:upper:]" "[:lower:]"
-}
 
 verifyLdapInstalled() {
 	echo -n "Looking for LDAP installation..."
@@ -60,7 +46,7 @@ verifyLdapInstalled() {
 verifyLdap() {
 	echo -n "Verifying ldap on ${ldap_master_url}..."
 	LDS="${zimbra_home}/bin/ldapsearch";
-	ARGS="-x -H ${ldap_master_url} -D ${zimbra_ldap_userdn} -w ${zimbra_ldap_password}"
+	ARGS="-x -H ${ldap_master_url} -D ${zimbra_ldap_userdn} -w ${ldap_root_password}"
 	OUTPUT=`$LDS $ARGS 2>&1`
 	if [ $? -ne 0 ]; then
 		echo "FAILED"
@@ -87,15 +73,17 @@ createLdapConfig() {
 	root_sha=`${zimbra_home}/openldap/sbin/slappasswd -s ${ldap_root_password}`
 	sed -e "s|^rootpw.*|rootpw ${root_sha}|" \
 		${zimbra_home}/openldap/etc/openldap/slapd.conf > ${zimbra_home}/conf/slapd.conf.in
-	sed -e '/overlay syncprov/d' -e '/syncprov-/d' ${zimbra_home}/conf/slapd.conf.in >/tmp/slapd.conf.in.$$
-	mv -f /tmp/slapd.conf.in.$$ ${zimbra_home}/conf/slapd.conf.in
+	grep -v syncprov ${zimbra_home}/conf/slapd.conf.in > /tmp/slapd.conf.in
+	mv -f /tmp/slapd.conf.in ${zimbra_home}/conf/slapd.conf.in
 
 	if [ $? -ne 0 ]; then
 		echo "FAILED"
 		echo "ERROR - LDAP config creation failed - exiting"
 	fi
 
-	ldap_replica_rid=100
+  if [ x"${ldap_replica_rid}" = "x" ]; then
+    ldap_replica_rid=100
+  fi
 
 	if [ -f "/opt/zimbra/lib/conf/zimbra-ext.schema" ]; then
 		sed -e '\|/opt/zimbra/openldap/etc/openldap/schema/zimbra.schema| a\
@@ -108,8 +96,6 @@ include		"/opt/zimbra/lib/conf/zimbra-ext.schema"' ${zimbra_home}/conf/slapd.con
 		echo "ERROR - LDAP config creation failed - exiting"
 	fi
 
-        num=`expr match "$ldap_url" 'ldaps*'`
-        if [ "$num" == 5 ]; then
 	cat >> ${zimbra_home}/conf/slapd.conf.in <<EOF
 syncrepl rid=${ldap_replica_rid}
 	provider=${ldap_master_url}
@@ -118,8 +104,8 @@ syncrepl rid=${ldap_replica_rid}
 	schemachecking=off
 	searchbase=""
 	bindmethod=simple
-	binddn=uid=zmreplica,cn=admins,cn=zimbra
-	credentials=${ldap_replication_password}
+	binddn="uid=zimbra,cn=admins,cn=zimbra"
+	credentials=${ldap_root_password}
 	logbase="cn=accesslog"
 	logfilter="(&(objectClass=auditWriteObject)(reqResult=0))"
 	syncdata="accesslog"
@@ -127,30 +113,38 @@ syncrepl rid=${ldap_replica_rid}
 updateref  ${ldap_master_url}
 overlay syncprov
 EOF
-	else
-	cat >> ${zimbra_home}/conf/slapd.conf.in <<EOF
-syncrepl rid=${ldap_replica_rid}
-	provider=${ldap_master_url}
-	retry="60 +"
-	type=refreshAndPersist
-	schemachecking=off
-	searchbase=""
-	bindmethod=simple
-	binddn=uid=zmreplica,cn=admins,cn=zimbra
-	credentials=${ldap_replication_password}
-	starttls=critical
-	logbase="cn=accesslog"
-	logfilter="(&(objectClass=auditWriteObject)(reqResult=0))"
-	syncdata="accesslog"
-
-updateref  ${ldap_master_url}
-overlay syncprov
-EOF
-	fi
 
 	/opt/zimbra/libexec/zmconfigure /opt/zimbra/conf/slapd.conf.in /opt/zimbra/conf/slapd.conf
 
 	echo "succeeded"
+}
+
+createReplicaUser() {
+	echo -n "Setting up replication ldap user..."
+
+	root_sha=`${zimbra_home}/openldap/sbin/slappasswd -s ${ldap_root_password}`
+	
+	cat > /tmp/replicauser.ldif <<EOF
+dn: uid=zimbrareplication,cn=admins,cn=zimbra
+uid: zimbrareplication
+objectclass: zimbraAccount
+objectclass: organizationalPerson
+cn: zimbrareplication
+sn: zimbrareplication
+zimbraAccountStatus: active
+zimbraIsAdminAccount: TRUE
+zimbraId: e0fafd89-1360-11d9-8661-000a95d98ef3
+description: The zimbra replication account
+userPassword: ${root_sha}
+EOF
+
+	${zimbra_home}/openldap/bin/ldapadd -w ${ldap_root_password} -D ${zimbra_ldap_userdn} \
+		-x -f /tmp/replicauser.ldif -H ${ldap_master_url} > /dev/null 2>&1
+
+	# Ignore failures, user may already exist?
+	echo "succeeded"
+	
+	/bin/rm -f /tmp/replicauser.ldif
 }
 
 enableLdapService() {
@@ -219,7 +213,7 @@ updateLdapHost() {
   else 
     proto="ldap"
   fi
-	${zimbra_home}/bin/zmlocalconfig -e ldap_url="${proto}://${zimbra_server_hostname}:${ldap_port} ${ldap_master_url}"
+	zmlocalconfig -e ldap_url="${proto}://${zimbra_server_hostname}:${ldap_port} ${ldap_master_url}"
 	echo "done"
 }
 
@@ -247,7 +241,7 @@ stopLdap() {
 	echo "done"
 }
 
-if [ `toLower $ldap_master_host` = `toLower $zimbra_server_hostname` ]; then
+if [ $ldap_master_host = $zimbra_server_hostname ]; then
 	enableSyncProv
   stopLdap
   startLdap
@@ -257,6 +251,7 @@ fi
 verifyLdapInstalled
 verifyLdap
 createLdapConfig
+createReplicaUser
 enableLdapService
 #stopZimbra
 #stopRemoteZimbra
