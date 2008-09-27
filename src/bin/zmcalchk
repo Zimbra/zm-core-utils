@@ -402,6 +402,7 @@ sub main() {
         $i++;
         my @errors = ();
         my $or = $item->{'or'}->{'a'};
+        my $organizer = $or;
         $or =~ s/\@\S+$//;
         my $src = $source_user;
         $src =~ s/\@\S+$//;
@@ -414,16 +415,16 @@ sub main() {
         if ($or ne $src) {
             my $or_item;
             eval {
-                $or_item = findCalendarItem($or, $item);
+                $or_item = findCalendarItem($organizer, $item);
                 if (defined($or_item)) {
-                    getItem($or, $or_item);
+                    getItem($organizer, $or_item);
                 }
             };
             if ($@) {
-                push(@errors, "$or: organizer account not found: $@");
+                push(@errors, "$organizer: organizer account not found: $@");
             }
             if (!defined($or_item)) {
-                push(@errors, "$or: organizer's event not found!");
+                push(@errors, "$organizer: organizer's event not found!");
             } else {
                 $item = $or_item;
             }
@@ -456,11 +457,6 @@ sub main() {
                 push(@errors, "$att: no matching event found; rsvp=$rsvp, role=$role");
             } else {
                 foreach my $instance (@{$item->{'inst'}}) {
-                    if (!defined($instance->{'ridZ'})) {
-                        print STDERR "WARNING: recurrence ID not found for $$item{'name'}\n" if ($debug);
-                        next;
-                    }
-
                     my $attInst = getInstanceByInstId($attItem, $instance->{'ridZ'});
                     my $iTime = scalar localtime($instance->{'s'} / 1000);
                     if (!defined($attInst)) {
@@ -655,7 +651,9 @@ sub sendZmmailboxRequestNP($$) {
         my @newlines = split(/\n/, $buf);
 
         if ($needs_join) {
-            $lines[$#lines] .= shift @newlines;
+            if (@newlines > 0 && defined $newlines[0]) {
+                $lines[$#lines] .= shift @newlines;
+            }
             $needs_join = 0;
         }
 
