@@ -23,7 +23,7 @@ my %locks;                      # by LockID - hash w/ 'owner','type'
 my %threads;           # by threadId - hash w/ 'state' 'waitingOnLock'
 
 my $filename = $ARGV[0];
-my ($dumpLocks, $dumpThreads, $searchThreadStack, $searchThreadId, $stackFrames, $sort, $filterByState, $allLocks, $negSearchThreadStack);
+my ($dumpLocks, $dumpThreads, $searchThreadStack, $searchThreadId, $stackFrames, $sort, $filterByState, $allLocks);
 my ($waiting);
 
 $stackFrames = 10;
@@ -37,7 +37,6 @@ GetOptions(
            "id=s" => \$searchThreadId,
            "state=s" => \$filterByState,
            "stack=s" => \$searchThreadStack,
-           "ns=s" => \$negSearchThreadStack,
            "waiting=s" => \$waiting,
            "all" => \$allLocks,
           );
@@ -263,8 +262,6 @@ sub dumpThreads() {
   foreach my $threadId ( sort { mySort($a, $b) } keys %threads ) {
     if (!defined $threadId) {
       # continue
-    } elsif (defined $negSearchThreadStack && ($threads{$threadId}{stack} =~ /$negSearchThreadStack/)) {
-      #continue
     } elsif (defined $searchThreadStack && !($threads{$threadId}{stack} =~ /$searchThreadStack/)) {
       # continue
     } elsif (defined $searchThreadId && !($threadId =~ /$searchThreadId/)) {
