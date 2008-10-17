@@ -39,35 +39,72 @@ my $localHostName = getHostName();
 my $ldapMasterHere = isLdapMaster();
 my $services;
 my %devicesChecked;
-my %startorder = ( 
-	"ldap" 		=> 0,
-	"logger" 	=> 1,
-	"convertd"	=> 2,
-	"mailbox" 	=> 3,
-	"imapproxy"	=> 4,
-	"antispam" 	=> 5,
-	"antivirus"	=> 6,
-	"archiving"	=> 7,
-	"snmp" 		=> 8,
-	"spell" 	=> 9,
-	"mta" 		=> 10,
-	"stats"		=> 11,
-);
 
-my %allservices = ( 
-	"antivirus" => "/opt/zimbra/bin/zmantivirusctl", 
-	"antispam" => "/opt/zimbra/bin/zmantispamctl", 
-	"archiving" => "/opt/zimbra/bin/zmarchivectl",
-	"convertd" => "/opt/zimbra/bin/zmconvertctl",
-	"mta" => "/opt/zimbra/bin/zmmtactl", 
-	"mailbox" => "/opt/zimbra/bin/zmstorectl", 
-	"logger" => "/opt/zimbra/bin/zmloggerctl", 
-	"snmp" => "/opt/zimbra/bin/zmswatchctl", 
-	"ldap" => "/opt/zimbra/bin/ldap",
-	"spell" => "/opt/zimbra/bin/zmspellctl",
-	"imapproxy" => "/opt/zimbra/bin/zmproxyctl",
-	"stats" => "/opt/zimbra/bin/zmstatctl",
-);
+my $convertdVersion;
+$convertdVersion=getLocalConfig("convertd_version");
+my %startorder;
+my %allservices;
+
+if ($convertdVersion == 1) {
+	%startorder = ( 
+		"ldap" 		=> 0,
+		"logger" 	=> 1,
+		"mailbox" 	=> 2,
+		"imapproxy"	=> 3,
+		"antispam" 	=> 4,
+		"antivirus"	=> 5,
+		"archiving"	=> 6,
+		"snmp" 		=> 7,
+		"spell" 	=> 8,
+		"mta" 		=> 9,
+		"stats"		=> 10,
+	);
+
+	%allservices = ( 
+		"antivirus" => "/opt/zimbra/bin/zmantivirusctl", 
+		"antispam" => "/opt/zimbra/bin/zmantispamctl", 
+		"archiving" => "/opt/zimbra/bin/zmarchivectl",
+		"mta" => "/opt/zimbra/bin/zmmtactl", 
+		"mailbox" => "/opt/zimbra/bin/zmstorectl", 
+		"logger" => "/opt/zimbra/bin/zmloggerctl", 
+		"snmp" => "/opt/zimbra/bin/zmswatchctl", 
+		"ldap" => "/opt/zimbra/bin/ldap",
+		"spell" => "/opt/zimbra/bin/zmspellctl",
+		"imapproxy" => "/opt/zimbra/bin/zmproxyctl",
+		"stats" => "/opt/zimbra/bin/zmstatctl",
+	);
+
+} else {
+	%startorder = ( 
+		"ldap" 		=> 0,
+		"logger" 	=> 1,
+		"convertd"	=> 2,
+		"mailbox" 	=> 3,
+		"imapproxy"	=> 4,
+		"antispam" 	=> 5,
+		"antivirus"	=> 6,
+		"archiving"	=> 7,
+		"snmp" 		=> 8,
+		"spell" 	=> 9,
+		"mta" 		=> 10,
+		"stats"		=> 11,
+	);
+	
+	%allservices = ( 
+		"antivirus" => "/opt/zimbra/bin/zmantivirusctl", 
+		"antispam" => "/opt/zimbra/bin/zmantispamctl", 
+		"archiving" => "/opt/zimbra/bin/zmarchivectl",
+		"convertd" => "/opt/zimbra/bin/zmconvertctl",
+		"mta" => "/opt/zimbra/bin/zmmtactl", 
+		"mailbox" => "/opt/zimbra/bin/zmstorectl", 
+		"logger" => "/opt/zimbra/bin/zmloggerctl", 
+		"snmp" => "/opt/zimbra/bin/zmswatchctl", 
+		"ldap" => "/opt/zimbra/bin/ldap",
+		"spell" => "/opt/zimbra/bin/zmspellctl",
+		"imapproxy" => "/opt/zimbra/bin/zmproxyctl",
+		"stats" => "/opt/zimbra/bin/zmstatctl",
+	);
+}
 
 my %rewrites = ( 
 	"antivirus" => "antivirus amavis", 
