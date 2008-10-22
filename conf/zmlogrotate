@@ -98,3 +98,12 @@
     rotate 7
     compress
 }
+
+/opt/zimbra/log/zmconvertd.log {
+    daily
+    missingok
+    copytruncate
+    notifempty
+    create 0644 zimbra zimbra
+    rotate 7
+}
