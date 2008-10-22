@@ -33,38 +33,40 @@ use ZimbraSoapTest;
 
 #standard options
 my ($admin, $user, $pw, $host, $help, $adminHost); #standard
-my ($token);
+my ($name);
+
 GetOptions("u|user=s" => \$user,
            "admin" => \$admin,
            "ah|adminHost=s" => \$adminHost,
            "pw=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
-           "t=s" => \$token,
+           "name=s" => \$name,
           );
 
-if (!defined($user) || defined($help)) {
+if (!defined($user)) {
+  $user = "admin";
+}
+
+if (!defined($user) || defined($help) || !defined($name) ) {
   my $usage = <<END_OF_USAGE;
 
-USAGE: $0 -u USER -t TOKEN
+USAGE: $0 -u USER -n NAME 
 END_OF_USAGE
   die $usage;
 }
 
 my $z = ZimbraSoapTest->new($user, $host, $pw, undef, $adminHost);
-$z->doStdAuth();
+$z->doAdminAuth();
 
 my $SOAP = $Soap::Soap12;
 
 my $d = new XmlDoc;
-if (defined($token) && ($token ne "")) {
-    $d->start('SyncRequest', $Soap::ZIMBRA_MAIL_NS, { "token" => $token});
-} else {
-    $d->start('SyncRequest', $Soap::ZIMBRA_MAIL_NS);
-}
-$d->end(); # 'SyncRequest';'
+$d->start('GetXMPPComponentRequest', $Soap::ZIMBRA_ADMIN_NS); {
+  $d->add('xmppcomponent', undef, { "by" => "name"}, $name);
+} $d->end();
 
-my $response = $z->invokeMail($d->root());
+my $response = $z->invokeAdmin($d->root());
 
 print "REQUEST:\n-------------\n".$z->to_string_simple($d);
 print "RESPONSE:\n--------------\n".$z->to_string_simple($response);
