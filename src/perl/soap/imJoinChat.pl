@@ -41,10 +41,10 @@ GetOptions("u|user=s" => \$user,
 
 
 
-if (!defined($user) || !defined($addr) || defined($help)) {
+if (!defined($user) || !defined($threadId) || defined($help)) {
     my $usage = <<END_OF_USAGE;
     
-USAGE: $0 -u USER [-t threadId] -a addr
+USAGE: $0 -u USER -t threadId -a addr
 END_OF_USAGE
     die $usage;
 }
