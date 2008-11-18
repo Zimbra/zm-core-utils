@@ -112,7 +112,7 @@ include		"/opt/zimbra/lib/conf/zimbra-ext.schema"' ${zimbra_home}/conf/slapd.con
 		echo "ERROR - LDAP config creation failed - exiting"
 	fi
 
-        num=`expr match "$ldap_url" 'ldaps*'`
+        num=`expr match "$ldap_master_url" 'ldaps*'`
         if [ "$num" == 5 ]; then
 	cat >> ${zimbra_home}/conf/slapd.conf.in <<EOF
 syncrepl rid=${ldap_replica_rid}
