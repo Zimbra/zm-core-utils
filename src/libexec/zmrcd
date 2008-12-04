@@ -45,7 +45,7 @@ my %SIMPLE_COMMANDS = (
    "flushqueue"       => "/opt/zimbra/postfix/sbin/postqueue -f",
    "showqueue"        => "/opt/zimbra/postfix/sbin/postqueue -p",
    "zmserverips"      => "/opt/zimbra/libexec/zmserverips",
-   "slapcat"          => "/opt/zimbra/openldap/sbin/slapcat -f /opt/zimbra/conf/slapd.conf -b ''",
+   "slapcat"          => "/opt/zimbra/openldap/sbin/slapcat -F /opt/zimbra/data/ldap/config -b ''",
    "zmqstat all"      => "sudo /opt/zimbra/libexec/zmqstat",
    "zmqstat incoming" => "sudo /opt/zimbra/libexec/zmqstat incoming",
    "zmqstat hold"     => "sudo /opt/zimbra/libexec/zmqstat hold",
@@ -53,7 +53,7 @@ my %SIMPLE_COMMANDS = (
    "zmqstat deferred" => "sudo /opt/zimbra/libexec/zmqstat deferred",
    "zmqstat corrupt"  => "sudo /opt/zimbra/libexec/zmqstat corrupt",
    "zmcollectconfigfiles" => "tar cv /opt/zimbra/conf | gzip -cf",
-   "zmcollectldapzimbra" => "/opt/zimbra/openldap/sbin/slapcat -f /opt/zimbra/conf/slapd.conf -b '' -s cn=zimbra | gzip -cf",      
+   "zmcollectldapzimbra" => "/opt/zimbra/openldap/sbin/slapcat -F /opt/zimbra/data/ldap/config -b '' -s cn=zimbra | gzip -cf",      
 );
 
 my %REGEX_CHECKED_COMMANDS = (
