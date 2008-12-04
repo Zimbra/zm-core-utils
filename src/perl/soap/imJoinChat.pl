@@ -26,7 +26,7 @@ use Soap;
 use ZimbraSoapTest;
 
 # specific to this app
-my ($threadId, $addr, $nickname);
+my ($threadId, $addr);
 
 #standard options
 my ($user, $pw, $host, $help); #standard
@@ -36,16 +36,15 @@ GetOptions("u|user=s" => \$user,
            "help|?" => \$help,
            # add specific params below:
            "t=s", \$threadId,
-           "a=s", \$addr,
-           "n=s", \$nickname,
+           "a=s", \$addr
           );
 
 
 
-if (!defined($user) || !defined($addr) || defined($help)) {
+if (!defined($user) || !defined($threadId) || defined($help)) {
     my $usage = <<END_OF_USAGE;
     
-USAGE: $0 -u USER [-t threadId] -a addr [-n nickname]
+USAGE: $0 -u USER -t threadId -a addr
 END_OF_USAGE
     die $usage;
 }
@@ -56,11 +55,7 @@ $z->doStdAuth();
 my $d = new XmlDoc;
 my $searchName = "SearchRequest";
 
-if (defined $nickname) {
-  $d->start("IMJoinChatRequest", $Soap::ZIMBRA_IM_NS, { 'addr' => $addr, 'thread' => $threadId, 'nick' => $nickname });
-} else {
-  $d->start("IMJoinChatRequest", $Soap::ZIMBRA_IM_NS, { 'addr' => $addr, 'thread' => $threadId });
-}
+$d->start("IMJoinChatRequest", $Soap::ZIMBRA_IM_NS, { 'addr' => $addr, 'thread' => $threadId });
 
  $d->end(); 
 
