@@ -20,49 +20,42 @@
 # Simple SOAP test-harness for the AddMsg API
 #
 
+use Date::Parse;
+use Time::HiRes qw ( time );
 use strict;
 
 use lib '.';
 
 use LWP::UserAgent;
 use Getopt::Long;
+use ZimbraSoapTest;
 use XmlElement;
 use XmlDoc;
 use Soap;
-use ZimbraSoapTest;
 
 #standard options
-my ($admin, $user, $pw, $host, $help, $adminHost); #standard
-my ($token);
+my ($user, $pw, $host, $help);  #standard
+
+my $svc;
+
 GetOptions("u|user=s" => \$user,
-           "admin" => \$admin,
-           "ah|adminHost=s" => \$adminHost,
            "pw=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
-           "t=s" => \$token,
+           "svc=s" => \$svc,
           );
 
-if (!defined($user) || defined($help)) {
-  my $usage = <<END_OF_USAGE;
-
-USAGE: $0 -u USER -t TOKEN
-END_OF_USAGE
-  die $usage;
+if (!defined($user)) {
+    print "USAGE: $0 -u USER -s CONFERENCE_SERVICE\n";
+    exit 1;
 }
 
-my $z = ZimbraSoapTest->new($user, $host, $pw, undef, $adminHost);
+my $z = ZimbraSoapTest->new($user, $host, $pw);
 $z->doStdAuth();
 
-my $SOAP = $Soap::Soap12;
-
 my $d = new XmlDoc;
-if (defined($token) && ($token ne "")) {
-    $d->start('SyncRequest', $Soap::ZIMBRA_MAIL_NS, { "token" => $token});
-} else {
-    $d->start('SyncRequest', $Soap::ZIMBRA_MAIL_NS);
-}
-$d->end(); # 'SyncRequest';'
+$d->start('IMListConferenceRoomsRequest', $Soap::ZIMBRA_IM_NS, { "svc" => $svc });
+$d->end(); #request
 
 my $response = $z->invokeMail($d->root());
 
