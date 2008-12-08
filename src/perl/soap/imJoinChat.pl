@@ -3,7 +3,7 @@
 # ***** BEGIN LICENSE BLOCK *****
 # 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2007 Zimbra, Inc.
+# Copyright (C) 2007 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -16,49 +16,48 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-use Date::Parse;
-use Time::HiRes qw ( time );
 use strict;
-
 use lib '.';
 
 use LWP::UserAgent;
 use Getopt::Long;
-use ZimbraSoapTest;
-use XmlElement;
 use XmlDoc;
 use Soap;
+use ZimbraSoapTest;
+
+# specific to this app
+my ($threadId, $addr);
 
 #standard options
-my ($user, $pw, $host, $help);  #standard
-my ($thread, $op);
-
+my ($user, $pw, $host, $help); #standard
 GetOptions("u|user=s" => \$user,
            "pw=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
-           "thread=s" => \$thread,
-           "op=s" => \$op,
+           # add specific params below:
+           "t=s", \$threadId,
+           "a=s", \$addr
           );
 
-if (!defined($user) || (!defined($thread)) || (!defined($op))) {
-    print "USAGE: $0 -u USER -t thread -o op \n";
-    exit 1;
+
+
+if (!defined($user) || !defined($threadId) || defined($help)) {
+    my $usage = <<END_OF_USAGE;
+    
+USAGE: $0 -u USER -t threadId -a addr
+END_OF_USAGE
+    die $usage;
 }
 
 my $z = ZimbraSoapTest->new($user, $host, $pw);
 $z->doStdAuth();
 
 my $d = new XmlDoc;
-$d->start('IMModifyChatRequest', $Soap::ZIMBRA_IM_NS, { 'thread' => $thread, 'op'=>$op }); {
-  if ($op eq "configure") {
-    $d->add("var", undef, { 'name'=>"persistent" }, "true");
-    $d->add("var", undef, { 'name'=>"publicroom" }, "1");
-    $d->add("var", undef, { 'name'=>"moderated" }, "true");
-    $d->add("var", undef, { 'name'=>"description" }, "deeesc");
-    $d->add("var", undef, { 'name'=>"longname" }, "llllllllllllllll");
-  }
-} $d->end();
+my $searchName = "SearchRequest";
+
+$d->start("IMJoinChatRequest", $Soap::ZIMBRA_IM_NS, { 'addr' => $addr, 'thread' => $threadId });
+
+ $d->end(); 
 
 my $response = $z->invokeMail($d->root());
 
