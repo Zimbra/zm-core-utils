@@ -99,6 +99,15 @@
     compress
 }
 
+/opt/zimbra/log/zmconvertd.log {
+    daily
+    missingok
+    copytruncate
+    notifempty
+    create 0644 zimbra zimbra
+    rotate 7
+}
+
 /opt/zimbra/zmstat/zmstat.out {
     daily
     missingok
