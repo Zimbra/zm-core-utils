@@ -56,14 +56,10 @@ print "AuthResponse = ".$authResponse->to_string("pretty")."\n";
 my $authToken = $authResponse->find_child('authToken')->content;
 print "authToken($authToken)\n";
 
-#my $sessionElt = $authResponse->find_child('sessionId');
-#if (!defined($sessionElt)) {
-#  $sessionElt = $authResponse->find_child('session');
-#}
-#my $sessionId = $sessionElt->content;
-#print "sessionId = $sessionId\n";
+my $sessionId = $authResponse->find_child('sessionId')->content;
+print "sessionId = $sessionId\n";
 
-my $context = $SOAP->zimbraContext($authToken);
+my $context = $SOAP->zimbraContext($authToken, $sessionId);
 
 my $contextStr = $context->to_string("pretty");
 print("Context = $contextStr\n");
