@@ -16,7 +16,4 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-ulimit -n 32768
-ulimit -c unlimited
-export LD_PRELOAD=/opt/zimbra/tcmalloc/lib/libtcmalloc.so
-exec /opt/zimbra/openldap/libexec/slapd "$@"
+exec `dirname $0`/zmjava com.zimbra.cs.mailbox.calendar.FixCalendarTimeZoneUtil "$@"
