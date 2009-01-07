@@ -26,7 +26,6 @@ use Data::Dumper;
 use POSIX qw(:signal_h :errno_h :sys_wait_h setsid);
 use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Util::Common;
-use Zimbra::Util::LDAP;
 use Zimbra::Mon::Logger;
 
 if ($^O eq "darwin") {
@@ -57,38 +56,41 @@ chomp($config{hostname} = `/opt/zimbra/bin/zmhostname`)
  
 logMsg(0, "Can't determine server hostname") 
   if ($config{hostname} eq ""); 
+chomp($config{hostname} = `/opt/zimbra/bin/zmhostname`)
+  if ($config{hostname} eq "");
+ 
+logMsg(0, "Can't determine server hostname") 
+  if ($config{hostname} eq ""); 
 
 my $sectionMap = { 
   amavis     => "mta",
   sasl       => "mta", 
   webxml     => "mailbox",
-  nginx      => "imapproxy"
+  nginx  => "imapproxy"
 };
 
 my $state = {
-  firstRun         => 1,
-  anyFailed        => 0,
-  forced           => 0,
+  firstRun      => 1,
+  anyFailed     => 0,
+  forced        => 0,
   localconfig      => (),
   globalconfig     => (),
-  miscconfig       => (),
+  miscconfig     => (),
   serverconfig     => (),
   serviceconfig    => (),
   forcedconfig     => (),
   watchdog         => (),
-  current          => { rewrites   => (),
-                        config     => (),
-                        restarts   => (),
-                        postconf   => (),
-                        services   => (),
-                        ldap       => (),
-                        proxygen   => 0, # 0|1
+  current          => { rewrites => (),
+                        config   => (),
+                        restarts => (),
+                        postconf => (),
+                        services => (),
+						proxygen => 0, # 0|1
                       },
   sections         => { name   => "",
                         config => { depends    => (),
                                     rewrites   => (),
                                     restarts   => (),
-                                    ldap       => (),
                                     configkeys => ()
                                   }
                       },
@@ -102,7 +104,6 @@ my %exe = (
   'IMAPPROXY'     => "$config{baseDir}/bin/zmproxyctl",
   'STATS'         => "$config{baseDir}/bin/zmstatctl",
   'ARCHIVING'     => "$config{baseDir}/bin/zmamavisdctl",
-  'MEMCACHED'     => "$config{baseDir}/bin/zmmemcachedctl",
   'MTA'           => "$config{baseDir}/bin/postfix",
   'ANTISPAM'      => "$config{baseDir}/bin/zmamavisdctl",
   'AMAVIS'        => "$config{baseDir}/bin/zmamavisdctl",
@@ -697,12 +698,6 @@ sub readConfig {
           }
         } elsif ($line =~ m/^PROXYGEN/) {
           logMsg(5, "Running zmproxyconfgen.");
-        } elsif ($line =~ m/^LDAP/) {
-          if ($fields[2] eq "LOCAL") {
-            my $val = lookUpConfig($fields[2], $fields[3]);
-            logMsg(5, "Adding to ldap commands: \'$line\' $fields[1]=\'$val\'");
-            $section->{config}->{ldap}->{$fields[1]}="$val";
-          }
         } elsif ($line =~ m/^if/) {
           if (checkConditional($fields[1], $fields[2])) {
             logMsg(4, "checkConditional $fields[1] $fields[2] is true");
@@ -824,15 +819,10 @@ sub compileActions {
         logMsg(5, "Adding postconf $postconf");
         $state->{current}->{postconf}->{$postconf} = $section->{config}->{postconf}->{$postconf};
       }
-      if ($section->{name} eq "imapproxy") {
-        logMsg(5, "Section $section->{name} changed compiling proxygen");
-        $state->{current}->{proxygen}=1;
-      }
-      logMsg(5, "Section $section->{name} changed compiling ldap");
-      foreach my $ldap (keys %{$section->{config}->{ldap}}) {
-        logMsg(5, "Adding LDAP $ldap");
-        $state->{current}->{ldap}->{$ldap} = $section->{config}->{ldap}->{$ldap};
-      }
+	  if ($section->{name} eq "imapproxy") {
+	    logMsg(5, "Section $section->{name} changed compiling proxygen");
+		$state->{current}->{proxygen}=1;
+	  }
       unless ($state->{forced}) {  # no restarts on forced rewrites
         logMsg(5, "Section $section->{name} changed compiling restarts");
         foreach my $restarts (keys %{$section->{config}->{restarts}}) {
@@ -915,10 +905,6 @@ sub doActions() {
   foreach my $restart (keys %{$state->{current}->{restarts}}) {
     delete($state->{current}->{restarts}->{$restart})
       unless controlProcess($restart,$state->{current}->{restarts}->{$restart});
-  }
-  foreach my $ldap (keys %{$state->{current}->{ldap}}) {
-    delete($state->{current}->{ldap}->{$ldap})
-      unless Zimbra::Util::LDAP->doLdap($ldap,$state->{current}->{ldap}->{$ldap});
   }
 }
 
