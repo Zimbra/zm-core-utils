@@ -23,10 +23,6 @@ zmsetvars \
 	zimbra_home \
 	zimbra_server_hostname 
 
-if [ "x${zimbra_home}" = "x" ]; then
-  zimbra_home=/opt/zimbra
-fi
-
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 rewriteconfig() {
