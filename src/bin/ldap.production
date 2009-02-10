@@ -68,8 +68,8 @@ checkrunning()
 
 doDebugStart() {
   TIMEOUT=60 # timelimit for command
-	sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 -u zimbra -h "${bind_url}" \
-			-f /opt/zimbra/conf/slapd.conf -d 1 2>&1 | egrep "failed|error" &
+	sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 -u zimbra -h "${bind_url} ldapi:///" \
+			-F /opt/zimbra/data/ldap/config -d 1 2>&1 | egrep "failed|error" &
   cmd_pid=$!
   sleep $TIMEOUT | (
     read nothing # wait on sleep to finish
@@ -87,20 +87,22 @@ start()
 {
    checkrunning
    if [ $RUNNING = 0 ]; then
-     if [ ! -f /opt/zimbra/openldap-data/DB_CONFIG -o ! -s /opt/zimbra/openldap-data/DB_CONFIG ]; then
+     if [ ! -f /opt/zimbra/data/ldap/hdb/db/DB_CONFIG -o ! -s /opt/zimbra/data/ldap/hdb/db/DB_CONFIG ]; then
        if [ -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG.custom ]; then
-         cp -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG.custom /opt/zimbra/openldap-data/DB_CONFIG
+	     mkdir -p /opt/zimbra/data/ldap/hdb/db
+         cp -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG.custom /opt/zimbra/data/ldap/hdb/db/DB_CONFIG
        else
-         cp -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG /opt/zimbra/openldap-data/DB_CONFIG
+	     mkdir -p /opt/zimbra/data/ldap/hdb/db
+         cp -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG /opt/zimbra/data/ldap/hdb/db/DB_CONFIG
        fi
      fi 
      if [ x$ldap_is_master = "xtrue" ]; then
-       if [ -d /opt/zimbra/openldap-data/accesslog/db ]; then
-         if [ ! -f /opt/zimbra/openldap-data/accesslog/db/DB_CONFIG -o ! -s /opt/zimbra/openldap-data/accesslog/db/DB_CONFIG ]; then
+       if [ -d /opt/zimbra/data/ldap/accesslog/db ]; then
+         if [ ! -f /opt/zimbra/data/ldap/accesslog/db/DB_CONFIG -o ! -s /opt/zimbra/data/ldap/accesslog/db/DB_CONFIG ]; then
            if [ -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG.accesslog.custom ]; then
-             cp -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG.accesslog.custom /opt/zimbra/openldap-data/accesslog/db/DB_CONFIG
+             cp -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG.accesslog.custom /opt/zimbra/data/ldap/accesslog/db/DB_CONFIG
            else
-             cp -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG.accesslog /opt/zimbra/openldap-data/accesslog/db/DB_CONFIG
+             cp -f /opt/zimbra/openldap/var/openldap-data/DB_CONFIG.accesslog /opt/zimbra/data/ldap/accesslog/db/DB_CONFIG
            fi
          fi
        fi
@@ -111,15 +113,14 @@ start()
     if [ x"$bind_url" = "x" ]; then
 		  bind_url=$(echo ${ldap_url} | awk '{print $1}')
     fi
-		/opt/zimbra/libexec/zmconfigure /opt/zimbra/conf/slapd.conf.in /opt/zimbra/conf/slapd.conf
-		sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 \
-      -u zimbra -h "${bind_url}" -f /opt/zimbra/conf/slapd.conf
+	sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 \
+      -u zimbra -h "${bind_url} ldapi:///" -F /opt/zimbra/data/ldap/config
     sleep 5
     for ((i =0; i < 6; i++)); do
       checkrunning
       if [ $RUNNING = 0 ]; then
-		    sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 \
-          -u zimbra -h "${bind_url}" -f /opt/zimbra/conf/slapd.conf
+	    sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 \
+          -u zimbra -h "${bind_url} ldapi:///" -F /opt/zimbra/data/ldap/config
       else 
         break
       fi
