@@ -3,7 +3,7 @@
 # ***** BEGIN LICENSE BLOCK *****
 # 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2007 Zimbra, Inc.
+# Copyright (C) 2007 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -16,53 +16,60 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-#
-# Simple SOAP test-harness for the AddMsg API
-#
-
 use strict;
-
 use lib '.';
 
 use LWP::UserAgent;
 use Getopt::Long;
-use XmlElement;
 use XmlDoc;
 use Soap;
 use ZimbraSoapTest;
 
+# specific to this app
+my ($threadId, $addr, $nickname, $pass);
+
 #standard options
-my ($admin, $user, $pw, $host, $help, $adminHost); #standard
-my ($token);
+my ($user, $pw, $host, $help); #standard
 GetOptions("u|user=s" => \$user,
-           "admin" => \$admin,
-           "ah|adminHost=s" => \$adminHost,
            "pw=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
-           "t=s" => \$token,
+           # add specific params below:
+           "t=s", \$threadId,
+           "a=s", \$addr,
+           "n=s", \$nickname,
+           "pass=s", \$pass,
           );
 
-if (!defined($user) || defined($help)) {
-  my $usage = <<END_OF_USAGE;
 
-USAGE: $0 -u USER -t TOKEN
+
+if (!defined($user) || !defined($addr) || defined($help)) {
+    my $usage = <<END_OF_USAGE;
+    
+USAGE: $0 -u USER [-t threadId] -a addr [-n nickname] [-pass room_password]
 END_OF_USAGE
-  die $usage;
+    die $usage;
 }
 
-my $z = ZimbraSoapTest->new($user, $host, $pw, undef, $adminHost);
+my $z = ZimbraSoapTest->new($user, $host, $pw);
 $z->doStdAuth();
 
-my $SOAP = $Soap::Soap12;
-
 my $d = new XmlDoc;
-if (defined($token) && ($token ne "")) {
-    $d->start('SyncRequest', $Soap::ZIMBRA_MAIL_NS, { "token" => $token});
-} else {
-    $d->start('SyncRequest', $Soap::ZIMBRA_MAIL_NS);
+my $searchName = "SearchRequest";
+
+my %args = ('addr' => $addr, 'thread' => $threadId);
+
+if (defined $nickname) {
+  $args{'nick'} = $nickname;
 }
-$d->end(); # 'SyncRequest';'
+
+if (defined $pass) {
+  $args{'password'} = $pass;
+}
+
+$d->start("IMJoinConferenceRoomRequest", $Soap::ZIMBRA_IM_NS, \%args);
+
+$d->end(); 
 
 my $response = $z->invokeMail($d->root());
 
