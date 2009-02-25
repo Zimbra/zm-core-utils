@@ -16,10 +16,7 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-# Periodically print FD open stats obtained from /proc/sys/fs/file-nr
-# The first column of /proc/sys/fs/file-nr gives an instantaneous reading
-# of all file descriptors open throughout all processes.  The third column
-# gives a maximum file descriptor count for the entire system.
+# Not a typo, /bin/df (not file-descriptors)
 
 use strict;
 use Getopt::Long;
@@ -30,16 +27,42 @@ use vars qw($LOGFH $CONSOLE $LOGFILE $ROTATE_NOW $ROTATE_DEFER);
 
 zmstatInit();
 
-my $STAT = '/proc/sys/fs/file-nr';
-my $HEADING = 'timestamp, fd_count';
+my $DF = '/bin/df';
+my $HEADING = 'timestamp, path, disk, disk_use, disk_pct_used, disk_space';
 
-sub get_fd_stat() {
-    open(STAT, "<$STAT") || die "Can't open $STAT: $!";
-    my $line = <STAT>;
-    $line =~ /^(\d+)\s+/;
-    my $stat = $1;
-    close(STAT);
-    $stat;
+sub get_df_stat() {
+    open(DF, "$DF |") || die "Can't open $DF: $!";
+    my $dev;
+    my @stats;
+    while (<DF>) {
+         next if ($_ =~ /^Filesystem\s+/);
+         my ($space, $used, $avail, $pct, $path);
+         if ($_ =~ /^(\S+)\s*$/) {
+             $dev = $1;
+             next;
+         } elsif ($_ =~ /^(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\%\s+(.+)/) {
+             $dev   = $1;
+             $space = $2;
+             $used  = $3;
+             $avail = $4;
+             $pct   = $5;
+             $path  = $6;
+         } elsif ($_ =~ /^\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\%\s+(.+)/) {
+             $space = $1;
+             $used  = $2;
+             $avail = $3;
+             $pct   = $4;
+             $path  = $5;
+        }
+        push(@stats, {
+            path => $path,
+            disk => $dev,
+            disk_use => $used,
+            disk_pct_used => $pct,
+            disk_space => $space
+        });
+    }
+    @stats;
 }
 sub sighup {
     if (!$CONSOLE) {
@@ -52,14 +75,14 @@ $SIG{HUP} = \&sighup;
 
 sub usage {
     print STDERR << '_USAGE_';
-Usage: zmstat-fd [options]
-Monitor system filedescriptor usage
+Usage: zmstat-df [options]
+Monitor disk usage
 -i, --interval: output a line every N seconds
--l, --log:      log file (default is /opt/zimbra/zmstat/fd.csv)
+-l, --log:      log file (default is /opt/zimbra/zmstat/df.csv)
 -c, --console:  output to stdout
 
 If logging to a file, rotation occurs when a HUP signal is sent or when
-the date changes.  The current log is renamed to <dir>/YYY-MM-DD/fd.csv
+the date changes.  The current log is renamed to <dir>/YYY-MM-DD/df.csv
 and a new file is created.
 _USAGE_
     exit(1);
@@ -67,7 +90,7 @@ _USAGE_
 
 $| = 1;
 
-$LOGFILE = getLogFilePath('fd.csv');
+$LOGFILE = getLogFilePath('df.csv');
 my $interval = getZmstatInterval();
 my $opts_good = GetOptions(
     'interval=i' => \$interval,
@@ -78,7 +101,7 @@ if (!$opts_good) {
     print STDERR "\n";
     usage();
 }
-createPidFile('zmstat-fd.pid');
+createPidFile('zmstat-df.pid');
 
 my $date = getDate();
 if ($CONSOLE) {
@@ -91,7 +114,7 @@ if ($CONSOLE) {
 waitUntilNiceRoundSecond($interval);
 
 while (1) {
-    my $stat = get_fd_stat();
+    my @stats = get_df_stat();
     my $tstamp = getTstamp();
     my $currDate = getDate();
     if ($currDate ne $date && !$CONSOLE) {
@@ -99,8 +122,13 @@ while (1) {
         $date = $currDate;
     }
     $ROTATE_DEFER = 1;
-    $LOGFH->print("$tstamp, $stat\n");
-    Zimbra::Mon::Logger::Log( "info", "zmstat-fd: ${HEADING}:: $tstamp, $stat"); 
+    foreach my $stat (@stats) {
+    	my $line = sprintf("%s, %s, %s, %d, %d, %d", $tstamp,
+                           $stat->{path}, $stat->{disk}, $stat->{disk_use},
+                           $stat->{disk_space}, $stat->{disk_pct_used});
+        $LOGFH->print("$line\n");
+        Zimbra::Mon::Logger::Log( "info", "zmstat-df: ${HEADING}:: $line"); 
+    }
     $LOGFH->flush();
     $ROTATE_DEFER = 0;
     if ($ROTATE_NOW) {
