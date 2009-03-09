@@ -21,7 +21,6 @@ use Carp ();
 use Getopt::Long;
 use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Mon::Zmstat;
-use Zimbra::Mon::Logger;
 use Zimbra::DB::DB;
 
 zmstatInit();
@@ -133,9 +132,7 @@ while (1) {
     # Don't allow rotation in signal handler while we're writing.
     $ROTATE_DEFER = 1;
     eval {
-    	my $values = getValues($tstamp);
-        $LOGFH->print("$values\n");
-        Zimbra::Mon::Logger::Log( "info", "zmstat-mysql: ${HEADING}:: $values"); 
+        $LOGFH->print(getValues($tstamp) . "\n");
         $LOGFH->flush();
     };
     if ($@) {
