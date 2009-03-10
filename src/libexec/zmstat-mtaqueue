@@ -20,6 +20,7 @@ use strict;
 use Getopt::Long;
 use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Mon::Zmstat;
+use Zimbra::Mon::Logger;
 
 zmstatInit();
 
@@ -112,7 +113,6 @@ $LOGFH = openLogFile($LOGFILE, $HEADING);
 my $curr_interval = $interval;
 my $date = getDate();
 my $t_last = waitUntilNiceRoundSecond($curr_interval);
-my $t_next = $t_last + $curr_interval;
 
 while (1) {
     my ($kb, $msgs) = getQueueStat();
@@ -127,6 +127,7 @@ while (1) {
     # Don't allow rotation in signal handler while we're writing.
     $ROTATE_DEFER = 1;
     $LOGFH->print("$tstamp, $kb, $msgs\n");
+    Zimbra::Mon::Logger::Log( "info", "zmstat mtaqueue.csv: ${HEADING}:: $tstamp, $kb, $msgs"); 
     $LOGFH->flush();
     $ROTATE_DEFER = 0;
     if ($ROTATE_NOW) {
@@ -147,11 +148,9 @@ while (1) {
         }
     } elsif ($curr_interval > $interval) {
         $curr_interval = $interval;
-        print STDERR "$tstamp: Queue size is back within the maximum of $max_qsize; Restoring default monitor interval of $interval seconds";
+        print STDERR "$tstamp: Queue size is back within the maximum of $max_qsize; Restoring default monitor interval of $interval seconds\n";
     }
 
-    my $now = time();
-    sleep($t_next - $now);
-    $t_next += $curr_interval;
+    sleep($curr_interval);
 }
 close($LOGFH);
