@@ -21,7 +21,6 @@ use vars qw($PROCFS @STATLIST $LOGFILE $CONSOLE $interval $LOGFH
 use Getopt::Long;
 use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Mon::Zmstat;
-use Zimbra::Mon::Logger;
 use Data::Dumper;
 
 # Initial version will support forked process monitoring.  I/O accounting
@@ -176,9 +175,7 @@ sub main() {
             for (@STATLIST) {
             	push(@printstats, $stats{$_});
             }
-            my $values = join(', ', @printstats);
-            $LOGFH->print("$values\n");
-            Zimbra::Mon::Logger::Log( "info", "zmstat convertd.csv: ${HEADING}:: $values"); 
+            $LOGFH->print(join(', ', @printstats) . "\n");
             $LOGFH->flush();
             $ROTATE_DEFER = 0;
             if ($ROTATE_NOW) {

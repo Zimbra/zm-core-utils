@@ -39,7 +39,6 @@ use strict;
 use Getopt::Long;
 use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Mon::Zmstat;
-use Zimbra::Mon::Logger;
 
 zmstatInit();
 
@@ -212,7 +211,6 @@ if (!$isMac) {
         # Don't allow rotation in signal handler while we're writing.
         $ROTATE_DEFER = 1;
         $LOGFH->print("$tstamp, $cpuinfo\n");
-        Zimbra::Mon::Logger::Log( "info", "zmstat cpu.csv: ${HEADING}:: $tstamp, $cpuinfo"); 
         $LOGFH->flush();
         $ROTATE_DEFER = 0;
         if ($ROTATE_NOW) {
@@ -261,9 +259,7 @@ if (!$isMac) {
 
         # Don't allow rotation in signal handler while we're writing.
         $ROTATE_DEFER = 1;
-        my $values = join(', ', @vals);
-        $LOGFH->print("$tstamp, $values\n");
-        Zimbra::Mon::Logger::Log( "info", "zmstat-cpu: ${HEADING}:: $tstamp, $values"); 
+        $LOGFH->print("$tstamp, " . join(', ', @vals) . "\n");
         $LOGFH->flush();
         $ROTATE_DEFER = 0;
         if ($ROTATE_NOW) {
