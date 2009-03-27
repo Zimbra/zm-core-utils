@@ -1,9 +1,8 @@
 #!/bin/bash -
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2006, 2007, 2009 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,12 +11,16 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/opt/zimbra/bin:/opt/zimbra/libexec
 host=`hostname -s`
-
+PLATFORM=$(/opt/zimbra/libexec/get_plat_tag.sh)
+if [ x"$PLATFORM" = "xMACOSXx86_10.5" ]; then
+  SU="su - zimbra -c -l "
+else
+  SU="su - zimbra -c "
+fi
 
 echo ""
 printf %s "Rotating log files:"
@@ -63,9 +66,6 @@ echo ""
 
 
 if [ -f /var/run/syslog.pid ]; then echo "Sending sighup to syslogd"; kill -HUP $(cat /var/run/syslog.pid | head -1); fi
-
-if [ -f /opt/zimbra/log/logswatch.pid ]; then echo "Sending sighup to zmlogswatch"; kill -HUP $(cat /opt/zimbra/log/logswatch.pid | head -1); fi
-
-if [ -f /opt/zimbra/log/swatch.pid ]; then echo "Sending sighup to zmswatch"; kill -HUP $(cat /opt/zimbra/log/swatch.pid | head -1); fi
-
+if [ -f /opt/zimbra/log/logswatch.pid ]; then echo "Restarting zmlogswatch"; $SU "/opt/zimbra/bin/zmlogswatchctl reload"; fi
+if [ -f /opt/zimbra/log/swatch.pid ]; then echo "Restarting zmswatch"; $SU "/opt/zimbra/bin/zmswatchctl reload"; fi
 if [ -f /opt/zimbra/log/nginx.pid ]; then echo "Sending USR1 to nginx"; kill -USR1 $(cat /opt/zimbra/log/nginx.pid | head -1); fi

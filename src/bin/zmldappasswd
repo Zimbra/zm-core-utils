@@ -1,9 +1,8 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007, 2008 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 #
@@ -37,6 +35,7 @@ our %saved = ();
 
 my $zimbra_home = getLocalConfig("zimbra_home");
 my $cur_rootdn_passwd = getLocalConfig("ldap_root_password");
+my $ldap_starttls_supported = getLocalConfig("ldap_starttls_supported");
 
 getopts('arlnph',\%options) or die "Unable to set options\n";
 
@@ -70,12 +69,15 @@ print "Updating local config and directory\n";
 my $ldap = Net::LDAP->new("$ldap_master")  or  die "$@";
 
 # startTLS Operation, add later
-#$mesg = $ldap->start_tls(
-#        verify => 'require',
-#        capath => "$zimbra_home/conf/ca",
-#        ) or die "start_tls: $@";
-#
-#$mesg->code && die "TLS: " . $mesg->error . "\n";
+
+if ( $ldap_starttls_supported ) {
+  my $mesg = $ldap->start_tls(
+          verify => 'require',
+          capath => "$zimbra_home/conf/ca",
+          ) or die "start_tls: $@";
+
+  $mesg->code && die "TLS: " . $mesg->error . "\n";
+}
 
 if ( $options{r}) {
     setLocalConfig("ldap_root_password", "$password");
@@ -87,38 +89,6 @@ if ( $options{r}) {
         olcRootPW=> "$ssha_password",
     );
     $entry->update($ldap);
-
-    # Update slapd.conf
-    #
-    print "Updating slapd.conf\n";
-    my $infile="$zimbra_home/conf/slapd.conf.in";
-    my $outfile="/tmp/slapd.conf.$$";
-    open(IN,"<$infile");
-    open(OUT,">$outfile");
-    while (<IN>) {
-      if ($_ =~ /^rootpw/) {
-        $_ =~ s|^rootpw.*|rootpw $ssha_password|;
-        print OUT $_;
-      } else {
-        print OUT $_;
-      }
-    }
-    if ( -s $outfile ) {
-      my $rc=0xffff & system("/bin/mv -f $infile $infile.bak");
-      if ($rc != 0) {
-        print "Warning: Failed to backup $infile\n";
-      }
-      $rc=0xffff & system("/bin/mv -f $outfile $infile");
-      if ($rc != 0) {
-        print "Failed to move $outfile to $infile\nRestoring old configuration\n";
-        $rc=0xffff & system("/bin/mv -f $infile.bak $infile");
-        if ($rc != 0) {
-          print "Failed to restore backup\n";
-        }
-      } else {
-        system("/bin/rm -f $infile.bak");
-      }
-    }
 } elsif ( $options{l} ) {
     setLocalConfig("ldap_replication_password", "$password");
     my $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
