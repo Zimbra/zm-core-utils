@@ -38,8 +38,8 @@ my $pidFile="${zimbra_home}/log/zmdisklog.pid";
 my $TIMEOUT=60;
 my $MNTCMD;
 my $DFCMD;
-my $DISK_CRIT_THRESHOLD = getLocalConfig("zmdisklog_warn_threshold") || 95;
-my $DISK_WARN_THRESHOLD = getLocalConfig("zmdisklog_critical_threshold") || 85;
+my $DISK_CRIT_THRESHOLD = getLocalConfig("zmdisklog_critical_threshold") || 95;
+my $DISK_WARN_THRESHOLD = getLocalConfig("zmdisklog_warn_threshold") || 85;
 
 if ($platform =~ /MACOSX/) {
 	$MNTCMD = "mount -t hfs";
