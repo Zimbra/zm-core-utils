@@ -81,6 +81,7 @@ sub usage {
 }
 
 sub checkDbs() {
+  my $status=0;
   my $mysql_root_passwd = getLocalConfig("mysql_root_password");
   my $mysql_socket = getLocalConfig("mysql_socket") || "${zimbra_home}/db/mysql.sock";
   my $mysql_mycnf = getLocalConfig("mysql_mycnf") || "${zimbra_home}/conf/my.cnf";
@@ -93,51 +94,59 @@ sub checkDbs() {
   $cmd .= " --auto-repair" if $options{r};
   unless (open(CMD, "$cmd|")) {
     addToReport("can't run $cmd: $!\n"); 
-    return undef;
+    return 1;
   }
   my @output = <CMD>;
   if (scalar @output != 0) {
     addToReport("Database errors found.\n");
     addToReport("$cmd\n");
     addToReport("@output");
+    $status = 1 unless $debug;
   } else {
     addToReport("No errors found\n") if $verbose;
+    $status = 0;
   }
   unless (close(CMD)) {
     addToReport("command failed $!\n");;
-    return undef;
+    return 1;
   }
-  return; 
+  return $status; 
 }
 
 sub checkLoggerDb() {
+  my $status=0;
   my $mysql_root_passwd = getLocalConfig("mysql_logger_root_password");
   my $mysql_socket = getLocalConfig("logger_mysql_socket") || "${zimbra_home}/logger/db/mysql.sock";
   my $mysql_mycnf = getLocalConfig("logger_mysql_mycnf") || "${zimbra_home}/conf/my.logger.cnf";
   my $cmd = "${zimbra_home}/logger/mysql/bin/mysqlcheck";
   $cmd .= " --defaults-file=${mysql_mycnf}";
   $cmd .= " -S ${mysql_socket}";
-  $cmd .= " -A -C";
-  $cmd .= " -s" unless $debug;
+  #$cmd .= " --optimize --extended --force";
+  #$cmd .= " --verbose";
+  #$cmd .= " --all-databases --check-only-changed";
+  $cmd .= " --silent" unless $debug;
   $cmd .= " -u root --password=${mysql_root_passwd}";
   $cmd .= " --auto-repair" if $options{r};
+  $cmd .= " --databases mysql zimbra_logger";
   unless (open(CMD, "$cmd|")) {
     addToReport("can't run $cmd: $!\n"); 
-    return undef;
+    return 1;
   }
   my @output = <CMD>;
   if (scalar @output != 0) {
     addToReport("Logger Database errors found.\n");
     addToReport("$cmd\n");
     addToReport("@output");
+    $status=1 unless $debug;
   } else {
     addToReport("No Logger DB errors found.\n") if $verbose;
+    $status=0;
   }
   unless (close(CMD)) {
     addToReport("$cmd command failed: $!\n");;
-    return undef;
+    return 1;
   }
-  return; 
+  return $status; 
 }
 
 
