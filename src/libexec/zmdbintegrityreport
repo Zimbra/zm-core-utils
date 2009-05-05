@@ -1,9 +1,8 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007 Zimbra, Inc.
+# Copyright (C) 2007, 2008, 2009 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -32,7 +30,6 @@ my $dbCheck = '';
 my $status = 0;
 my $zimbra_home = "/opt/zimbra";
 unless ( GetOptions ("mailReport" => \$options{m},
-                     "logger"     => \$options{l},
                      "repair"     => \$options{r},
                      "verbose"    => \$options{v},
                      "debug"      => \$options{d},
@@ -53,11 +50,7 @@ my $check_disabled = getLocalConfig("zmdbintegrityreport_disabled");
 exit 0 if (lc($check_disabled) eq "true");
 
 addToReport("Generating report\n") if $debug;
-if ($options{l}) {
-  $status = (checkLoggerDb() ? 1 : 0);
-} else {
-  $status = (checkDbs() ? 1 : 0);
-}
+$status = (checkDbs() ? 1 : 0);
 if ($options{m}) {
   sendEmailReport($report);
 } else {
@@ -81,7 +74,6 @@ sub usage {
 }
 
 sub checkDbs() {
-  my $status=0;
   my $mysql_root_passwd = getLocalConfig("mysql_root_password");
   my $mysql_socket = getLocalConfig("mysql_socket") || "${zimbra_home}/db/mysql.sock";
   my $mysql_mycnf = getLocalConfig("mysql_mycnf") || "${zimbra_home}/conf/my.cnf";
@@ -94,59 +86,21 @@ sub checkDbs() {
   $cmd .= " --auto-repair" if $options{r};
   unless (open(CMD, "$cmd|")) {
     addToReport("can't run $cmd: $!\n"); 
-    return 1;
+    return undef;
   }
   my @output = <CMD>;
   if (scalar @output != 0) {
     addToReport("Database errors found.\n");
     addToReport("$cmd\n");
     addToReport("@output");
-    $status = 1 unless $debug;
   } else {
     addToReport("No errors found\n") if $verbose;
-    $status = 0;
   }
   unless (close(CMD)) {
     addToReport("command failed $!\n");;
-    return 1;
+    return undef;
   }
-  return $status; 
-}
-
-sub checkLoggerDb() {
-  my $status=0;
-  my $mysql_root_passwd = getLocalConfig("mysql_logger_root_password");
-  my $mysql_socket = getLocalConfig("logger_mysql_socket") || "${zimbra_home}/logger/db/mysql.sock";
-  my $mysql_mycnf = getLocalConfig("logger_mysql_mycnf") || "${zimbra_home}/conf/my.logger.cnf";
-  my $cmd = "${zimbra_home}/logger/mysql/bin/mysqlcheck";
-  $cmd .= " --defaults-file=${mysql_mycnf}";
-  $cmd .= " -S ${mysql_socket}";
-  #$cmd .= " --optimize --extended --force";
-  #$cmd .= " --verbose";
-  #$cmd .= " --all-databases --check-only-changed";
-  $cmd .= " --silent" unless $debug;
-  $cmd .= " -u root --password=${mysql_root_passwd}";
-  $cmd .= " --auto-repair" if $options{r};
-  $cmd .= " --databases mysql zimbra_logger";
-  unless (open(CMD, "$cmd|")) {
-    addToReport("can't run $cmd: $!\n"); 
-    return 1;
-  }
-  my @output = <CMD>;
-  if (scalar @output != 0) {
-    addToReport("Logger Database errors found.\n");
-    addToReport("$cmd\n");
-    addToReport("@output");
-    $status=1 unless $debug;
-  } else {
-    addToReport("No Logger DB errors found.\n") if $verbose;
-    $status=0;
-  }
-  unless (close(CMD)) {
-    addToReport("$cmd command failed: $!\n");;
-    return 1;
-  }
-  return $status; 
+  return; 
 }
 
 
