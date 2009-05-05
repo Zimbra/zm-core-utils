@@ -1,9 +1,8 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -29,82 +27,48 @@ use Zimbra::Mon::Logger;
 
 use Getopt::Std;
 use File::Temp qw/ tempfile /;
-my (undef, $zmcontrolLogfile) = tempfile("zmcontrol.out.XXXXX", DIR=>"/tmp",  OPEN=>0);
+my $zimbra_tmp_directory=getLocalConfig("zimbra_tmp_directory");
+my (undef, $zmcontrolLogfile) = tempfile("zmcontrol.out.XXXXX", DIR=>"$zimbra_tmp_directory",  OPEN=>0);
 
 my $timeout = 180;
 $SIG{ALRM} = sub { print "Timeout after $timeout seconds\n"; exit(1) };
 my $now = time();
 my $cache_file = "${zimbra_home}/log/.zmcontrol.cache";
 my $localHostName = getHostName();
-my $ldapMasterHere = isLdapMaster();
+my $ldapHere = isLdapLocal();
 my $services;
 my %devicesChecked;
+my %startorder = ( 
+	"ldap" 		=> 0,
+	"logger" 	=> 1,
+	"convertd"	=> 2,
+	"mailbox" 	=> 3,
+	"memcached"	=> 4,
+	"imapproxy"	=> 5,
+	"antispam" 	=> 6,
+	"antivirus"	=> 7,
+	"archiving"	=> 8,
+	"snmp" 		=> 9,
+	"spell" 	=> 10,
+	"mta" 		=> 11,
+	"stats"		=> 12,
+);
 
-my $convertdVersion;
-$convertdVersion=getLocalConfig("convertd_version");
-my %startorder;
-my %allservices;
-
-if ($convertdVersion == 1) {
-	%startorder = ( 
-		"ldap" 		=> 0,
-		"logger" 	=> 1,
-		"mailbox" 	=> 2,
-		"imapproxy"	=> 3,
-		"antispam" 	=> 4,
-		"antivirus"	=> 5,
-		"archiving"	=> 6,
-		"snmp" 		=> 7,
-		"spell" 	=> 8,
-		"mta" 		=> 9,
-		"stats"		=> 10,
-	);
-
-	%allservices = ( 
-		"antivirus" => "/opt/zimbra/bin/zmantivirusctl", 
-		"antispam" => "/opt/zimbra/bin/zmantispamctl", 
-		"archiving" => "/opt/zimbra/bin/zmarchivectl",
-		"mta" => "/opt/zimbra/bin/zmmtactl", 
-		"mailbox" => "/opt/zimbra/bin/zmstorectl", 
-		"logger" => "/opt/zimbra/bin/zmloggerctl", 
-		"snmp" => "/opt/zimbra/bin/zmswatchctl", 
-		"ldap" => "/opt/zimbra/bin/ldap",
-		"spell" => "/opt/zimbra/bin/zmspellctl",
-		"imapproxy" => "/opt/zimbra/bin/zmproxyctl",
-		"stats" => "/opt/zimbra/bin/zmstatctl",
-	);
-
-} else {
-	%startorder = ( 
-		"ldap" 		=> 0,
-		"logger" 	=> 1,
-		"convertd"	=> 2,
-		"mailbox" 	=> 3,
-		"imapproxy"	=> 4,
-		"antispam" 	=> 5,
-		"antivirus"	=> 6,
-		"archiving"	=> 7,
-		"snmp" 		=> 8,
-		"spell" 	=> 9,
-		"mta" 		=> 10,
-		"stats"		=> 11,
-	);
-	
-	%allservices = ( 
-		"antivirus" => "/opt/zimbra/bin/zmantivirusctl", 
-		"antispam" => "/opt/zimbra/bin/zmantispamctl", 
-		"archiving" => "/opt/zimbra/bin/zmarchivectl",
-		"convertd" => "/opt/zimbra/bin/zmconvertctl",
-		"mta" => "/opt/zimbra/bin/zmmtactl", 
-		"mailbox" => "/opt/zimbra/bin/zmstorectl", 
-		"logger" => "/opt/zimbra/bin/zmloggerctl", 
-		"snmp" => "/opt/zimbra/bin/zmswatchctl", 
-		"ldap" => "/opt/zimbra/bin/ldap",
-		"spell" => "/opt/zimbra/bin/zmspellctl",
-		"imapproxy" => "/opt/zimbra/bin/zmproxyctl",
-		"stats" => "/opt/zimbra/bin/zmstatctl",
-	);
-}
+my %allservices = ( 
+	"antivirus" => "/opt/zimbra/bin/zmantivirusctl", 
+	"antispam" => "/opt/zimbra/bin/zmantispamctl", 
+	"archiving" => "/opt/zimbra/bin/zmarchivectl",
+	"convertd" => "/opt/zimbra/bin/zmconvertctl",
+	"mta" => "/opt/zimbra/bin/zmmtactl", 
+	"mailbox" => "/opt/zimbra/bin/zmstorectl", 
+	"logger" => "/opt/zimbra/bin/zmloggerctl", 
+	"snmp" => "/opt/zimbra/bin/zmswatchctl", 
+	"ldap" => "/opt/zimbra/bin/ldap",
+	"spell" => "/opt/zimbra/bin/zmspellctl",
+	"memcached" => "/opt/zimbra/bin/zmmemcachedctl",
+	"imapproxy" => "/opt/zimbra/bin/zmproxyctl",
+	"stats" => "/opt/zimbra/bin/zmstatctl",
+);
 
 my %rewrites = ( 
 	"antivirus" => "antivirus amavis", 
@@ -191,8 +155,8 @@ sub runRemoteCommand {
 sub doStatus {
 	$services = getEnabledServices();
   alarm($timeout);
-  my (undef, $statusfile) = tempfile("zmcontrol.status.XXXXX", DIR=>"/tmp",  OPEN=>0);
-  my (undef, $errfile) = tempfile("zmcontrol.error.XXXXX", DIR=>"/tmp",  OPEN=>0);
+  my (undef, $statusfile) = tempfile("zmcontrol.status.XXXXX", DIR=>"$zimbra_tmp_directory",  OPEN=>0);
+  my (undef, $errfile) = tempfile("zmcontrol.error.XXXXX", DIR=>"$zimbra_tmp_directory",  OPEN=>0);
 	if (scalar(keys %$services) == 0) {
 		print "Cannot determine services - exiting\n";
 		return 1;
@@ -247,7 +211,7 @@ sub doStartup {
 	print "Host $localHostName\n";
 	my $rc = 0;
 	my $rrc = 0;
-	if ($ldapMasterHere) {
+	if ($ldapHere) {
 		my $ldapStopped = 0xffff & system("/opt/zimbra/bin/ldap status > /dev/null 2>&1");
 		if ($ldapStopped) {
 			$rrc = startLdap();
@@ -256,7 +220,7 @@ sub doStartup {
 	if ($rrc) {
 		$rc = 1;
 		my $out = `cat $zmcontrolLogfile`;
-		print "FAILED\n";
+		print "Failed.\n";
 		print "$out\n\n";
 		exit (1);
 	}
@@ -275,7 +239,7 @@ sub doStartup {
 	if ($rrc) {
 		$rc = 1;
 		my $out = `cat $zmcontrolLogfile`;
-		print "FAILED\n";
+		print "Failed.\n";
 		print "$out\n\n";
 		exit (1);
 	}
@@ -297,7 +261,7 @@ sub doStartup {
 		if ($rrc) {
 			$rc = 1;
 			my $out = `cat $zmcontrolLogfile`;
-			print "FAILED\n";
+			print "Failed.\n";
 			print "$out\n\n";
 		} else {
 			print "Done.\n";
@@ -314,10 +278,11 @@ sub doShutdown {
 	my $rrc = 0;
 	foreach (sort {$startorder{$b} <=> $startorder{$a}} keys %allservices) {
 		Zimbra::Mon::Logger::Log ("info", "Stopping $_ via zmcontrol");
-		if ($_ eq "ldap" && !(-d "/opt/zimbra/openldap/libexec") ) { next; }
+		if ($_ eq "ldap" && !(-d "/opt/zimbra/openldap/sbin") ) { next; }
 		if ($_ eq "mta" && !(-d "/opt/zimbra/postfix/libexec") ) { next; }
 		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
 		if ($_ eq "mailbox" && !(-d "/opt/zimbra/db/data") ) { next; }
+		if ($_ eq "convertd" && !(-l "/opt/zimbra/keyview") ) { next; }
 		print "\tStopping $_...";
     unless (-x "$allservices{$_}") {
       print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
@@ -328,10 +293,10 @@ sub doShutdown {
 		if ($rrc) {
 			$rc = 1;
 			my $out = `cat $zmcontrolLogfile`;
-			print "FAILED\n";
+			print "Failed.\n";
 			print "$out\n\n";
 		} else {
-			print "Done\n";
+			print "Done.\n";
 		}
 		unlink($zmcontrolLogfile);
 	}
@@ -412,8 +377,8 @@ sub getEnabledServices {
   return \%s;
 }
 
-sub isLdapMaster {
-	return (getLocalConfig("ldap_is_master") =~ /true/i);
+sub isLdapLocal {
+  return((index(getLocalConfig("ldap_url"), getLocalConfig("zimbra_server_hostname")) != -1) ? 1 : 0);
 }
 
 sub getHostName {
