@@ -1,8 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007, 2008 Zimbra, Inc.
+# Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -18,28 +20,15 @@ source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars -f
 
 #
+# Memory for use by MySQL.
 #
-# Usage: zmmycnf [--innodb-buffer-pool-memory-percent number].  
-# 
-# We don't error check - if you provide wrong arguments we default the
-# buffer pool percent to keep things simple for the installer.
-#
-bufferPoolPercent=25
-if [ "x$1" = "x--innodb-buffer-pool-memory-percent" ];
-then
-    if echo "$2" | grep -q "^[0-9]*$"
-    then
-        if [ $2 -gt 1 -a $2 -lt 100 ]; then
-            bufferPoolPercent=$2
-        fi
-    fi
-fi
+memkb=$(zmsysmemkb)
+((mymem=memkb * 1024 * mysql_memory_percent / 100))
 
 #
-# Calculate innodb buffer pool size
+# Allocate 75% of memory that mysql can use to buffer pool.
 #
-memKB=$(zmsysmemkb)
-((bufferPoolSize=memKB * 1024 * bufferPoolPercent / 100))
+((computed_innodb_buffer_pool_size = mymem * 75 / 100))
 
 #
 # Tell the JDBC driver how many mysql active connections to use.
@@ -74,23 +63,20 @@ max_connections   = 110
 # We do a lot of writes, query cache turns out to be not useful.
 query_cache_type = 0
 
-sort_buffer_size = 1048576
-read_buffer_size = 1048576
+sort_buffer_size = ${mysql_sort_buffer_size}
+read_buffer_size = ${mysql_read_buffer_size}
 
-# (Num mailbox groups * Num tables in each group) + padding
-table_cache = 1200
+# Increase the size of the table cache, since each mailbox has its
+# own set of tables
+table_cache = ${mysql_table_cache}
 
-innodb_buffer_pool_size        = ${bufferPoolSize}
-innodb_log_file_size           = 104857600
-innodb_log_buffer_size         = 8388608
+innodb_buffer_pool_size   = ${computed_innodb_buffer_pool_size}
+innodb_log_file_size      = ${mysql_innodb_log_file_size}
+innodb_log_buffer_size    = ${mysql_innodb_log_buffer_size}
 innodb_file_per_table
-
-# Value is: 200 + max_connections + 2 * table_cache
-innodb_open_files              = 2710
-
-innodb_max_dirty_pages_pct     = 10
-innodb_flush_method            = O_DIRECT
-innodb_flush_log_at_trx_commit = 0
+innodb_open_files         = ${mysql_table_cache}
+innodb_max_dirty_pages_pct = 10
+innodb_flush_method       = O_DIRECT
 
 [mysqld_safe]
 
