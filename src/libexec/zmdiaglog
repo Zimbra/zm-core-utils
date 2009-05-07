@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2008, 2009 Zimbra, Inc.
 # 
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 use strict;
@@ -27,7 +25,13 @@ use vars qw(
 );
 
 chomp($ZMHOSTNAME = `/opt/zimbra/bin/zmhostname`);
-$DEFAULT_DEST = "/tmp/zmdiaglog-$ZMHOSTNAME." . $$;
+
+my $zimbra_tmp_directory = "/tmp/zimbra";
+if (-f "/opt/zimbra/bin/zmlocalconfig") {
+  $zimbra_tmp_directory=`zmlocalconfig -s -m nokey zimbra_tmp_directory`;
+  chomp($zimbra_tmp_directory);
+}
+$DEFAULT_DEST = "$zimbra_tmp_directory/zmdiaglog-$ZMHOSTNAME." . $$;
 $DEFAULT_TIMEOUT = 120;
 $PID_FILE = '/opt/zimbra/log/zmmailboxd_java.pid';
 $JMAP = '/opt/zimbra/java/bin/jmap';
@@ -196,7 +200,7 @@ sub HELP_MESSAGE {
 Usage: zmdiaglog [-dth]
 
     -a    - Do everything: also gather JVM heapdump/coredump
-    -d    - Log destination (Default /tmp/zmdiaglog.PID)
+    -d    - Log destination (Default $zimbra_tmp_directory/zmdiaglog.PID)
     -t    - Timeout in seconds for hanging commands (Default $DEFAULT_TIMEOUT)
     -h    - This help message
 EOF
