@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2007 Zimbra, Inc.
 # 
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -46,10 +48,7 @@ END_OF_USAGE
     die $usage;
 }
 
-my %soapargs;
-$soapargs{'TIMEOUT'} = 10 * 60;
-
-my $z = ZimbraSoapTest->new($user, $host, $pw, \%soapargs);
+my $z = ZimbraSoapTest->new($user, $host, $pw);
 $z->doAdminAuth();
 
 my $d = new XmlDoc;
