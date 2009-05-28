@@ -1,8 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2005, 2006 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -18,8 +20,7 @@ source `dirname $0`/../bin/zmshutil || exit 1
 
 zmsetvars \
 	zimbra_home \
-	zimbra_server_hostname \
-	zimbra_tmp_directory
+	zimbra_server_hostname
 
 getPubKey() {
 	server=$1
@@ -60,15 +61,11 @@ command=\"/opt/zimbra/libexec/zmrcd\" ${key}"
 
 keyattr="zimbraSshPublicKey"
 
-zmprov="/opt/zimbra/bin/zmprov -m -l"
+zmprov="/opt/zimbra/bin/zmprov -l"
 
 authkeysfile="${zimbra_home}/.ssh/authorized_keys"
 
-if [ ! -d ${zimbra_tmp_directory} ]; then
-  mkdir -p ${zimbra_tmp_directory} > /dev/null 2>&1
-fi
-
-tempkeysfile="${zimbra_tmp_directory}/auth_keys.tmp"
+tempkeysfile="/tmp/auth_keys.tmp"
 
 if [ -f $authkeysfile ]; then
 	authkeys=`cat ${authkeysfile}`
