@@ -1,9 +1,8 @@
 #!/usr/bin/perl
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007, 2008 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 #
@@ -24,6 +22,7 @@
 use strict;
 use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Util::Common;
+use File::Path;
 use Getopt::Std;
 use Net::LDAP;
 use Net::LDAP::LDIF;
@@ -37,6 +36,12 @@ our %saved = ();
 
 my $zimbra_home = getLocalConfig("zimbra_home");
 my $cur_rootdn_passwd = getLocalConfig("ldap_root_password");
+my $ldap_starttls_supported = getLocalConfig("ldap_starttls_supported");
+my $zimbra_tmp_directory = getLocalConfig("zimbra_tmp_directory");
+
+if ( !-d $zimbra_tmp_directory ) {
+  File::Path::mkpath("$zimbra_tmp_directory");
+}
 
 getopts('arlnph',\%options) or die "Unable to set options\n";
 
@@ -66,16 +71,25 @@ my $ssha_password = $ctx->generate;
 # Get the LDAP Master
 my $ldap_master = getLocalConfig("ldap_master_url");
 
+my $ldap;
+
 print "Updating local config and directory\n";
-my $ldap = Net::LDAP->new("$ldap_master")  or  die "$@";
+if (! $options{r}) {
+  $ldap = Net::LDAP->new("$ldap_master")  or  die "$@";
+} else {
+  $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fopenldap%2fvar%2frun%2fldapi/')  or  die "$@";
+}
 
 # startTLS Operation, add later
-#$mesg = $ldap->start_tls(
-#        verify => 'require',
-#        capath => "$zimbra_home/conf/ca",
-#        ) or die "start_tls: $@";
-#
-#$mesg->code && die "TLS: " . $mesg->error . "\n";
+
+if ( $ldap_starttls_supported ) {
+  my $mesg = $ldap->start_tls(
+          verify => 'require',
+          capath => "$zimbra_home/conf/ca",
+          ) or die "start_tls: $@";
+
+  $mesg->code && die "TLS: " . $mesg->error . "\n";
+}
 
 if ( $options{r}) {
     setLocalConfig("ldap_root_password", "$password");
@@ -87,45 +101,13 @@ if ( $options{r}) {
         olcRootPW=> "$ssha_password",
     );
     $entry->update($ldap);
-
-    # Update slapd.conf
-    #
-    print "Updating slapd.conf\n";
-    my $infile="$zimbra_home/conf/slapd.conf.in";
-    my $outfile="/tmp/slapd.conf.$$";
-    open(IN,"<$infile");
-    open(OUT,">$outfile");
-    while (<IN>) {
-      if ($_ =~ /^rootpw/) {
-        $_ =~ s|^rootpw.*|rootpw $ssha_password|;
-        print OUT $_;
-      } else {
-        print OUT $_;
-      }
-    }
-    if ( -s $outfile ) {
-      my $rc=0xffff & system("/bin/mv -f $infile $infile.bak");
-      if ($rc != 0) {
-        print "Warning: Failed to backup $infile\n";
-      }
-      $rc=0xffff & system("/bin/mv -f $outfile $infile");
-      if ($rc != 0) {
-        print "Failed to move $outfile to $infile\nRestoring old configuration\n";
-        $rc=0xffff & system("/bin/mv -f $infile.bak $infile");
-        if ($rc != 0) {
-          print "Failed to restore backup\n";
-        }
-      } else {
-        system("/bin/rm -f $infile.bak");
-      }
-    }
 } elsif ( $options{l} ) {
     setLocalConfig("ldap_replication_password", "$password");
     my $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
     $mesg = $ldap->modify('uid=zmreplica,cn=admins,cn=zimbra',
                            replace => [ userPassword => $password] );
     my $infile = "$zimbra_home/conf/zimbra.ldif";
-    my $outfile = "/tmp/zimbra.ldif.$$";
+    my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
     my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
     my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
     my $entry;
@@ -167,7 +149,7 @@ if ( $options{r}) {
     $mesg = $ldap->modify('uid=zmpostfix,cn=appaccts,cn=zimbra',
                            replace => [ userPassword => $password ] );
     my $infile = "$zimbra_home/conf/zimbra.ldif";
-    my $outfile = "/tmp/zimbra.ldif.$$";
+    my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
     my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
     my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
     my $entry;
@@ -209,7 +191,7 @@ if ( $options{r}) {
     $mesg = $ldap->modify('uid=zmamavis,cn=appaccts,cn=zimbra',
                            replace  => [ userPassword => $password ] );
     my $infile = "$zimbra_home/conf/zimbra.ldif";
-    my $outfile = "/tmp/zimbra.ldif.$$";
+    my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
     my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
     my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
     my $entry;
@@ -251,7 +233,7 @@ if ( $options{r}) {
     $mesg = $ldap->modify('uid=zmnginx,cn=appaccts,cn=zimbra',
                            replace  => [ userPassword => $password ] );
     my $infile = "$zimbra_home/conf/zimbra.ldif";
-    my $outfile = "/tmp/zimbra.ldif.$$";
+    my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
     my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
     my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
     my $entry;
@@ -294,7 +276,7 @@ if ( $options{r}) {
     $mesg = $ldap->modify("$zimbra_ldap_userdn",
                            replace => [ userPassword => $password ] );
     my $infile = "$zimbra_home/conf/zimbra.ldif";
-    my $outfile = "/tmp/zimbra.ldif.$$";
+    my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
     my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
     my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );
     my $entry;
