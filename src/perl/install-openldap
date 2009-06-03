@@ -31,8 +31,8 @@ my %binaries = (
                 "openssl" => "0.9.8k",
                 "heimdal" => "1.2",
                 "curl" => "7.18.1",
-                "cyrus-sasl" => "2.1.22.3z",
-                "openldap" => "2.3.43.8z",
+                "cyrus-sasl" => "2.1.23.3z",
+                "openldap" => "2.3.43.10z",
                );
 
 if (! -d $CACHE_DIR) {
