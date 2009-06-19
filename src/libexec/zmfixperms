@@ -1,6 +1,7 @@
 #!/bin/bash 
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007, 2008, 2009 Zimbra, Inc.
 # 
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 # This may not be there, but we don't want to break the zimbramta package
@@ -55,6 +57,7 @@ components="\
   httpd \
   keyview \
   libtool \
+  logger/mysql \
   memcached \
   mysql \
   net-snmp \
@@ -62,13 +65,13 @@ components="\
   openldap-clibs \
   openssl \
   perdition \
+  sleepycat \
   snmp \
   tcmalloc \
   zimbramon/bin \
   zimbramon/crontabs \
   zimbramon/rrdtool \
 "
-  
 
 usage() {
   echo "$0 [-help] [-extended] [-verbose]"
@@ -151,12 +154,12 @@ if [ -d ${zimbra_home} ]; then
     chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/log
     if [ -f ${zimbra_home}/log/.hotspot_compiler ]; then
       chown ${root_user}:${root_group} ${zimbra_home}/log/.hotspot_compiler
-      chmod 444 ${zimbra_home}/log/.hotspot_compiler
+      chmod 444 ${zimbra_home}/.hotspot_compiler
     fi
   fi
 
   if [ -d ${zimbra_home}/logger ]; then
-    chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/logger 2> /dev/null
+    chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/logger
     chmod 755 ${zimbra_home}/logger/* 2> /dev/null
   fi
 
@@ -173,14 +176,6 @@ if [ -d ${zimbra_home} ]; then
     chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/wiki
   fi
 
-  if [ -d ${zimbra_home}/convertd ]; then
-    if [ !-d ${zimbra_home}/convertd/convert ]; then
-      mkdir -p ${zimbra_home}/convertd/convert
-    fi
-    chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/convertd/convert
-    chmod 755 ${zimbra_home}/convertd/convert
-  fi
-
   if [ -d ${zimbra_home}/conf ]; then
     printMsg "Fixing ownership and permissions on ${zimbra_home}/conf"
     chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf
@@ -193,6 +188,11 @@ if [ -d ${zimbra_home} ]; then
     if [ -f ${zimbra_home}/conf/localconfig.xml ]; then
       chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/localconfig.xml
       chmod 640 ${zimbra_home}/conf/localconfig.xml
+    fi
+
+    if [ -f ${zimbra_home}/conf/nginx.conf ]; then
+	    chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/nginx.conf
+	    chmod 644 ${zimbra_home}/conf/nginx.conf
     fi
 
     if [ -d ${zimbra_home}/conf/spamassassin ]; then
@@ -212,11 +212,11 @@ if [ -d ${zimbra_home} ]; then
 fi
 
 # fix the temp directory
-if [ ! -d ${zimbra_home}/data/tmp ]; then
-  mkdir -p ${zimbra_home}/data/tmp
+if [ ! -d /tmp/zimbra ]; then
+  mkdir -p /tmp/zimbra
 fi
-chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/tmp
-chmod 755 ${zimbra_home}/data/tmp
+chown ${zimbra_user}:${zimbra_group} /tmp/zimbra
+chmod 755 /tmp/zimbra
 
 if [ -f ${zimbra_home}/.install_history ]; then
   chmod 644 ${zimbra_home}/.install_history
@@ -296,9 +296,11 @@ if [ -L ${zimbra_home}/cyrus-sasl ]; then
     chmod 440 ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf
     chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf
   fi
+    
 fi
 
 if [ -L ${zimbra_home}/dspam ]; then
+  printMsg "Fixing ownership and permissions on ${zimbra_home}/data/dspam"
   if [ ! -d "${zimbra_home}/data/dspam" ]; then
     mkdir -p ${zimbra_home}/data/dspam
   fi
@@ -315,7 +317,6 @@ if [ -L ${zimbra_home}/amavisd ]; then
     chown -R ${root_user}:${root_group} ${zimbra_home}/amavisd/.spamassassin
   fi
 fi
-
 
 if [ -L ${zimbra_home}/jetty ]; then
   printMsg "Fixing ownership and permissions on ${zimbra_home}/jetty"
@@ -369,25 +370,12 @@ fi
 
 if [ -L ${zimbra_home}/openldap ]; then
   printMsg "Fixing ownership and permissions on ${zimbra_home}/openldap"
-  chown ${root_user}:${root_group} ${zimbra_home}/openldap-* 2> /dev/null
-  if [ -d ${zimbra_home}/data/ldap ]; then
-    chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/ldap
-    chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/ldap
-  fi
-  if [ -e ${zimbra_home}/openldap ]; then
-    chown -R ${root_user}:${root_group} ${zimbra_home}/openldap/* 2> /dev/null
-    if [ -d ${zimbra_home}/openldap/etc ]; then
-      chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/openldap/etc
-    fi
-    if [ -d ${zimbra_home}/openldap/var ]; then
-      chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/openldap/var
-    fi
-    if [ -d ${zimbra_home}/openldap/sbin ]; then
-      for i in ${zimbra_home}/openldap/sbin/*; do
-        chmod 755 ${i}
-      done
-    fi
-  fi
+  chown ${root_user}:${root_group} ${zimbra_home}/openldap-*
+  chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/openldap-data
+  chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/openldap-data
+  chown -R ${root_user}:${root_group} ${zimbra_home}/openldap/*
+  chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/openldap/{etc,var}
+	chmod 755 ${zimbra_home}/openldap/libexec/*
 fi
 
 if [ -d ${zimbra_home}/snmp/var ]; then
@@ -463,14 +451,12 @@ fi
 
 if [ -d ${zimbra_home}/data/postfix ]; then
 	printMsg "Fixing ownership and permissions on ${zimbra_home}/data/postfix"
-	if [ ! -d ${zimbra_home}/data/postfix/spool/pid ]; then
-		mkdir -p ${zimbra_home}/data/postfix/spool/pid
+	if [ ! -d ${zimbra_home}/data/postfix/spool ]; then
+		mkdir -p ${zimbra_home}/data/postfix/spool
 	fi
 	chown -fR ${postfix_owner}:${postfix_owner} ${zimbra_home}/data/postfix/spool
 	chown -f ${root_user} ${zimbra_home}/data/postfix/spool
 	chgrp -f ${postfix_owner} ${zimbra_home}/data/postfix/spool
-	chown -f ${postfix_owner} ${zimbra_home}/data/postfix/spool/pid
-	chgrp -f ${root_group} ${zimbra_home}/data/postfix/spool/pid
 	# Postfix specific permissions
 	if [ -d ${zimbra_home}/data/postfix/spool/public ]; then
 		chgrp -f ${postfix_suid_group} ${zimbra_home}/data/postfix/spool/public
@@ -543,11 +529,6 @@ fi
 if [ -f ${zimbra_home}/libexec/ZmSetup.app/Contents/MacOS/ZmSetup ]; then
 	chown ${root_user}:${root_group} ${zimbra_home}/libexec/ZmSetup.app/Contents/MacOS/ZmSetup
 	chmod 544 ${zimbra_home}/libexec/ZmSetup.app/Contents/MacOS/ZmSetup
-fi
-
-if [ -f ${zimbra_home}/conf/nginx.conf ]; then
-	chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/nginx.conf
-	chmod 644 ${zimbra_home}/conf/nginx.conf
 fi
 
 exit 0
