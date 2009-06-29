@@ -1,8 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2008 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -23,7 +25,6 @@ source `dirname $0`/zmshutil || exit 1
 zmsetvars \
     zimbra_home \
     zimbra_log_directory \
-    zimbra_tmp_directory \
     zimbra_swatch_acct_threshold \
     zimbra_swatch_ip_threshold \
     zimbra_swatch_ipacct_threshold \
@@ -106,14 +107,10 @@ case "$1" in
       echo "${configfile} template not found."
       exit 1
     fi
-
-    if [ ! -d ${zimbra_tmp_directory} ]; then
-      mkdir -p ${zimbra_tmp_directory} > /dev/null 2>&1
-    fi
        
     ${zimbra_home}/libexec/auditswatch --config-file=${configfile} \
       --use-cpan-file-tail \
-      --script-dir=${zimbra_tmp_directory} \
+      --script-dir=/tmp \
       --tail-file /opt/zimbra/log/audit.log > $logfile 2>&1 &
     pid=$!
     if [ "x$pid" != 'x' ]; then

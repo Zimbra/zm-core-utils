@@ -1,6 +1,7 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
 # 
@@ -11,7 +12,8 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
-exec `dirname $0`/zmjava -Duser.home=/opt/zimbra/data/tmp jline.ConsoleRunner com.zimbra.cs.account.ProvUtil "$@"
+exec `dirname $0`/zmjava com.zimbra.cs.account.ProvUtil "$@"

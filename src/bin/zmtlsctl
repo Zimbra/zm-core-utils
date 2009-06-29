@@ -1,8 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -63,7 +65,7 @@ esac
 export JAVA_HOME=${zimbra_java_home}
 
 if [ "x${zimbra_tmp_directory}" = "x" ]; then
-  zimbra_tmp_directory=$zimbra_home/data/tmp
+  zimbra_tmp_directory=/tmp
 fi
 
 if [ ! -d ${zimbra_tmp_directory} ]; then
@@ -148,23 +150,6 @@ updateJettyConfig() {
       exit 1
     fi
 
-    origfile=${mailboxd_conf_directory}/service.web.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-		  sed -e 's/\(.*REDIRECTBEGIN\).*/\1/' -e 's/.*\(REDIRECTEND.*\)/\1/' \
-			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
-
     origfile=${jetty_web_xml}/zimbra.web.xml.in
     tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
     if [ $? = 0 -a -s "${tempfile}" ]; then
@@ -207,23 +192,6 @@ updateJettyConfig() {
       echo -n "Updating ${origfile}..."
 		  sed -e 's/\(.*HTTPSBEGIN\).*/\1 -->/' -e 's/.*\(HTTPSEND.*\)/<!-- \1/' \
 			  -e 's/\(.*HTTPBEGIN\).*/\1/' -e 's/.*\(HTTPEND.*\)/\1/' \
-			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
-
-    origfile=${mailboxd_conf_directory}/service.web.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-		  sed -e 's/\(.*REDIRECTBEGIN\).*/\1/' -e 's/.*\(REDIRECTEND.*\)/\1/' \
 			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
       if [ $? = 0 ]; then
         echo "done."
@@ -292,23 +260,6 @@ updateJettyConfig() {
       exit 1
     fi
 
-    origfile=${mailboxd_conf_directory}/service.web.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-		  sed -e 's/\(.*REDIRECTBEGIN\).*/\1 -->/' -e 's/.*\(REDIRECTEND.*\)/<!-- \1/' \
-			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
-
     origfile=${jetty_web_xml}/zimbra.web.xml.in
     tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
     if [ $? = 0 -a -s "${tempfile}" ]; then
@@ -351,23 +302,6 @@ updateJettyConfig() {
       echo -n "Updating ${origfile}..."
 		  sed -e 's/\(.*HTTPSBEGIN\).*/\1 -->/' -e 's/.*\(HTTPSEND.*\)/<!-- \1/' \
 			  -e 's/\(.*HTTPBEGIN\).*/\1 -->/' -e 's/.*\(HTTPEND.*\)/<!-- \1/' \
-			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
-
-    origfile=${mailboxd_conf_directory}/service.web.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-		  sed -e 's/\(.*REDIRECTBEGIN\).*/\1/' -e 's/.*\(REDIRECTEND.*\)/\1/' \
 			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
       if [ $? = 0 ]; then
         echo "done."
