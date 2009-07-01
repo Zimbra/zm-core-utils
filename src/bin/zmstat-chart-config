@@ -1,8 +1,9 @@
 #!/usr/bin/perl -w
 #
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2008, 2009 Zimbra, Inc.
+# Copyright (C) 2007 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 #
 
@@ -18,6 +20,7 @@ use strict;
 use Zimbra::Mon::Zmstat;
 
 zmstatInit();
+Zimbra::Mon::Zmstat::getLocalConfig('convertd_version');
 
 my $isLinux = isLinux();
 my $isMac = isMac();
@@ -26,15 +29,12 @@ my $ZIMBRA_HOME = getZimbraHome();
 my $mtaqstatCsv = 'mtaqueue.csv';
 my $cpustatCsv = 'cpu.csv';
 my $fdstatCsv = 'fd.csv';
-my $dfstatCsv = 'df.csv';
 my $pstatCsv = 'proc.csv';
-my $allpstatCsv = "allprocs.csv";
 my $vmstatCsv = 'vm.csv';
 my $iostatxCsv = 'io-x.csv';
 my $iostatCsv = 'io.csv';
 my $mailboxdCsv = 'mailboxd.csv';
 my $convertdCsv = 'convertd.csv';
-my $nginxCsv = 'nginx.csv';
 my $mysqlCsv = 'mysql.csv';
 my $soapCsv = 'soap.csv';
 
@@ -159,6 +159,7 @@ sub getHostAndProcsInfo() {
         if ($svc =~ /mailbox/) {
             push(@ENABLED_PROCS, 'mailbox');
             push(@ENABLED_PROCS, 'mysql');
+            push(@ENABLED_PROCS, 'convertd') if $Zimbra::Mon::Zmstat::LC{'convertd_version'} ne '2';
             $HAS_MAILBOX = 1;
             last;
         }
@@ -490,26 +491,15 @@ _HERE_
          category="IO"
          infile="$iostatCsv"
          outfile="${ZIMBRA_HOSTNAME}_${partFile}_part_iops.png"
-         yAxis="tps"
+         yAxis="tps/s"
          showRaw="false"
          showMovingAvg="true">
     <plot data="$partition:tps" legend="$partition tps"/>
   </chart>
-_HERE_
-  
 
+_HERE_
             }
         }
-        print <<_HERE_;
-  <chart title="Host $ZIMBRA_HOSTNAME: Disk Usage"
-         category="IO"
-         height="400"
-         infile="$dfstatCsv"
-         outfile="${ZIMBRA_HOSTNAME}_disk_usage.png"
-         yAxis="% used">
-    <groupplot data="disk_pct_used" groupBy="path" />
-  </chart>
-_HERE_
     }
 }
 
@@ -524,7 +514,7 @@ sub mailboxdConfig() {
          infile="$soapCsv"
          outfile="${ZIMBRA_HOSTNAME}_soap_call_count.png"
          yAxis="calls/min">
-    <groupplot data="exec_count" ignore="BackupRequest" groupBy="command" aggregateFunction="max"/>
+    <groupplot data="exec_count" groupBy="command" aggregateFunction="max"/>
   </chart>
   
   <chart title="Host $ZIMBRA_HOSTNAME: SOAP: Average Call Duration: Summary (Top 10 avg)"
@@ -535,7 +525,7 @@ sub mailboxdConfig() {
          infile="$soapCsv"
          outfile="${ZIMBRA_HOSTNAME}_soap_avg_duration.png"
          yAxis="ms avg">
-    <groupplot data="exec_ms_avg" ignore="BackupRequest" groupBy="command"/>
+    <groupplot data="exec_ms_avg" groupBy="command"/>
   </chart>
   <chart title="Host $ZIMBRA_HOSTNAME: SOAP: Invocation Count: %s"
          category="soap"
@@ -574,12 +564,13 @@ sub mailboxdConfig() {
     <plot data="innodb_bp_hit_rate" legend="buffer pool hit rate"/>
   </chart>
 
-  <chart title="Host $ZIMBRA_HOSTNAME: MySQL: Database Connections In Use"
+  <chart title="Host $ZIMBRA_HOSTNAME: MySQL: Database Connections"
          category="database"
          infile="$mailboxdCsv"
          outfile="${ZIMBRA_HOSTNAME}_mysql-conns.png"
          yAxis="conns">
-    <plot data="db_pool_size" legend="connections in use"/>
+    <plot data="db_pool_size" legend="connection pool size"/>
+    <plot data="mysql_threads_connected" legend="threads connected"/>
   </chart>
 
   <chart title="Host $ZIMBRA_HOSTNAME: MySQL: Tables Open/Opened"
@@ -632,18 +623,18 @@ sub mailboxdConfig() {
       category="mailboxd"
       infile="$mailboxdCsv"
       outfile="${ZIMBRA_HOSTNAME}_mboxd-lucene-io.png"
-      yAxis="KB/s"
+      yAxis="KB"
       showRaw="false"
       showMovingAvg="true">
-    <plot data="idx_bytes_written" legend="Index writes" divisor="61440"/>
-    <plot data="idx_bytes_read" legend="Index reads" divisor="61440"/>
+    <plot data="idx_bytes_written" legend="Index writes" divisor="1024"/>
+    <plot data="idx_bytes_read" legend="Index reads" divisor="1024"/>
   </chart>
 
   <chart title="Host $ZIMBRA_HOSTNAME: Mailboxd: LMTP Delivery Throughput"
          category="mailboxd"
          infile="$mailboxdCsv"
          outfile="${ZIMBRA_HOSTNAME}_mboxd-lmtp-thruput.png"
-         yAxis="KB/s"
+         yAxis="KB"
          showRaw="false"         
          showMovingAvg="true">
     <plot data="lmtp_rcvd_bytes" legend="received" divisor="61440"/>
@@ -654,7 +645,7 @@ sub mailboxdConfig() {
          category="mailboxd"
          infile="$mailboxdCsv"
          outfile="${ZIMBRA_HOSTNAME}_mboxd-mbox-deliv-rate.png"         
-         yAxis="msgs/s">
+         yAxis="msgs">
       <plot data="lmtp_rcvd_msgs" legend="received msgs" divisor="60"/>
       <plot data="lmtp_dlvd_msgs" legend="delivered msgs" divisor="60" />
       <plot data="lmtp_rcvd_rcpt" legend="received x rcpts" divisor="60" />
@@ -776,63 +767,6 @@ sub convertdConfig() {
          category="convertd"
          infile="$convertdCsv"
          outfile="${ZIMBRA_HOSTNAME}_convertd_procs_threads.png"
-         yAxis="count"
-         showRaw="false"
-         showMovingAvg="true">
-    <plot data="processes" legend="processes"/>
-    <plot data="threads" legend="threads"/>
-  </chart>
-
-_HERE_
-}
-sub allpstatsConfig() {
-    print <<_HERE_;
-  <!-- allprocs Stats -->
-  <chart title="Host $ZIMBRA_HOSTNAME: Process CPU Time (Top 10 avg)"
-         category="CPU"
-         infile="$allpstatCsv"
-         outfile="${ZIMBRA_HOSTNAME}_allpstats_cputime.png"
-         yAxis="cputime (seconds)"
-         allowLogScale="false"
-         height="400"
-         topPlots="10"
-         topPlotsType="avg"
-         showRaw="false"
-         showMovingAvg="true">
-    <groupplot data="cputime" groupBy="process"/>
-  </chart>
-_HERE_
-}
-
-sub nginxConfig() {
-    print <<_HERE_;
-  <!-- Nginx Stats -->
-  <chart title="Host $ZIMBRA_HOSTNAME: nginx: CPU time used"
-         category="nginx"
-         infile="$nginxCsv"
-         outfile="${ZIMBRA_HOSTNAME}_nginx_cputime.png"
-         yAxis="cputime (seconds)"
-         showRaw="false"
-         showMovingAvg="true">
-    <plot data="cputime" legend="total cputime" divisor="100"/>
-    <plot data="utime" legend="user time" divisor="100"/>
-    <plot data="stime" legend="system time" divisor="100"/>
-  </chart>
-  
-  <chart title="Host $ZIMBRA_HOSTNAME: nginx: Resident Memory"
-         category="nginx"
-         infile="$nginxCsv"
-         outfile="${ZIMBRA_HOSTNAME}_nginx_rss.png"
-         yAxis="MB"
-         showRaw="false"
-         showMovingAvg="true">
-    <plot data="rss" legend="nginx rss" divisor="1024"/>
-  </chart>
-  
-  <chart title="Host $ZIMBRA_HOSTNAME: nginx: Processes and Threads"
-         category="nginx"
-         infile="$nginxCsv"
-         outfile="${ZIMBRA_HOSTNAME}_nginx_procs_threads.png"
          yAxis="count"
          showRaw="false"
          showMovingAvg="true">
@@ -999,13 +933,11 @@ vmstatConfig();
 iostatConfig();
 if (!$isMac) {
     getFDstatConfig();
-    allpstatsConfig();
 }
 if ($HAS_MAILBOX) {
     mailboxdConfig();
     gcConfig();
     heapConfig();
-    convertdConfig() if !$isMac;
-    nginxConfig();
+    convertdConfig() if !$isMac && $Zimbra::Mon::Zmstat::LC{'convertd_version'} eq '2';
 }
 print "</charts>\n";
