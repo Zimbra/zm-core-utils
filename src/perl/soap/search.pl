@@ -1,8 +1,9 @@
 #!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Zimbra, Inc.
+# Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -25,7 +27,7 @@ use ZimbraSoapTest;
 
 # specific to this app
 my ($searchString, $offset, $prevId, $prevSortVal, $endSortVal, $limit, $fetch, $sortBy, $types, $convId, $tz, $locale, $field);
-my ($calExpandInstStart, $calExpandInstEnd, $allowableTaskStatus);
+my ($calExpandInstStart, $calExpandInstEnd);
 $offset = 0;
 $limit = 5;
 $fetch = 0;
@@ -56,7 +58,6 @@ GetOptions("u|user=s" => \$user,
            "field=s" => \$field,
            "calExpandInstStart=s" => \$calExpandInstStart,
            "calExpandInstEnd=s" => \$calExpandInstEnd,
-           "allowableTaskStatus=s" => \$allowableTaskStatus,
           );
 
 
@@ -64,7 +65,7 @@ GetOptions("u|user=s" => \$user,
 if (!defined($user) || !defined($searchString) || defined($help)) {
     my $usage = <<END_OF_USAGE;
     
-USAGE: $0 -u USER -q QUERYSTR [-s SORT] [-t TYPES] [-o OFFSET] [-l LIMIT] [-fetch FETCH] [-pi PREV-ITEM-ID -ps PREV-SORT-VALUE] [-es END-SORT-VALUE] [-conv CONVID] [-tz TZID] [-calExpandInstStart STARTTIME -calExpandInstEnd ENDTIME] [-locale LOCALE_STR] [-allowableTaskStatus=INPR,NEED,DEFERRED,WAITING,COMP]
+USAGE: $0 -u USER -q QUERYSTR [-s SORT] [-t TYPES] [-o OFFSET] [-l LIMIT] [-fetch FETCH] [-pi PREV-ITEM-ID -ps PREV-SORT-VALUE] [-es END-SORT-VALUE] [-conv CONVID] [-tz TZID] [-calExpandInstStart STARTTIME -calExpandInstEnd ENDTIME] [-locale LOCALE_STR]
     SORT = dateDesc|dateAsc|subjDesc|subjAsc|nameDesc|nameAsc|score|none
     TYPES = message|conversation|contact|appointment
 END_OF_USAGE
@@ -96,10 +97,7 @@ if (defined($calExpandInstStart)) {
   $args{'calExpandInstStart'} = $calExpandInstStart;
   $args{'calExpandInstEnd'} = $calExpandInstEnd;
 }
-
-if (defined($allowableTaskStatus)) {
-  $args{'allowableTaskStatus'} = $allowableTaskStatus;
-}
+  
 
 if (defined($convId)) {
   $searchName = "SearchConvRequest";
