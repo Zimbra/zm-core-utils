@@ -1,8 +1,9 @@
 #!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2007, 2008 Zimbra, Inc.
+# Copyright (C) 2005 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -54,14 +56,10 @@ print "AuthResponse = ".$authResponse->to_string("pretty")."\n";
 my $authToken = $authResponse->find_child('authToken')->content;
 print "authToken($authToken)\n";
 
-#my $sessionElt = $authResponse->find_child('sessionId');
-#if (!defined($sessionElt)) {
-#  $sessionElt = $authResponse->find_child('session');
-#}
-#my $sessionId = $sessionElt->content;
-#print "sessionId = $sessionId\n";
+my $sessionId = $authResponse->find_child('sessionId')->content;
+print "sessionId = $sessionId\n";
 
-my $context = $SOAP->zimbraContext($authToken);
+my $context = $SOAP->zimbraContext($authToken, $sessionId);
 
 my $contextStr = $context->to_string("pretty");
 print("Context = $contextStr\n");
