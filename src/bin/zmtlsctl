@@ -1,8 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -11,6 +12,7 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -47,7 +49,6 @@ fi
 case "$1" in
   mixed|both|http|https|redirect)
     MODE=$1
-    UPDATE_MAIL_MODE=1
     ;;
   help|--help|-help)
     echo "Usage: $0 [mixed|both|http|https|redirect]"
@@ -64,7 +65,7 @@ esac
 export JAVA_HOME=${zimbra_java_home}
 
 if [ "x${zimbra_tmp_directory}" = "x" ]; then
-  zimbra_tmp_directory=$zimbra_home/data/tmp
+  zimbra_tmp_directory=/tmp
 fi
 
 if [ ! -d ${zimbra_tmp_directory} ]; then
@@ -76,26 +77,17 @@ if [ "x$zimbra_server_hostname" = "x" ]; then
   exit 1;
 fi
 
+${zimbra_home}/bin/zmprov -l gs ${zimbra_server_hostname} > /dev/null 2>&1
+if [ $? != 0 ]; then
+  echo "ERROR: problem reading config from ldap. Make sure ldap is running."
+  exit 1
+fi
+
 if [ "x$MODE" = "x" ]; then
 	MODE=`${zimbra_home}/bin/zmprov -l gs ${zimbra_server_hostname} 2> /dev/null | grep zimbraMailMode | sed -e 's/zimbraMailMode: //'`
 
-  if [ $? != 0 ]; then
-    echo "ERROR: problem reading config from ldap. Make sure ldap is running."
-    exit 1
-  fi
-
 	if [ "x$MODE" = "x" ]; then
 		MODE="http"
-	fi
-else
-	shift
-fi
-
-if [ "x$DEBUG" = "x" ]; then
-	DEBUG=`${zimbra_home}/bin/zmprov -l gcf zimbraHttpDebugHandlerEnabled | sed -e 's/zimbraHttpDebugHandlerEnabled: //' | tr A-Z a-z`
-
-	if [ "x$DEBUG" = "x" ]; then
-		DEBUG="false"
 	fi
 else
 	shift
@@ -158,23 +150,6 @@ updateJettyConfig() {
       exit 1
     fi
 
-    origfile=${mailboxd_conf_directory}/service.web.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-		  sed -e 's/\(.*REDIRECTBEGIN\).*/\1/' -e 's/.*\(REDIRECTEND.*\)/\1/' \
-			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
-
     origfile=${jetty_web_xml}/zimbra.web.xml.in
     tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
     if [ $? = 0 -a -s "${tempfile}" ]; then
@@ -217,23 +192,6 @@ updateJettyConfig() {
       echo -n "Updating ${origfile}..."
 		  sed -e 's/\(.*HTTPSBEGIN\).*/\1 -->/' -e 's/.*\(HTTPSEND.*\)/<!-- \1/' \
 			  -e 's/\(.*HTTPBEGIN\).*/\1/' -e 's/.*\(HTTPEND.*\)/\1/' \
-			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
-
-    origfile=${mailboxd_conf_directory}/service.web.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-		  sed -e 's/\(.*REDIRECTBEGIN\).*/\1/' -e 's/.*\(REDIRECTEND.*\)/\1/' \
 			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
       if [ $? = 0 ]; then
         echo "done."
@@ -302,23 +260,6 @@ updateJettyConfig() {
       exit 1
     fi
 
-    origfile=${mailboxd_conf_directory}/service.web.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-		  sed -e 's/\(.*REDIRECTBEGIN\).*/\1 -->/' -e 's/.*\(REDIRECTEND.*\)/<!-- \1/' \
-			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
-
     origfile=${jetty_web_xml}/zimbra.web.xml.in
     tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
     if [ $? = 0 -a -s "${tempfile}" ]; then
@@ -361,23 +302,6 @@ updateJettyConfig() {
       echo -n "Updating ${origfile}..."
 		  sed -e 's/\(.*HTTPSBEGIN\).*/\1 -->/' -e 's/.*\(HTTPSEND.*\)/<!-- \1/' \
 			  -e 's/\(.*HTTPBEGIN\).*/\1 -->/' -e 's/.*\(HTTPEND.*\)/<!-- \1/' \
-			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
-
-    origfile=${mailboxd_conf_directory}/service.web.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-		  sed -e 's/\(.*REDIRECTBEGIN\).*/\1/' -e 's/.*\(REDIRECTEND.*\)/\1/' \
 			  ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
       if [ $? = 0 ]; then
         echo "done."
@@ -461,42 +385,14 @@ updateJettyConfig() {
     fi
 	fi
 
-	if [ x"$DEBUG" = "xtrue" ]; then
-    origfile=${mailboxd_conf_directory}/jetty.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-	    sed -e 's/\(.*DEBUGBEGIN\).*/\1 -->/' -e 's/.*\(DEBUGEND.*\)/<!-- \1/' \
-		    ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
-  else 
-    origfile=${mailboxd_conf_directory}/jetty.xml.in
-    tempfile=$(mktemp ${origfile}.XXXXXX) && cp -f ${origfile} ${tempfile}
-    if [ $? = 0 -a -s "${tempfile}" ]; then
-      echo -n "Updating ${origfile}..."
-	    sed -e 's/\(.*DEBUGBEGIN\).*/\1/' -e 's/.*\(DEBUGEND.*\)/\1/' \
-		    ${origfile} > ${tempfile} && mv -f ${tempfile} ${origfile}
-      if [ $? = 0 ]; then
-        echo "done."
-      else 
-        echo "failed."
-        exit 1
-      fi
-    else
-      echo "Couldn't create tempfile for ${origfile}"
-      exit 1
-    fi
+  echo -n "Rewriting config files for webxml and mailboxd..."
+  ${zimbra_home}/libexec/zmmtaconfig webxml mailbox  > /dev/null 2>&1
+  if [ $? = 0 ]; then
+    echo "done."
+  else
+    echo "failed."
+    exit 1
   fi
-
 }
 
 updateSASLConfig() {
@@ -539,11 +435,8 @@ updateSASLConfig() {
       fi
 		fi
 	fi
-}
-
-rewriteConfigs() {
-  echo -n "Rewriting config files for cyrus-sasl, webxml and mailboxd..."
-  ${zimbra_home}/libexec/zmmtaconfig sasl webxml mailbox  > /dev/null 2>&1
+  echo -n "Rewriting config files for cyrus-sasl..."
+  ${zimbra_home}/libexec/zmmtaconfig sasl > /dev/null 2>&1
   if [ $? = 0 ]; then
     echo "done."
   else
@@ -569,8 +462,4 @@ else
   updateJettyConfig
 fi
 updateSASLConfig
-rewriteConfigs
-
-if [ x"$UPDATE_MAIL_MODE" = "x1" ]; then
-  updateLdap
-fi
+updateLdap
