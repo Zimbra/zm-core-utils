@@ -1,9 +1,8 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2007 Zimbra, Inc.
+# Copyright (C) 2005, 2007, 2008 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -24,27 +22,49 @@ PIDFILE=$BASE/log/httpd.pid
 case "$1" in
 	start)
 		if [ -f $APACHECTL ]; then
+      echo -n "Starting apache..."
 			$APACHECTL -k $1 -f $CONF
-			exit $?
+      status=$?
+      if [ $status = 0 ]; then
+        echo "done."
+      else
+        echo "failed."
+      fi
+			exit $status
 		fi
 		exit 0
 	;;
   reload|graceful)
 		if [ -f $APACHECTL ]; then
+      echo -n "Reloading apache..."
 			$APACHECTL -k graceful -f $CONF
-			exit $?
+      status=$?
+      if [ $status = 0 ]; then
+        echo "done."
+      else
+        echo "failed."
+      fi
+			exit $status
 		fi
 		exit 0
 	;;
   restart)
     $0 stop
+    sleep 1
     $0 start
   ;;
 	stop)
 		if [ -f $PIDFILE ]; then
 			if [ -f $APACHECTL ]; then
+        echo -n "Stopping apache..."
 				$APACHECTL -k $1 -f $CONF
-				exit $?
+        status=$?
+        if [ $status = 0 ]; then
+          echo "done."
+        else
+          echo "failed."
+        fi
+			  exit $status
 			fi
 		fi
 		exit 0
@@ -53,19 +73,19 @@ case "$1" in
     if [ -f $PIDFILE ]; then
 		  pid=$(cat $PIDFILE)
       if [ x"$pid" = "x" ]; then
-        echo "Apache not running."
+        echo "apache is not running."
         exit 1
       fi
     else
-      echo "Apache not running.  No PID file found."
+      echo "apache is not running."
       exit 1
     fi
 		kill -0 $pid
     if [ $? = 0 ]; then
-      echo "Apache running with PID $pid"
+      echo "apache is running."
       exit 0
     else 
-      echo "Apache not running."
+      echo "apache is not running."
 		  exit 1
     fi
 	;;

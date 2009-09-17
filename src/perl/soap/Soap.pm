@@ -1,7 +1,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2004, 2005, 2006, 2007, 2008 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -241,6 +241,8 @@ sub doAuthByName {
   my $ctxt = new XmlElement("context", "urn:zimbra");
   if (!defined($opts) || !defined($opts->{NOTIFY})) {
     $ctxt->add_child(new XmlElement("nosession"));
+  } else {
+    $ctxt->add_child(new XmlElement("session"));
   }
 
   my $d = new XmlDoc;
@@ -248,7 +250,7 @@ sub doAuthByName {
   $d->start('AuthRequest', $namespace);
   {
     $d->add('account', undef, { by => "name"}, $acctName);
-    $d->add('name', undef, undef, $acctName);
+#    $d->add('name', undef, undef, $acctName);
     $d->add('password', undef, undef, $passwd);
     
   } $d->end();
@@ -265,12 +267,19 @@ sub doAuthByName {
   my $authToken = $elt->content;
 
   if (!defined($sessionId)) {
-    $elt = $authResponse->find_child('sessionId');
+    # 6.x servers
+    $elt = $authResponse->find_child('session');
     if (!defined($elt)) {
-      print "AuthRequest: ".$d->to_string("pretty")."\n";
-      print "AuthResponse: ".$authResponse->to_string("pretty")."\n";
-      #    die "Could not find sessionId in AuthToken";
-    } else {
+      # 5.x servers
+      $elt = $authResponse->find_child('sessionId');
+#      if (!defined($elt)) {
+#        print "Unable to locate session ID\n";
+        #      print "AuthRequest: ".$d->to_string("pretty")."\n";
+        #      print "AuthResponse: ".$authResponse->to_string("pretty")."\n";
+        #    die "Could not find sessionId in AuthToken";
+#      }
+    }
+    if (defined($elt)) {
       $sessionId = $elt->content;
     }
   }
@@ -286,6 +295,12 @@ sub doAuthByName {
 sub zimbraContext {
 	my ($self, $authtoken, $sessionId, $wantcontext, $opts) = @_;
 
+#    if (defined($sessionId)) {
+#      print "SESSIONID is $sessionId\n";
+#    } else {
+#      print "No session ID\n";
+#    }
+
     my $notSeq = '0';
     if (defined($opts) && defined($opts->{NOTSEQ})) {
       $notSeq = $opts->{NOTSEQ};
@@ -296,19 +311,32 @@ sub zimbraContext {
 	$auth->content($authtoken);
 	$context->add_child($auth);
     if (defined($sessionId) && $sessionId ne "") {
-        my $sessionElt = new XmlElement("session");
-        if (defined ($wantcontext) && $wantcontext) {
-          $sessionElt->attrs({'notify' => '1' });
-        }
-        $sessionElt->attrs({'id' => $sessionId});
-        $context->add_child($sessionElt);
+      # SESSION elt (6.x servers)
+      my $sessionElt = new XmlElement("session");
+      if (defined ($wantcontext) && $wantcontext) {
+        $sessionElt->attrs({'notify' => '1' });
+      }
+      $sessionElt->attrs({'id' => $sessionId});
+      $context->add_child($sessionElt);
+
+      # SESSIONID elt (5.x servers)
+      my $sessionIdElt = new XmlElement("sessionId");
+      if (defined ($wantcontext) && $wantcontext) {
+        $sessionIdElt->attrs({'notify' => '1' });
+      }
+      $sessionIdElt->attrs({'id' => $sessionId});
+      $context->add_child($sessionIdElt);
+      
+      
     }
 	if (! defined ($wantcontext) ) {
 		my $want = new XmlElement("nosession");
 		$want->content("");
 		$context->add_child($want);
 	} else {
-      print "****************notSeq = $notSeq***************************\n\n";
+#      print "****************notSeq = $notSeq***************************\n\n";
+#      my $session = new XmlElement("session");
+#      $context->add_child($session);
       my $want = new XmlElement("notify");
       $want->attrs({ 'seq' => $notSeq });
       $context->add_child($want);
@@ -325,7 +353,12 @@ sub invoke {
 
     my $env = $self->soapEnvelope($doc, $context);
     my $soap = $env->to_string();
-    my $ua = new LWP::UserAgent();
+    my $ua;
+    if (defined($options->{TIMEOUT})) {
+      $ua = new LWP::UserAgent(timeout => $options->{TIMEOUT});
+    } else {
+      $ua = new LWP::UserAgent();
+    }
     $req = new HTTP::Request(POST=> $uri);
     $req->content_type($self->getContentType());
     $req->content_length(length($soap));
@@ -333,6 +366,10 @@ sub invoke {
         $req->header("SOAPAction" => $uri);
     }
     $req->add_content($soap);
+
+    if ($LogRequest > 0) {
+      print "\nREQUEST: \n\t".$req->content."\n";
+    }
     
     eval {
         $res = $ua->request($req);
@@ -348,21 +385,25 @@ sub invoke {
         die "unable to determine soap protocol" unless defined $rsoap;
         die "unexpected soap version in response" unless $rsoap == $self;
 
-        $toRet = $self->getElement($xml);
+        if (defined($options->{FULLRESPONSE})) {
+          $toRet = $xml;
+        } else {
+          $toRet = $self->getElement($xml);
+        }
     };
 
     $err = $@;
 
-    if ( ($err && ($reqOK == 0))  || ($LogRequest > 0)) {
-        print "\nREQUEST: \n\t".$req->content."\n";
+    if ( ($err && ($reqOK == 0))  &&  (!($LogRequest > 0))) {
+      print "\nREQUEST: \n\t".$req->content."\n";
     }
-
+    
     if ( ($err && ($reqOK == 2))  || ($LogResponse  > 0)) {
         print "\nRESPONSE: \n\t".$res->content."\n";
     }
 
     if ($err) {
-      print "\nRESPONSE: \n\t".$res->content."\n";
+      print "\nERROR RESPONSE: \n\t".$res->content."\n";
       if ($reqOK == 0) {
           $err = "\nError Handling Soap Request".$err;
         } else {

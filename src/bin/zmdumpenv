@@ -1,9 +1,8 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007, 2008 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,7 +11,6 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 source /opt/zimbra/bin/zmshutil || exit 1
@@ -41,13 +39,9 @@ echo "----------------"
 /sbin/ifconfig
 echo "----------------"
 
-if [ x$P = "xMACOSX" -o "x$P" = "xMACOSXx86" ]; then
+if [[ x$P == "xMACOSX"* ]]; then
 	ls -ld /Library/Receipts/zimbra-*
-elif [ "x$P" = "xUBUNTU6" -o "x$P" = "xUBUNTU6_64" ]; then
-	apt-cache show zimbra-core
-elif [ "x$P" = "xUBUNTU8" -o "x$P" = "xUBUNTU8_64" ]; then
-	apt-cache show zimbra-core
-elif [ "x$P" = "DEBIAN4.0" ]; then
+elif [[ "x$P" == "xUBUNTU"* || "x$P" == "DEBIAN"* ]]; then
 	apt-cache show zimbra-core
 else
 	rpm -qi zimbra-core

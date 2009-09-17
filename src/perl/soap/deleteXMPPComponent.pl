@@ -1,9 +1,8 @@
 #!/usr/bin/perl -w
 # 
 # ***** BEGIN LICENSE BLOCK *****
-# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007 Zimbra, Inc.
+# Copyright (C) 2008 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -12,54 +11,60 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
-# 
 # ***** END LICENSE BLOCK *****
 # 
 
+#
+# Simple SOAP test-harness for the AddMsg API
+#
+
 use strict;
+
 use lib '.';
 
 use LWP::UserAgent;
 use Getopt::Long;
+use XmlElement;
 use XmlDoc;
 use Soap;
 use ZimbraSoapTest;
 
-# specific to this app
-my ($threadId, $addr);
-
 #standard options
-my ($user, $pw, $host, $help); #standard
+my ($admin, $user, $pw, $host, $help, $adminHost); #standard
+my ($name);
+
 GetOptions("u|user=s" => \$user,
+           "admin" => \$admin,
+           "ah|adminHost=s" => \$adminHost,
            "pw=s" => \$pw,
            "h|host=s" => \$host,
            "help|?" => \$help,
-           # add specific params below:
-           "t=s", \$threadId,
-           "a=s", \$addr
+           "name=s" => \$name,
           );
 
-
-
-if (!defined($user) || !defined($threadId) || defined($help)) {
-    my $usage = <<END_OF_USAGE;
-    
-USAGE: $0 -u USER -t threadId -a addr
-END_OF_USAGE
-    die $usage;
+if (!defined($user)) {
+  $user = "admin";
 }
 
-my $z = ZimbraSoapTest->new($user, $host, $pw);
-$z->doStdAuth();
+if (!defined($user) || defined($help) || !defined($name) ) {
+  my $usage = <<END_OF_USAGE;
+
+USAGE: $0 -n NAME 
+END_OF_USAGE
+  die $usage;
+}
+
+my $z = ZimbraSoapTest->new($user, $host, $pw, undef, $adminHost);
+$z->doAdminAuth();
+
+my $SOAP = $Soap::Soap12;
 
 my $d = new XmlDoc;
-my $searchName = "SearchRequest";
+$d->start('DeleteXMPPComponentRequest', $Soap::ZIMBRA_ADMIN_NS); {
+  $d->add('xmppcomponent', undef, { "by" => "name"}, $name);
+} $d->end();
 
-$d->start("IMJoinChatRequest", $Soap::ZIMBRA_IM_NS, { 'addr' => $addr, 'thread' => $threadId });
-
- $d->end(); 
-
-my $response = $z->invokeMail($d->root());
+my $response = $z->invokeAdmin($d->root());
 
 print "REQUEST:\n-------------\n".$z->to_string_simple($d);
 print "RESPONSE:\n--------------\n".$z->to_string_simple($response);
