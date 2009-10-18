@@ -1,8 +1,9 @@
 #!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
+# 
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Yahoo! Public License
 # Version 1.0 ("License"); you may not use this file except in
@@ -11,61 +12,27 @@
 # 
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
+# 
 # ***** END LICENSE BLOCK *****
 # 
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
   zimbra_home \
-  mailboxd_directory \
-  zimbra_mysql_password
-
-MYSQL="${zimbra_home}/bin/mysql -u zimbra -P ${zimbra_mysql_password}"
+  mailboxd_directory
 
 START_ORDER="zmmtaconfigctl mysql.server zmmailboxdctl"
 STOP_ORDER="zmmtaconfigctl zmmailboxdctl mysql.server"
 
 STATUS=0
 
-flushDirtyPages() {
-  # make sure mysql is running
-  ${zimbra_home}/bin/mysql.server status > /dev/null 2>&1
-  if [ $? != 0 ]; then
-    return
-  fi
-
-  # make sure innodb is enabled
-  local innodb_status=$(echo "show engines;" | ${MYSQL} | grep InnoDB | cut -f2)
-  if [ "$innodb_status" = "DISABLED" ]; then
-    return
-  fi
-
-  # set max_dirty_pages=0 so mysql starts flushing dirty pages to disk.
-  ${MYSQL} -e "slave stop; set global innodb_max_dirty_pages_pct=0;"
-  if [ $? != 0 ]; then
-    return
-  fi
-
-  # wait for 600 seconds or until there are no more dirty pages
-  local i=0
-  while [ $i -lt 600 ]; do
-    local pages=$(${MYSQL} -e "show innodb status\G" | grep '^Modified db pages' | grep -Eo '[0-9]+$')
-    if [ "$pages" = "0" ]; then
-      break
-    fi
-    #echo -ne "$pages\r"
-    i=$((i+1))
-    sleep 1
-  done
-}
-
 case "$1" in 
   start)
     if [ x$2 = "x" ]; then
-      ${zimbra_home}/libexec/zmmtaconfig mailbox >/dev/null 2>&1
+      ${zimbra_home}/libexec/zmmtaconfig mailbox
     fi
     for i in $START_ORDER; do
-      ${zimbra_home}/bin/$i start norewrite >/dev/null 2>&1
+      ${zimbra_home}/bin/$i start norewrite
       R=$?
       if [ $R -ne "0" ]; then
         STATUS=$R
@@ -75,9 +42,6 @@ case "$1" in
   ;;
   stop)
     for i in $STOP_ORDER; do
-      if [ "$i" = "mysql.server" ]; then
-        flushDirtyPages
-      fi
       ${zimbra_home}/bin/$i stop
       R=$?
       if [ $R -ne "0" ]; then

@@ -6,20 +6,9 @@
     postrotate
       killall -HUP syslogd 2> /dev/null || true
       su - zimbra -c "/opt/zimbra/bin/zmswatchctl restart" > /dev/null 2>&1 || true
-    endscript
-    compress
-}
-
-/var/log/zimbra-stats.log {
-    daily
-    missingok
-    notifempty
-    create 0644 zimbra zimbra
-    postrotate
-      killall -HUP syslogd 2> /dev/null || true
       su - zimbra -c "/opt/zimbra/bin/zmlogswatchctl restart" > /dev/null 2>&1 || true
     endscript
-    rotate 0
+    compress
 }
 
 /opt/zimbra/log/myslow.log {
@@ -57,19 +46,6 @@
     rotate 7
 }
 
-/opt/zimbra/log/freshclam.log {
-    daily
-    missingok
-    copytruncate
-    notifempty    create 0660 zimbra zimbra
-    postrotate
-     kill -HUP `cat /opt/zimbra/log/freshclam.pid 2> /dev/null` 2> /dev/null || true
-    endscript
-    compress
-    size 5000k
-    rotate 7
-}   
-
 /opt/zimbra/log/zmlogswatch.out {
     daily
     missingok
@@ -77,7 +53,8 @@
     notifempty
     create 0740 zimbra zimbra
     postrotate
-      su - zimbra -c "/opt/zimbra/bin/zmlogswatchctl restart" > /dev/null 2>&1 || true
+      su - zimbra -c "/opt/zimbra/bin/zmlogswatchctl stop"
+      su - zimbra -c "/opt/zimbra/bin/zmlogswatchctl start"
     endscript
     rotate 5
     compress
@@ -90,7 +67,8 @@
     notifempty
     create 0740 zimbra zimbra
     postrotate
-      su - zimbra -c "/opt/zimbra/bin/zmswatchctl restart" > /dev/null 2>&1 || true
+      su - zimbra -c "/opt/zimbra/bin/zmswatchctl stop"
+      su - zimbra -c "/opt/zimbra/bin/zmswatchctl start"
     endscript
     rotate 5
     compress
@@ -103,15 +81,14 @@
     notifempty
     create 0740 zimbra zimbra
     postrotate
-      su - zimbra -c "/opt/zimbra/bin/zmmtaconfigctl restart" > /dev/null 2>&1 || true
+      su - zimbra -c "/opt/zimbra/bin/zmmtaconfigctl restart"
     endscript
     rotate 5
     compress
 }
 
-/opt/zimbra/log/nginx.log /opt/zimbra/log/nginx.access.log {
+/opt/zimbra/log/nginx.log {
     daily
-    sharedscripts
     missingok
     notifempty
     create 0644 zimbra zimbra
@@ -120,6 +97,15 @@
     endscript
     rotate 7
     compress
+}
+
+/opt/zimbra/log/zmconvertd.log {
+    daily
+    missingok
+    copytruncate
+    notifempty
+    create 0644 zimbra zimbra
+    rotate 7
 }
 
 /opt/zimbra/zmstat/zmstat.out {
