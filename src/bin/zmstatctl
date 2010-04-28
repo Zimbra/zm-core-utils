@@ -47,7 +47,10 @@ sub getProcList() {
     }
 
     if ($all || arrayContains(\@services, 'mailbox')) {
-        push(@procs, 'mailbox', 'mysql', 'convertd');
+        push(@procs, 'mailbox', 'mysql');
+    }
+    if ($all || arrayContains(\@services, 'convertd')) {
+        push(@procs, 'convertd');
     }
     if ($all || arrayContains(\@services, 'ldap')) {
         push(@procs, 'ldap');
@@ -129,10 +132,12 @@ if (defined($cmd)) {
             system("$cmd >> $outfile 2>&1 &");
             
             if (!$isMac) {
-            	 # doMysql implies that convertd is also on the system
-            	 $cmd = "$toolpath/$TOOL_CONVERTD";
-            	 print "Invoking: $cmd\n";
-            	 system("$cmd >> $outfile 2>&1 &");
+                if ($procs =~ /convertd/) {
+                    # doMysql implies that convertd is also on the system
+                    $cmd = "$toolpath/$TOOL_CONVERTD";
+                    print "Invoking: $cmd\n";
+                    system("$cmd >> $outfile 2>&1 &");
+                }
             }
         }
         if ($doMtaQueue) {
