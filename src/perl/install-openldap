@@ -30,7 +30,7 @@ my %binaries = (
                 "heimdal" => "1.2",
                 "curl" => "7.18.1",
                 "cyrus-sasl" => "2.1.23.3z",
-                "openldap" => "2.3.43.12z",
+                "openldap" => "2.3.43.13z",
                );
 
 if (! -d $CACHE_DIR) {
