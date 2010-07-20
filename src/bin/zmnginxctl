@@ -15,7 +15,7 @@
 # 
 
 if [ x`whoami` != xzimbra ]; then
-    echo "Error: must be run as zimbra user"
+    echo Error: must be run as zimbra user
   exit 1
 fi
 
@@ -54,11 +54,6 @@ checkrunning()
 
 case "$1" in 
   start)
-    if [ ! -L /opt/zimbra/nginx ]; then
-      echo "Error: nginx not installed"
-      exit 1
-    fi
-
     if [ ! -f ${configfile} ]; then
       echo "${configfile} is missing."
     fi

@@ -138,10 +138,6 @@ if [ -d ${zimbra_home} ]; then
     chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/.bashrc
   fi
 
-  if [ -f ${zimbra_home}/.platform ]; then
-    chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/.platform
-  fi
-
   for i in .jline-com.zimbra.cs.account.ProvUtil.history .jline-com.zimbra.cs.zclient.ZMailboxUtil.history .jline-jython.history .bash_history; do
     if [ ! -f ${zimbra_home}/${i} ]; then
       touch ${zimbra_home}/${i}
@@ -243,12 +239,6 @@ if [ -d ${zimbra_home} ]; then
     chown ${zimbra_user}:${zimbra_group} $i
     chmod 640 $i
   done
-
-  if [ ! -d ${zimbra_home}/data ]; then
-    mkdir -p ${zimbra_home}/data
-  fi
-  chmod 755 ${zimbra_home}/data
-  chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/data
 
 
 fi
@@ -372,11 +362,7 @@ if [ -L ${zimbra_home}/amavisd ]; then
   printMsg "Fixing ownership and permissions on ${zimbra_home}/data/amavisd"
   if [ ! -d "${zimbra_home}/data/amavisd" ]; then
     mkdir -p ${zimbra_home}/data/amavisd/.spamassassin
-  fi
-  if [ ! -d "/var/spamassassin" ]; then
-    mkdir -p /var/spamassassin
-    chown -R ${zimbra_user}:${zimbra_group} /var/spamassassin
-  fi
+  fi  
   chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/amavisd
   if [ -d ${zimbra_home}/amavisd/.spamassassin ]; then
     chown -R ${root_user}:${root_group} ${zimbra_home}/amavisd/.spamassassin
