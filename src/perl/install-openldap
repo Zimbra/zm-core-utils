@@ -23,16 +23,17 @@ if (scalar(@ARGV) != 1) {
 
 my $BASE_DIR = "/opt/zimbra";
 my $CACHE_DIR = "$BASE_DIR/third-party-cache";
-my $P4_ROOT = "//depot/$ARGV[0]/ThirdPartyBuilds/" . getPlatformDirName();
+my $BINARIES_DIR = "ThirdPartyBuilds/" . getPlatformDirName();
+my $P4_ROOT = "//depot/$ARGV[0]/$BINARIES_DIR";
 my %BINARIES = (
                 "bdb" => "4.7.25.4",
                 "curl" => "7.21.0",
                 "cyrus-sasl" => "2.1.23.3z",
                 "heimdal" => "1.3.3",
                 "libtool" => "2.2.6b",
-                "openldap" => "2.4.23.3z",
-                "openldap-libs" => "2.4.23.3z",
-                "openssl" => "1.0.0a",
+                "openldap" => "2.4.23.2z",
+                "openldap-libs" => "2.4.23.2z",
+                "openssl" => "0.9.8o",
                 "tcmalloc" => "1.5"
                );
 my $P4_CMD = "p4";
@@ -44,18 +45,22 @@ if (! -d $CACHE_DIR) {
 for my $binaryName (keys %BINARIES) {
   my $version = $BINARIES{$binaryName};
   my $cmd;
-  my $p4Path;
+  my $binaryPath;
 
   if ($binaryName eq "openldap-libs") {
-      $p4Path = "$P4_ROOT/openldap/openldap-libs-$version.tgz";
+      $binaryPath = "openldap/openldap-libs-$version.tgz";
   } else {
-      $p4Path = "$P4_ROOT/$binaryName/$binaryName-$version.tgz";
+      $binaryPath = "$binaryName/$binaryName-$version.tgz";
   }
 
   # Copy tarball to the third party cache directory if necessary.
   my $tarball = "$CACHE_DIR/$binaryName-$version.tgz";
   if (! -f $tarball) {
-      $cmd = "$P4_CMD print -o $tarball $p4Path";
+      if (-f "../$BINARIES_DIR/$binaryPath") {
+          $cmd = "cp ../$BINARIES_DIR/$binaryPath $tarball";
+      } else {
+          $cmd = "$P4_CMD print -o $tarball $P4_ROOT/$binaryPath";
+      }
       runCommand($cmd);
   }
 
