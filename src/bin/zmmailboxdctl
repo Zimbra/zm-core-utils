@@ -64,8 +64,12 @@ EOF
   fi
 }
 
+rewriteconfig() {
+  /opt/zimbra/libexec/zmmtaconfig mailbox > /dev/null 2>&1
+}
+
 rewriteWebXml() {
-  /opt/zimbra/libexec/configrewrite webxml > /dev/null 2>&1
+  /opt/zimbra/libexec/zmmtaconfig webxml > /dev/null 2>&1
 }
 
 #
@@ -74,9 +78,7 @@ rewriteWebXml() {
 case "$1" in
     'start')
       mk_download_dir
-	  if [ "x$2" = "x" ]; then
-		  ${zimbra_home}/bin/zmtlsctl > /dev/null 2>&1
-	  fi
+      /opt/zimbra/bin/zmtlsctl > /dev/null 2>&1
       sudo ${zimbra_home}/libexec/zmmailboxdmgr status
       if [ $? = 0 ]; then
         echo "mailboxd already running."

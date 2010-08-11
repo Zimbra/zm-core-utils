@@ -35,7 +35,7 @@ if [ ! -d "/opt/zimbra/data/clamav/db" ]; then
 fi
 
 rewriteconfig() {
-  /opt/zimbra/libexec/configrewrite antivirus > /dev/null 2>&1
+  /opt/zimbra/libexec/zmmtaconfig antivirus > /dev/null 2>&1
 }
 
 getpid() {
@@ -76,18 +76,6 @@ checkrunning() {
     fi
   fi
 }
-
-ps_cmd="/bin/ps -ef"
-pskillall() {
-  killsig="$1"
-  pname=`echo "$2" | sed -e 's%/%\\\/%g'`
-  plist=`${ps_cmd} | awk '{ if ( $8 ~ /'${pname}'/ ) { print $2 } }'`
-  for p in ${plist}
-  do
-    echo kill ${killsig} ${p}
-  done
-}
-
 
 #
 # Main
@@ -152,11 +140,11 @@ case "$1" in
       kill -9 "$cpid" 2> /dev/null
     fi
     if [ "x$platform" = "xMACOSX" -o "x$platform" = "xMACOSXx86" ]; then
-      pskillall -9 freshclam
-      pskillall -9 clamd
+      killall -9 freshclam
+      killall -9 clamd
     else
-      pskillall -9 ${zimbra_home}/clamav/bin/freshclam
-      pskillall -9 ${zimbra_home}/clamav/sbin/clamd
+      killall -9 ${zimbra_home}/clamav/bin/freshclam
+      killall -9 ${zimbra_home}/clamav/sbin/clamd
     fi
     exit 0
    ;;

@@ -15,11 +15,11 @@
 # 
 
 BASE=/opt/zimbra
-SCRIPTS="postfix zmsaslauthdctl"
+SCRIPTS="zmmtaconfigctl postfix zmsaslauthdctl"
 
 rewriteconfig() {
   echo -n "Rewriting configuration files..."
-  /opt/zimbra/libexec/configrewrite antispam antivirus mta sasl  > /dev/null 2>&1
+  /opt/zimbra/libexec/zmmtaconfig antispam antivirus mta sasl  > /dev/null 2>&1
   if [ $? = 0 ]; then
     echo "done."
   else
@@ -67,7 +67,9 @@ case "$1" in
 			R=$?
 			if [ $R -ne "0" ]; then
 				echo "$i is not running"
-				STATUS=$R
+        if [ x"$i" != "xzmmtaconfigctl" ]; then
+				  STATUS=$R
+        fi
 			fi
 		done
 		exit $STATUS
