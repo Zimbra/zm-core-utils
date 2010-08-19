@@ -422,12 +422,6 @@ if [ -L ${zimbra_home}/jetty ]; then
   chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/fbqueue
   chmod 755 ${zimbra_home}/fbqueue
 
-  if [ ! -d ${zimbra_home}/data/mailboxd/imap/cache ]; then
-    mkdir -p ${zimbra_home}/data/mailboxd/imap/cache
-  fi
-  chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/mailboxd/imap/cache
-  chmod 755 ${zimbra_home}/data/mailboxd/imap/cache
-
   if [ ! -d ${zimbra_home}/zimlets-deployed ]; then
     mkdir -p ${zimbra_home}/zimlets-deployed
   fi
@@ -532,13 +526,8 @@ if [ -L ${zimbra_home}/postfix ]; then
   chown -fR ${root_user}:${root_group} ${zimbra_home}/postfix* 2> /dev/null
 
   if [ -e ${zimbra_home}/postfix/conf ]; then
-    if [ ! -f ${zimbra_home}/postfix/conf/main.cf ]; then
-      touch ${zimbra_home}/postfix/conf/main.cf
-    fi
-
     chown -fR ${root_user}:${postfix_owner} ${zimbra_home}/postfix/conf
     chmod 775 ${zimbra_home}/postfix/conf
-
     chmod -fR 644 ${zimbra_home}/postfix/conf/* 2> /dev/null
     if [ -f ${zimbra_home}/postfix/conf/postfix-script ]; then
       chmod -f 755 ${zimbra_home}/postfix/conf/postfix-script

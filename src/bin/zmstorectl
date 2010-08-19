@@ -22,8 +22,8 @@ zmsetvars \
 
 MYSQL="${zimbra_home}/bin/mysql -u zimbra --password=${zimbra_mysql_password}"
 
-START_ORDER="mysql.server zmmailboxdctl"
-STOP_ORDER="zmmailboxdctl mysql.server"
+START_ORDER="zmmtaconfigctl mysql.server zmmailboxdctl"
+STOP_ORDER="zmmtaconfigctl zmmailboxdctl mysql.server"
 
 STATUS=0
 
@@ -62,11 +62,10 @@ flushDirtyPages() {
 case "$1" in 
   start)
     if [ x$2 = "x" ]; then
-	  # Call tlsctl to get all the mailbox config files
-      ${zimbra_home}/bin/zmtlsctl >/dev/null 2>&1
+      ${zimbra_home}/libexec/zmmtaconfig mailbox >/dev/null 2>&1
     fi
     for i in $START_ORDER; do
-      ${zimbra_home}/bin/$i start norewrite
+      ${zimbra_home}/bin/$i start norewrite >/dev/null 2>&1
       R=$?
       if [ $R -ne "0" ]; then
         STATUS=$R
@@ -102,12 +101,14 @@ case "$1" in
       if [ $i = "mysql.server" ]; then
         ${zimbra_home}/bin/mysqladmin status > /dev/null 2>&1
       else
-        ${zimbra_home}/bin/$i status
+        ${zimbra_home}/bin/$i status > /dev/null 2>&1
       fi
       R=$?
       if [ $R -ne "0" ]; then
         echo "$i is not running."
-		STATUS=$R
+        if [ x"$i" != "xzmmtaconfigctl" ]; then
+          STATUS=$R
+        fi
       fi
     done
     exit $STATUS
