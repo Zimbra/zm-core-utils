@@ -46,23 +46,20 @@ my $localHostName = getHostName();
 my $ldapHere = isLdapLocal();
 my $services;
 my %devicesChecked;
-my %serviceStatusList;
 my %startorder = ( 
 	"ldap" 		=> 0,
-	"zmconfigd"	=> 5,
-	"logger" 	=> 10,
-	"convertd"	=> 20,
-	"mailbox" 	=> 30,
-	"memcached"	=> 40,
-	"imapproxy"	=> 50,
-	"antispam" 	=> 60,
-	"antivirus"	=> 70,
-	"archiving"	=> 80,
-  "cbpolicyd" => 85,
-	"snmp" 		=> 90,
-	"spell" 	=> 100,
-	"mta" 		=> 110,
-	"stats"		=> 120,
+	"logger" 	=> 1,
+	"convertd"	=> 2,
+	"mailbox" 	=> 3,
+	"memcached"	=> 4,
+	"imapproxy"	=> 5,
+	"antispam" 	=> 6,
+	"antivirus"	=> 7,
+	"archiving"	=> 8,
+	"snmp" 		=> 9,
+	"spell" 	=> 10,
+	"mta" 		=> 11,
+	"stats"		=> 12,
 );
 
 my %allservices = ( 
@@ -79,8 +76,6 @@ my %allservices = (
 	"memcached" => "/opt/zimbra/bin/zmmemcachedctl",
 	"imapproxy" => "/opt/zimbra/bin/zmproxyctl",
 	"stats" => "/opt/zimbra/bin/zmstatctl",
-	"zmconfigd" => "/opt/zimbra/bin/zmconfigdctl",
-  "cbpolicyd" => "/opt/zimbra/bin/zmcbpolicydctl",
 );
 
 my %rewrites = ( 
@@ -170,7 +165,6 @@ sub runRemoteCommand {
 
 sub doStatus {
 	$services = getEnabledServices();
-  getServiceStatusList();
   alarm($timeout);
   my (undef, $statusfile) = tempfile("zmcontrol.status.XXXXX", DIR=>"$zimbra_tmp_directory",  OPEN=>0);
   my (undef, $errfile) = tempfile("zmcontrol.error.XXXXX", DIR=>"$zimbra_tmp_directory",  OPEN=>0);
@@ -185,7 +179,7 @@ sub doStatus {
 		$rc = $rc >> 8;
 		if ($rc) {
       # this is an any ugly hack for 11266
-      $status = 1 if ($serviceStatusList{$_});
+			$status = 1 unless (/logger|spell|snmp|stats/);
         
 		}
 		my $stat = sprintf "\t%-20s %10s\n",$_,($rc)?"Stopped":"Running";
@@ -218,7 +212,7 @@ sub doRewrite {
 		$rew .= " $rewrites{$_}";
 	}
 	Zimbra::Mon::Logger::Log ("info", "Rewriting configs $rew");
-	my $rc = 0xffff & system("/opt/zimbra/libexec/configrewrite $rew > $zmcontrolLogfile 2>&1");
+	my $rc = 0xffff & system("/opt/zimbra/libexec/zmmtaconfig $rew > $zmcontrolLogfile 2>&1");
 	$rc = $rc >> 8;
 	return $rc;
 }
@@ -266,16 +260,18 @@ sub doStartup {
 		exit (1);
 	}
 
-	checkAvailableSpace();
+	doRewrite (sort keys %{$services});
+
+  checkAvailableSpace();
 	foreach (sort {$startorder{$a} <=> $startorder{$b}} keys %{$services}) {
 		if ($_ eq "ldap") {next;}
-		checkAvailableServiceSpace($_);
+    checkAvailableServiceSpace($_);
 		Zimbra::Mon::Logger::Log ("info", "Starting $_ via zmcontrol");
 		print "\tStarting $_...";
-		unless (-x "$allservices{$_}") {
-			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
-			next;
-		}
+    unless (-x "$allservices{$_}") {
+      print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
+      next;
+    }
 		$rrc = 0xffff & system ("$allservices{$_} start norewrite > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
@@ -327,18 +323,6 @@ sub setMaintenanceMode {
 	my $mode = shift;
 }
 
-sub getServiceStatusList {
-  my @services = split(/\s+/, getLocalConfig("zmcontrol_service_status_list"));
-  @services = grep(!/stats|snmp|logger|spell/, keys %allservices) if (scalar @services < 1);
-  if (scalar @services > 1) {
-    foreach my $service (@services) {
-      $serviceStatusList{$service} = 1
-        if (defined($allservices{$service}));
-    }
-  }
-}
-    
-
 sub getLocalConfig {
 	my $key = shift;
 	if (defined ($ENV{zmsetvars})) {
@@ -365,7 +349,6 @@ sub getLocalConfig {
 sub getCachedServices {
 
   my %s = ();
-  $s{"zmconfigd"} = "zmconfigd";
 	if (-f $cache_file && -M $cache_file <= 1) {
     open(CACHE, "<$cache_file");
     my @lines = <CACHE>;
@@ -395,7 +378,6 @@ sub getEnabledServices {
   }
 
   my %s = ();
-  $s{"zmconfigd"} = "zmconfigd";
   foreach (@lines) {
     if (m/^zimbraServiceEnabled: (.*)/) {
       $s{$1} = $1;
@@ -426,7 +408,7 @@ sub displayVersion {
 	if ($platform =~ /MACOSX/) {
     my $release;
     if (-x "/usr/sbin/pkgutil") {
-      $release=`/usr/sbin/pkgutil --pkg-info com.zimbra.zcs.core  2> /dev/null | grep ^version | awk '{print \$NF}'`;
+      $release=`/usr/sbin/pkgutil --pkg-info com.zimbra.zcs.core  | grep ^version | awk '{print \$NF}'`;
     } else {
 		  $release=`grep -C1 CFBundleGetInfoString /Library/Receipts/zimbra-core.pkg/Contents/Info.plist | tail -1 | sed -e 's/\<[^>]*\>//g' -e 's/^ *//g' | awk -F, '{print $1}'`;
     }

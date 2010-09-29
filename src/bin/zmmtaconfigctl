@@ -19,7 +19,6 @@ if [ x`whoami` != xzimbra ]; then
   exit 1
 fi
 
-
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
     zimbra_home \
@@ -27,11 +26,6 @@ zmsetvars \
 
 pid=""
 pidfile="${zimbra_log_directory}/zmmtaconfig.pid"
-pidfile="${zimbra_home}/cyrus-sasl/state/saslauthd.pid"
-
-rewriteconfig() {
-  ${zimbra_home}/libexec/zmmtaconfig sasl > /dev/null 2>&1
-}
 
 getpid()
 {
@@ -52,9 +46,9 @@ checkrunning()
       running=0
     else
       running=1
-    fi
+    fi 
   fi
-}
+} 
 
 #
 # Main
@@ -62,16 +56,12 @@ checkrunning()
 case "$1" in
   'start')
     checkrunning
-    echo -n "Starting saslauthd..."
+    echo -n "Starting zmmtaconfig..."
     if [ $running = 1 ]; then
-      echo "already running."
+      echo "zmmtaconfig is already running."
       exit 0
     fi
-    mkdir -p ${zimbra_home}/cyrus-sasl/state
-    if [ x$2 = "x" ]; then
-      rewriteconfig
-    fi
-    ${zimbra_home}/cyrus-sasl/sbin/saslauthd -r -a zimbra 
+    ${zimbra_home}/libexec/zmmtaconfig >> ${zimbra_log_directory}/zmmtaconfig.log 2>&1 
     for ((i = 0; i < 30; i++)) do
       checkrunning
       if [ $running = 1 ]; then
@@ -82,15 +72,15 @@ case "$1" in
     done
     echo "failed."
     exit 1
-    ;;
+   ;;
 
   'kill'|'stop')
     checkrunning
+    echo -n "Stopping zmmtaconfig..."
     if [ $running = 0 ]; then
-      echo "saslauthd is not running."
+      echo "zmmtaconfig is not running."
       exit 0
-    else
-      echo -n "Stopping saslauthd..."
+    else 
       for ((i = 0; i < 30; i++)); do
         kill -0 $pid 2> /dev/null
         if [ $? != 0 ]; then
@@ -102,31 +92,35 @@ case "$1" in
       done
     fi
     if [ -s ${pidfile} ]; then
+      echo "failed."
       exit 1
     else
       echo "done."
     fi
     exit 0
-    ;;
+  ;;
 
+    
   'restart'|'reload')
     $0 stop
     $0 start
-    ;;
+  ;;
   
   'status')
+    echo -n "zmmtaconfig is "
     checkrunning
-    if [ $running = 1 ]; then
-      echo "saslauthd is running."
-      exit 0
-    else 
-      echo "saslauthd is not running."
+    if [ $running = 0 ]; then
+      echo "not running." 
       exit 1
+    else
+      echo "running."
+      exit 0
     fi
-    ;;
+   ;;
     
-    *)
-        echo "Usage: $0 start|stop|kill|restart|reload|status"
-        exit 1
-        ;;
+  *)
+    echo "Usage: $0 start|stop|kill|restart|reload|status"
+    exit 1
+  ;;
+
 esac
