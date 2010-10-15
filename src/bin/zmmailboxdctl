@@ -29,20 +29,16 @@ if [ ! -d ${zimbra_java_home} ]; then
   exit 0
 fi
 
-
 #
-# Memory for use by JVM.
+# Memory for use by JVM.  Defaults should come from local config, but
+# just in case...
 #
-javaXmx=${mailboxd_java_heap_size:=512}
-javaXms=${javaXmx}
+mailboxd_java_heap_memory_percent=${mailboxd_java_heap_memory_percent:=30}
 mailboxd_java_heap_new_size_percent=${mailboxd_java_heap_new_size_percent:=25}
+memkb=$(zmsysmemkb)
+javaXmx=$(expr ${memkb} '*' ${mailboxd_java_heap_memory_percent} / 100 / 1024)
+javaXms=${javaXmx}
 javaXmn=$(expr ${javaXmx} '*' ${mailboxd_java_heap_new_size_percent} / 100)
-
-#
-# Spnego - the spnego_options_file is written by zmconfigd to avoid a zmprov call here.
-#
-spnego_options_file=${zimbra_home}/conf/spnego_java_options
-spnegoJavaOptions=$(cat $spnego_options_file)
 
 #
 # Expand war files.
@@ -52,7 +48,11 @@ mk_download_dir() {
     cat >${mailboxd_directory}/webapps/zimbra/downloads/index.html<<EOF
 <HTML><BODY>
 EOF
-    for filename in `ls -r ${mailboxd_directory}/webapps/zimbra/downloads/ | grep -v html`; do
+    for i in ${mailboxd_directory}/webapps/zimbra/downloads/*; do
+      filename=`basename $i`
+      if [ x$filename = "xindex.html" ]; then
+        continue
+      fi
       cat >>${mailboxd_directory}/webapps/zimbra/downloads/index.html<<EOF
 <BR>
 <A HREF="/downloads/${filename}">${filename}</A>
@@ -64,8 +64,12 @@ EOF
   fi
 }
 
+rewriteconfig() {
+  /opt/zimbra/libexec/zmmtaconfig mailbox > /dev/null 2>&1
+}
+
 rewriteWebXml() {
-  /opt/zimbra/libexec/configrewrite webxml > /dev/null 2>&1
+  /opt/zimbra/libexec/zmmtaconfig webxml > /dev/null 2>&1
 }
 
 #
@@ -74,9 +78,7 @@ rewriteWebXml() {
 case "$1" in
     'start')
       mk_download_dir
-	  if [ "x$2" = "x" ]; then
-		  ${zimbra_home}/bin/zmtlsctl > /dev/null 2>&1
-	  fi
+      /opt/zimbra/bin/zmtlsctl > /dev/null 2>&1
       sudo ${zimbra_home}/libexec/zmmailboxdmgr status
       if [ $? = 0 ]; then
         echo "mailboxd already running."
@@ -97,9 +99,7 @@ case "$1" in
         mkdir -p ${mailboxd_directory}/work/zimbraAdmin/jsp
         if [ ! -d ${mailboxd_directory}/webapps/zimlet/WEB-INF ]; then
           mkdir -p ${mailboxd_directory}/webapps/zimlet/WEB-INF
-		  if [ "x$2" = "x" ]; then
-			  rewriteWebXml
-          fi
+          rewriteWebXml
         fi
       fi
 
@@ -109,7 +109,7 @@ case "$1" in
       fi
       echo -n "Starting mailboxd..."
       sudo ${zimbra_home}/libexec/zmmailboxdmgr start \
-        ${mailboxd_java_options} $spnegoJavaOptions -Xms${javaXms}m -Xmx${javaXmx}m \
+        ${mailboxd_java_options} -Xms${javaXms}m -Xmx${javaXmx}m \
         -Xmn${javaXmn}m < /dev/null > /dev/null 2>&1
       status=$?
       if [ $status = 0 ]; then
@@ -140,7 +140,7 @@ case "$1" in
     
     'restart'|'reload')
         $0 stop
-        $0 start $2
+        $0 start
     ;;
     
     'status')
@@ -155,12 +155,8 @@ case "$1" in
       fi
     ;;
 
-	'update')
-		mk_download_dir
-	;;
-
     *)
-      echo "Usage: $0 start|stop|kill|restart|reload|status|update"
+      echo "Usage: $0 start|stop|kill|restart|reload|status"
       exit 1
     ;;
 esac

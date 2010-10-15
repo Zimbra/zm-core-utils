@@ -208,9 +208,6 @@ sub updateSyslogNG {
   chown $uid,$gid,"/var/log/zimbra.log";
   chown $uid,$gid,"/var/log/zimbra-stats.log";
   chmod 0644, "/var/log/zimbra.log", "/var/log/zimbra-stats.log";
-  if ( -f "/etc/logrotate.d/zimbra~" ){
-    unlink("/etc/logrotate.d/zimbra~" );
-  }
   print "done.\n"
 }
 
@@ -300,13 +297,10 @@ sub updateSyslog {
       local $^I="~";
       local @ARGV=("/etc/logrotate.d/zimbra");
       while (<>) {
-        s/syslogd.pid/rsyslogd.pid/g;
+        s/\-HUP\s+syslog/-HUP rsyslog/g;
         print;
       }
     }
-  }
-  if ( -f "/etc/logrotate.d/zimbra~" ){
-    unlink("/etc/logrotate.d/zimbra~" );
   }
   print "done.\n";
 }
@@ -388,12 +382,9 @@ sub updateRsyslogd {
     local $^I="~";
     local @ARGV=("/etc/logrotate.d/zimbra");
     while (<>) {
-      s/kill\s+\-HUP\s+.+syslog\*\.pid.+\/dev\/null/\/usr\/sbin\/service rsyslog restart >\/dev\/null/g;
+      s/killall\s+\-HUP\s+syslog/\/usr\/sbin\/service rsyslog restart >\/dev\/null/g;
       print;
     }
-  }
-  if ( -f "/etc/logrotate.d/zimbra~" ){
-    unlink("/etc/logrotate.d/zimbra~" );
   }
   print "done.\n";
 }
@@ -466,8 +457,7 @@ if ( $platform =~ /UBUNTU/ || $platform =~ /DEBIAN4/ ) {
     exit 1;
   }
 } else {
-  my $syslog_PID=`cat /var/run/syslogd.pid`;
-  `kill -HUP $syslog_PID`;
+  `killall -HUP syslogd`;
 }
 
 sub getLocalConfig {
