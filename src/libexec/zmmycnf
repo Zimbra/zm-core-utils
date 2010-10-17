@@ -53,20 +53,23 @@ cat<<EOF
 
 [mysqld]
 
-basedir      = ${mysql_directory}
-datadir      = ${mysql_data_directory}
-socket       = ${mysql_socket}
-pid-file     = ${mysql_pidfile}
-bind-address = ${mysql_bind_address}
-port         = ${mysql_port}
-user         = ${zimbra_mysql_user}
-tmpdir       = ${zimbra_tmp_directory}
+basedir        = ${mysql_directory}
+datadir        = ${mysql_data_directory}
+socket         = ${mysql_socket}
+pid-file       = ${mysql_pidfile}
+bind-address   = ${mysql_bind_address}
+port           = ${mysql_port}
+user           = ${zimbra_mysql_user}
+tmpdir         = ${zimbra_tmp_directory}
 
 external-locking
+slow_query_log = 1
+slow_query_log_file = ${zimbra_log_directory}/myslow.log
+ignore-builtin-innodb
 
-log-slow-queries = ${zimbra_log_directory}/myslow.log
+plugin-load=innodb=ha_innodb_plugin.so;innodb_trx=ha_innodb_plugin.so;innodb_locks=ha_innodb_plugin.so;innodb_lock_waits=ha_innodb_plugin.so;innodb_cmp=ha_innodb_plugin.so;innodb_cmp_reset=ha_innodb_plugin.so;innodb_cmpmem=ha_innodb_plugin.so;innodb_cmpmem_reset=ha_innodb_plugin.so
+
 long-query-time  = 1
-log-long-format
 log-queries-not-using-indexes
 
 thread_cache_size = 110

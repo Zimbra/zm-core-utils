@@ -46,6 +46,7 @@ components="\
   amavisd \
   aspell \
   bdb \
+  cbpolicyd \
   clamav \
   curl \
   cyrus-sasl \
@@ -68,6 +69,7 @@ components="\
   zimbramon/bin \
   zimbramon/crontabs \
   zimbramon/rrdtool \
+  zimbramon/pylibs \
 "
   
 
@@ -289,7 +291,7 @@ for i in ${components}; do
     for l in ${zimbra_home}/${i}-*; do
       chown ${root_user}:${root_group} ${l} 2> /dev/null
     done
-    for l in ${zimbra_home}/${i}/*; do
+    for l in ${zimbra_home}/${i}/* ${zimbra_home}/${i}/.???*; do
       chown -R ${root_user}:${root_group} ${l} 2> /dev/null
     done
   elif [ -d ${zimbra_home}/${i} ]; then
@@ -334,6 +336,27 @@ if [ -d ${zimbra_home}/db ]; then
   fi
   chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/db
   chmod 444 ${zimbra_home}/db/*.sql ${zimbra_home}/db/*.sql.in
+fi
+
+if [ -L ${zimbra_home}/cbpolicyd ]; then
+  if [ -d ${zimbra_home}/cbpolicyd/bin ]; then
+    for i in ${zimbra_home}/cbpolicyd/bin/*; do
+      chmod 755 ${i}
+    done
+  fi
+    
+  for i in data/cbpolicyd data/cbpolicyd/db; do
+    if [ ! -d "${zimbra_home}/${i}" ]; then
+      mkdir -p ${zimbra_home}/${i}
+    fi
+  done
+  chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/cbpolicyd
+fi
+
+if [ -d ${zimbra_home}/mta ]; then
+  printMsg "Fixing ownership and permissions on ${zimbra_home}/mta"
+  chown -R ${root_user}:${root_group} ${zimbra_home}/mta
+  chmod 755 ${zimbra_home}/mta
 fi
 
 if [ -L ${zimbra_home}/cyrus-sasl ]; then
@@ -415,12 +438,28 @@ if [ -L ${zimbra_home}/jetty ]; then
     chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/jetty/etc/zimbraAdmin.web.xml.in
     chmod 640 ${zimbra_home}/jetty/etc/zimbraAdmin.web.xml.in
   fi
+  if [ -f ${zimbra_home}/jetty/etc/zimlet.web.xml.in ]; then
+    chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/jetty/etc/zimlet.web.xml.in
+    chmod 640 ${zimbra_home}/jetty/etc/zimlet.web.xml.in
+  fi
+
+  if [ ! -d ${zimbra_home}/jetty/webapps/zimlet/WEB-INF ]; then
+    mkdir -p ${zimbra_home}/jetty/webapps/zimlet/WEB-INF
+  fi
+  chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/jetty/webapps/zimlet
+  chmod 755 ${zimbra_home}/jetty/webapps/zimlet ${zimbra_home}/jetty/webapps/zimlet/WEB-INF
 
   if [ ! -d ${zimbra_home}/fbqueue ]; then
     mkdir -p ${zimbra_home}/fbqueue
   fi
   chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/fbqueue
   chmod 755 ${zimbra_home}/fbqueue
+
+  if [ ! -d ${zimbra_home}/data/mailboxd/imap/cache ]; then
+    mkdir -p ${zimbra_home}/data/mailboxd/imap/cache
+  fi
+  chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/mailboxd/imap/cache
+  chmod 755 ${zimbra_home}/data/mailboxd/imap/cache
 
   if [ ! -d ${zimbra_home}/zimlets-deployed ]; then
     mkdir -p ${zimbra_home}/zimlets-deployed
@@ -526,8 +565,13 @@ if [ -L ${zimbra_home}/postfix ]; then
   chown -fR ${root_user}:${root_group} ${zimbra_home}/postfix* 2> /dev/null
 
   if [ -e ${zimbra_home}/postfix/conf ]; then
+    if [ ! -f ${zimbra_home}/postfix/conf/main.cf ]; then
+      touch ${zimbra_home}/postfix/conf/main.cf
+    fi
+
     chown -fR ${root_user}:${postfix_owner} ${zimbra_home}/postfix/conf
     chmod 775 ${zimbra_home}/postfix/conf
+
     chmod -fR 644 ${zimbra_home}/postfix/conf/* 2> /dev/null
     if [ -f ${zimbra_home}/postfix/conf/postfix-script ]; then
       chmod -f 755 ${zimbra_home}/postfix/conf/postfix-script
