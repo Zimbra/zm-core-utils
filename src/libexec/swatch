@@ -22,7 +22,6 @@ eval 'exec /usr/local/bin/perl  -S $0 ${1+"$@"}'
 #
  
 use strict;
-use lib "/opt/zimbra/zimbramon/lib";
 use English;
 use FileHandle;
 use Getopt::Long;
