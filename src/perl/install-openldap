@@ -32,7 +32,7 @@ my %BINARIES = (
                 "libtool" => "2.2.6b",
                 "openldap" => "2.4.23.4z",
                 "openldap-libs" => "2.4.23.4z",
-                "openssl" => "1.0.0a",
+                "openssl" => "1.0.0b",
                 "tcmalloc" => "1.6",
                 "rlfe" => "0.4"
                );
