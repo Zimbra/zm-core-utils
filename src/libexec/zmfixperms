@@ -152,6 +152,19 @@ if [ -d ${zimbra_home} ]; then
     chmod 640 ${zimbra_home}/${i}
   done
 
+  if [ -f /selinux/enforce ]; then
+    if [ "`cat /selinux/enforce 2> /dev/null`" = "1" ]; then
+      # make sure ssh keys are in home dir selinux type
+      chcon -R -v -u system_u -t user_home_t ${zimbra_home}/.ssh/
+      if [ -f ${zimbra_home}/httpd/modules/libphp5.so ]; then
+        # allow text relocation for these problem files
+        chcon -t textrel_shlib_t ${zimbra_home}/httpd/modules/libphp5.so
+      fi
+      # Fix Zimbra upgrades selinux perms
+      restorecon -R /etc/security
+    fi
+  fi
+
   if [ -d ${zimbra_home}/contrib ]; then
     chown -R ${root_user}:${root_group} ${zimbra_home}/contrib
     chmod 755 ${zimbra_home}/contrib/* 2> /dev/null
@@ -457,6 +470,18 @@ if [ -L ${zimbra_home}/jetty ]; then
   fi
   chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/jetty/webapps/zimlet
   chmod 755 ${zimbra_home}/jetty/webapps/zimlet ${zimbra_home}/jetty/webapps/zimlet/WEB-INF
+
+  if [ ! -d ${zimbra_home}/jetty/work/zimlet ]; then
+    mkdir -p ${zimbra_home}/jetty/work/zimlet
+  fi
+  chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/jetty/work/zimlet
+  chmod 750 ${zimbra_home}/jetty/work/zimlet
+
+  if [ ! -d ${zimbra_home}/jetty/work/spnego ]; then
+    mkdir -p ${zimbra_home}/jetty/work/spnego
+  fi
+  chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/jetty/work/spnego
+  chmod 750 ${zimbra_home}/jetty/work/spnego
 
   if [ ! -d ${zimbra_home}/fbqueue ]; then
     mkdir -p ${zimbra_home}/fbqueue
