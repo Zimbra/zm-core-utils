@@ -152,6 +152,19 @@ if [ -d ${zimbra_home} ]; then
     chmod 640 ${zimbra_home}/${i}
   done
 
+  if [ -f /selinux/enforce ]; then
+    if [ "`cat /selinux/enforce 2> /dev/null`" = "1" ]; then
+      # make sure ssh keys are in home dir selinux type
+      chcon -R -v -u system_u -t user_home_t ${zimbra_home}/.ssh/
+      if [ -f ${zimbra_home}/httpd/modules/libphp5.so ]; then
+        # allow text relocation for these problem files
+        chcon -t textrel_shlib_t ${zimbra_home}/httpd/modules/libphp5.so
+      fi
+      # Fix Zimbra upgrades selinux perms
+      restorecon -R /etc/security
+    fi
+  fi
+
   if [ -d ${zimbra_home}/contrib ]; then
     chown -R ${root_user}:${root_group} ${zimbra_home}/contrib
     chmod 755 ${zimbra_home}/contrib/* 2> /dev/null
@@ -373,6 +386,7 @@ if [ -L ${zimbra_home}/cyrus-sasl ]; then
   if [ ! -d ${zimbra_home}/cyrus-sasl/state ]; then  
     mkdir -p ${zimbra_home}/cyrus-sasl/state
   fi
+  chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/cyrus-sasl/lib/sasl2
   chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/cyrus-sasl/{etc,state}
   chmod 755 ${zimbra_home}/cyrus-sasl/state 
 
@@ -383,6 +397,14 @@ if [ -L ${zimbra_home}/cyrus-sasl ]; then
   if [ -f ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf ]; then
     chmod 440 ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf
     chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf
+  fi
+  if [ -f ${zimbra_home}/cyrus-sasl/lib/sasl2/smtpd.conf.in ]; then
+    chmod 640 ${zimbra_home}/cyrus-sasl/lib/sasl2/smtpd.conf.in
+    chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/cyrus-sasl/lib/sasl2/smtpd.conf.in
+  fi
+  if [ -f ${zimbra_home}/cyrus-sasl/lib/sasl2/smtpd.conf ]; then
+    chmod 640 ${zimbra_home}/cyrus-sasl/lib/sasl2/smtpd.conf
+    chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/cyrus-sasl/lib/sasl2/smtpd.conf
   fi
 fi
 
