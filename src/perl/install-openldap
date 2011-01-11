@@ -27,13 +27,13 @@ my $BINARIES_DIR = "ThirdPartyBuilds/" . getPlatformDirName();
 my $P4_ROOT = "//depot/$ARGV[0]/$BINARIES_DIR";
 my %BINARIES = (
                 "bdb" => "4.7.25.4",
-                "curl" => "7.21.1",
+                "curl" => "7.21.3",
                 "cyrus-sasl" => "2.1.23.3z",
                 "heimdal" => "1.3.3",
                 "libtool" => "2.2.6b",
-                "openldap" => "2.4.23.4z",
-                "openldap-libs" => "2.4.23.4z",
-                "openssl" => "0.9.8o",
+                "openldap" => "2.4.23.5z",
+                "openldap-libs" => "2.4.23.5z",
+                "openssl" => "0.9.8q",
                 "tcmalloc" => "1.6"
                );
 my $P4_CMD = "p4";
