@@ -20,17 +20,17 @@ SCRIPTS="zmnginxctl"
 case "$1" in 
 	start)
 		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i start $2
+			/opt/zimbra/bin/$i start
 		done
 	;;
 	stop)
 		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i stop $2
+			/opt/zimbra/bin/$i stop
 		done
 	;;
 	restart|reload)
 		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i $1 $2
+			/opt/zimbra/bin/$i $1
 		done
 	;;
 	status)

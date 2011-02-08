@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2011 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -14,33 +14,18 @@
 # ***** END LICENSE BLOCK *****
 # 
 
+if [ x`whoami` != xzimbra ]; then
+    echo Error: must be run as zimbra user
+  exit 1
+fi
+
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
     zimbra_home \
     zimbra_log_directory
 
-libjars=${zimbra_home}/lib/jars
-configfile=${zimbra_home}/conf/localconfig.xml
-pidfile=${zimbra_log_directory}/milter.pid
 pid=""
-java="${zimbra_home}/bin/zmjava"
-
-case "`uname`" in
-CYGWIN*) PATHSEP=";";;
-*) PATHSEP=":";;
-esac
-
-CP=${zimbra_home}/conf
-
-java_version=$(${java} -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
-if [ x"$java_version" = "x1.6.0" ]; then
-  java_options="-XX:ErrorFile=${ZMROOT}/log"
-else
-  java_options=""
-fi
-
-runcmd="${java} ${java_options} -Dzimbra.home=\"${zimbra_home}\" -Dzimbra.config=\"${configfile}\" -cp \"$CP\" \
-   com.zimbra.cs.milter.NioMilterServer" 
+pidfile="${zimbra_log_directory}/zmmtaconfig.pid"
 
 getpid()
 {
@@ -61,44 +46,41 @@ checkrunning()
       running=0
     else
       running=1
-    fi
+    fi 
   fi
-}
+} 
 
-case "$1" in 
-  start)
+#
+# Main
+#
+case "$1" in
+  'start')
     checkrunning
-    echo -n "Starting milter server..."
+    echo -n "Starting zmmtaconfig..."
     if [ $running = 1 ]; then
-      echo "milter server is already running."
+      echo "zmmtaconfig is already running."
       exit 0
     fi
+    ${zimbra_home}/libexec/zmmtaconfig >> ${zimbra_log_directory}/zmmtaconfig.log 2>&1 
+    for ((i = 0; i < 30; i++)) do
+      checkrunning
+      if [ $running = 1 ]; then
+        echo "done."
+        exit 0
+      fi
+      sleep 1
+    done
+    echo "failed."
+    exit 1
+   ;;
 
-    nohup sh -c "exec ${runcmd} 2>&1" > ${zimbra_home}/log/milter.out &
-
-    pid=$!
-    if [ "x$pid" != 'x' ]; then
-      echo $pid > $pidfile
-    else
-      echo "failed."
-      exit 1
-    fi
+  'kill'|'stop')
     checkrunning
-    if [ $running = 1 ]; then
-      echo "done."
-      exit 0
-    else
-      echo "failed."
-      exit 1
-    fi
-  ;;
-  stop)
-    checkrunning
-    echo -n "Stopping milter server..."
+    echo -n "Stopping zmmtaconfig..."
     if [ $running = 0 ]; then
-      echo "milter server is not running."
+      echo "zmmtaconfig is not running."
       exit 0
-    else
+    else 
       for ((i = 0; i < 30; i++)); do
         kill -0 $pid 2> /dev/null
         if [ $? != 0 ]; then
@@ -117,27 +99,28 @@ case "$1" in
     fi
     exit 0
   ;;
-  restart)
+
+    
+  'restart'|'reload')
     $0 stop
     $0 start
   ;;
-  reload)
-    $0 stop
-    $0 start
-  ;;
-  status)
-    echo -n "Milter server is "
+  
+  'status')
+    echo -n "zmmtaconfig is "
     checkrunning
     if [ $running = 0 ]; then
-      echo "not running."
+      echo "not running." 
       exit 1
     else
       echo "running."
       exit 0
     fi
-  ;;
+   ;;
+    
   *)
-    echo "$0 start|stop|restart|reload|status"
+    echo "Usage: $0 start|stop|kill|restart|reload|status"
     exit 1
   ;;
+
 esac
