@@ -316,7 +316,7 @@ sub getLocalConfig {
   $config{restartconfig} =
     ($state->{localconfig}->{zmmtaconfig_enable_config_restarts} eq "no") ? 0 : 1;
   $config{watchdog} = 
-    ($state->{localconfig}->{zmmtaconfig_watchdog} eq "no") ? 0 : 1;
+    ($state->{localconfig}->{zmmtaconfig_watchdog} eq "FALSE") ? 0 : 1;
   if (exists $state->{localconfig}->{zmmtaconfig_watchdog_services}) {
     @{$config{wd_list}} =  
       split(/ /, $state->{localconfig}->{zmmtaconfig_watchdog_services});
