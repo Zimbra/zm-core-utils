@@ -2,7 +2,7 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010 Zimbra, Inc.
+# Copyright (C) 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -260,9 +260,6 @@ sub updateSyslog {
       if ( $rsyslog == 0 ) {
         s/^\*\.info/\*\.info;local0.none;local1.none;auth.none/;
       }
-      if ($rsyslog == 1 || -e "/etc/init.d/sysklogd") {
-        s/;mail.none//g;
-      }
       if ( $rsyslog == 1 || -e "/etc/init.d/sysklogd" ) {
         s/^\*\.\*;auth,authpriv.none/\*\.\*;auth,authpriv.none;local0.none;local1.none;mail.none/;
         s/^\*\.=debug;\\/\*.=debug;\\\n\tlocal0,local1.none;\\/;
@@ -305,7 +302,7 @@ sub updateSyslog {
     local @ARGV=("/etc/logrotate.d/zimbra");
     while (<>) {
       if ( $rsyslog == 1 ) {
-        s/syslogd.pid/rsyslogd.pid/g;
+        s/\-HUP\s+syslog/-HUP rsyslog/g;
       }
       s/USER/zimbra/;
       s/GROUP/zimbra/;
@@ -381,17 +378,6 @@ sub updateRsyslogd {
   print ZFH "mail.*                $logfile\n";
   close(ZFH);
 
-  if ( $LOGHOST ne "" ) {
-    if ( lc($LOGHOST) eq lc($LOCALHOST) ) {
-      local $^I="~";
-      local @ARGV="/etc/rsyslog.conf";
-      while (<>) {
-        s/#\$ModLoad imudp/\$ModLoad imudp/;
-        s/#\$UDPServerRun 514/\$UDPServerRun 514/;
-        print;
-      }
-    }
-  }
 
   if ( !-f "/var/log/zimbra.log") {
     open(my $tlog, ">/var/log/zimbra.log");
@@ -412,7 +398,7 @@ sub updateRsyslogd {
     local $^I="~";
     local @ARGV=("/etc/logrotate.d/zimbra");
     while (<>) {
-      s/kill\s+\-HUP\s+.+syslog\*\.pid.+\/dev\/null/\/usr\/sbin\/service rsyslog restart >\/dev\/null/g;
+      s/killall\s+\-HUP\s+syslog/\/usr\/sbin\/service rsyslog restart >\/dev\/null/g;
       if ($platform eq "UBUNTU10_64") {
         s/USER/syslog/;
         s/GROUP/adm/;
@@ -488,7 +474,7 @@ if ( $platform =~ /UBUNTU/ || $platform =~ /DEBIAN4/ ) {
     print "Unable to restart syslog.  Please do it manually.\n";
     exit 1;
   }
-} elsif ( $platform =~ /DEBIAN5/ || $platform =~ /DEBIAN6/ || $platform =~ /F10/ || $platform =~ /F11/ ) {
+} elsif ( $platform =~ /DEBIAN5/ || $platform =~ /F10/ || $platform =~ /F11/ ) {
   if ( -e "/etc/init.d/rsyslog" ) {
     `/etc/init.d/rsyslog restart> /dev/null 2>&1`;
     exit 0;
@@ -497,8 +483,7 @@ if ( $platform =~ /UBUNTU/ || $platform =~ /DEBIAN4/ ) {
     exit 1;
   }
 } else {
-  my $syslog_PID=`cat /var/run/syslog*.pid`;
-  `kill -HUP $syslog_PID`;
+  `killall -HUP syslogd`;
 }
 
 sub getLocalConfig {

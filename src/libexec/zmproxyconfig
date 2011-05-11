@@ -408,9 +408,8 @@ if ($options{d}) {
   }
 }
 
-print ZMPROV "exit\n";
 close ZMPROV;
-exit ($? >> 8);
+exit 0;
 
 sub usage() {
   print "Usage: $0 [-h] [-o] [-m] [-w] [-d [-r] [-s] [-a w1:w2:w3:w4] [-i p1:p2:p3:p4] [-p p1:p2:p3:p4] [-x mailmode]] [-e [-a w1:w2:w3:w4] [-i p1:p2:p3:p4] [-p p1:p2:p3:p4] [-x mailmode]] [-f] -H hostname\n";
