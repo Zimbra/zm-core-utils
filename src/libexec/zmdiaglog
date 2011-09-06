@@ -171,9 +171,9 @@ sub get_pid() {
     }
     return $pid;
 }
-sub invoke_thread_dump($$$) {
-    my ($i, $ts,$destination) = @_;
-    system("$SU '/opt/zimbra/bin/zmthrdump -i' > ${destination}/threaddump.$i.$ts 2>&1");
+sub invoke_thread_dump($$) {
+    my ($i, $ts) = @_;
+    system("/opt/zimbra/bin/zmthrdump -i > threaddump.$i.$ts 2>&1");
 }
 
 sub collect_thread_stats($) {
@@ -280,7 +280,7 @@ sub run() {
         logmsg "Collecting thread stats/stacks: $i of 10\n";
         my $TS = strftime("%H-%M-%S", localtime());
     
-        invoke_thread_dump($i, $TS, $destination);
+        invoke_thread_dump($i, $TS);
         my $top_cmd = "top -bc -n1 > top.$i.$TS 2>&1";
         if ($isMac) {
             $top_cmd = "top -o cpu -l 2 | \
