@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010 Zimbra, Inc.
+# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 VMware, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -36,7 +36,7 @@ zmassert -x ${zimbra_home}/bin/mysqladmin
 zmassert -x ${zimbra_home}/bin/mysql
 zmassert -x ${zimbra_home}/bin/zmlocalconfig
 zmassert -x ${zimbra_home}/bin/zmmypasswd
-zmassert -x ${mysql_directory}/scripts/mysql_install_db
+zmassert -x ${mysql_directory}/bin/mysql_install_db
 zmassert -r ${zimbra_db_directory}/db.sql
 zmassert -r ${zimbra_db_directory}/versions-init.sql
 
@@ -96,7 +96,7 @@ ${zimbra_home}/libexec/zmmycnf --innodb-buffer-pool-memory-percent \
 # Create database
 #
 echo '*' Creating database in ${mysql_data_directory}
-(cd ${mysql_directory}; ./scripts/mysql_install_db \
+(cd ${mysql_directory}; ./bin/mysql_install_db \
     --defaults-file=${mysql_mycnf}) \
     >> ${zimbra_log_directory}/zmmyinit.log 2>&1
 
@@ -125,12 +125,6 @@ done
 echo '*' Loading schema ${zimbra_db_directory}/db.sql 
 ${zimbra_home}/bin/mysql -u root --password= < \
     ${zimbra_db_directory}/db.sql
-
-if [ -f "${zimbra_db_directory}/create_sharing_database.sql" ];then
-  echo '*' Loading schema ${zimbra_db_directory}/create_sharing_database.sql 
-  ${zimbra_home}/bin/mysql -u root --password= < \
-      ${zimbra_db_directory}/create_sharing_database.sql
-fi
 
 echo '*' Loading version from ${zimbra_db_directory}/versions-init.sql
 ${zimbra_home}/bin/mysql -u root --password= < \
