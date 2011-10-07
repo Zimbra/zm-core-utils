@@ -27,7 +27,7 @@ use Zimbra::Mon::Zmstat;
 use vars qw(
     $VERSION $PID_FILE $DEFAULT_DEST $JMAP $JAVA $DEFAULT_TIMEOUT
     $HAVE_GCORE $HAVE_PSTACK $HAVE_LSOF $HAVE_DMESG $LOG_FILE $ZMSTAT_CONF
-    $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT $HAVE_MYSQL
+    $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT
 );
 
 my $isMac = isMac();
@@ -57,7 +57,6 @@ $HAVE_PSTACK = has_cmd('pstack');
 $HAVE_LSOF = has_cmd('lsof');
 $HAVE_DMESG = has_cmd('dmesg');
 $HAVE_NETSTAT = has_cmd('netstat');
-$HAVE_MYSQL = has_cmd('/opt/zimbra/mysql/bin/mysql');
 $LOG_FILE = 'zmdiag.log';
 $ZMSTAT_CONF = '/opt/zimbra/conf/zmstat-chart.xml';
 $ZMDUMPENV = '/opt/zimbra/bin/zmdumpenv';
@@ -221,27 +220,12 @@ sub HELP_MESSAGE {
 Usage: zmdiaglog [-dthazj]
 
     -a    - Do everything: also gather JVM heapdump/coredump
-    -d    - Log destination (Default $DEFAULT_DEST)
+    -d    - Log destination (Default $zimbra_tmp_directory/zmdiaglog.PID)
     -t    - Timeout in seconds for hanging commands (Default $DEFAULT_TIMEOUT)
     -j    - Also include the output of /opt/zimbra/libexec/zmjavawatch
     -z    - Zip output
     -h    - This help message
 EOF
-}
-
-
-sub get_mysql_data() {
-    if ($HAVE_MYSQL) {
-        my $mysql_cmd="/opt/zimbra/bin/mysql";
-        logmsg "Collecting MySQL data ";
-        logmsg ".";
-        system("echo \"show engine innodb status\\G;\" | $SU $mysql_cmd > mysql-innodb-status.txt");
-        logmsg ".";
-        system("echo \"show global status;\" | $SU $mysql_cmd > mysql-show-global-status.txt");
-        logmsg ".";
-        system("echo \"select * from information_schema.processlist;\" | $SU $mysql_cmd > mysql-information_schema.processlist.txt");
-        logmsg " done.";
-    }
 }
 
 
@@ -297,16 +281,7 @@ sub run() {
         my $TS = strftime("%H-%M-%S", localtime());
     
         invoke_thread_dump($i, $TS);
-        my $top_cmd = "top -bc -n1 > top.$i.$TS 2>&1";
-        if ($isMac) {
-            $top_cmd = "top -o cpu -l 2 | \
-                        awk 'BEGIN { sample = 0 } \
-                            { \
-                                if ( \$0 ~ /^Processes: / ) { sample++; } \
-                                if ( sample ==2 ) { print \$0 } \
-                            }' > top.$i.$TS 2>&1";
-        }
-        system($top_cmd);
+        system("top -bc -n1 > top.$i.$TS 2>&1");
         system("/bin/ps -auxw > ps.$i.$TS 2>&1");
         my $netstat = "netstat -anp > netstat.$i.$TS 2>&1";
         $netstat = "netstat -an > netstat.$i.$TS 2>&1" if ($isMac);
@@ -319,6 +294,8 @@ sub run() {
     
         sleep(5);
     }
+    my $dumped = save_heap_info($JAVA_VERSION, $destination,
+            $mailboxd_pid, $timeout) if ($options{'a'});
     
     if ($HAVE_PSTACK) {
         for (my $i = 1; $i <= 3; $i++) {
@@ -334,6 +311,8 @@ sub run() {
     if ($options{'j'}) {
         system("/opt/zimbra/libexec/zmjavawatch > zmjavawatch.log 2>&1");
     }
+    
+    save_jvm_core($JAVA_VERSION, $mailboxd_pid) if (!$dumped && $options{'a'});
     
     if ($HAVE_LSOF) {
         logmsg "Saving output of LSOF\n";
@@ -373,9 +352,8 @@ sub run() {
         system("cp $ZMSTAT_CONF stats/");
     }
     my $today = strftime("%Y-%m-%d", localtime(time()));
-    my $t_today = strftime("%Y_%m_%d", localtime(time()));
     logmsg "Copying current ZCS logs\n";
-    system("cp /opt/zimbra/log/audit.log /opt/zimbra/log/my*.log /opt/zimbra/log/mailbox.log /opt/zimbra/log/zmmailboxd.out /opt/zimbra/jetty/logs/access_log.$today /opt/zimbra/jetty/logs/$t_today.trace.log /var/log/zimbra.log /opt/zimbra/log/hs_err_pid* /opt/zimbra/log/zmconfigd.log $destination/logs/");
+    system("cp /opt/zimbra/log/audit.log /opt/zimbra/log/my*.log /opt/zimbra/log/mailbox.log /opt/zimbra/log/zmmailboxd.out /opt/zimbra/jetty/logs/access_log.$today /var/log/zimbra.log $destination/logs/");
     system("cp /opt/zimbra/db/data/*.err $destination/logs/ 2> /dev/null");
     logmsg "Copying today's ZCS statistics\n";
     system("cp /opt/zimbra/zmstat/*.csv $destination/stats/");
@@ -397,11 +375,6 @@ sub run() {
       logmsg "Copying system log $systemlogfile\n";
       system("cp $systemlogfile $destination/logs/");
     }
-
-    if (-f "/opt/zimbra/log/nginx.log") {
-      logmsg "Copying nginx log /opt/zimbra/log/nginx.log\n";
-      system("cp /opt/zimbra/log/nginx.log $destination/logs/");
-    }
    
     if (-f "/etc/ld.so.conf") { 
       logmsg "Copying ld.so configuration\n";
@@ -409,13 +382,6 @@ sub run() {
     } else {
       logmsg "ld.so.conf not present...skipping copy.\n";
     }
-
-    get_mysql_data();
-
-    my $dumped = save_heap_info($JAVA_VERSION, $destination,
-            $mailboxd_pid, $timeout) if ($options{'a'});
-
-    save_jvm_core($JAVA_VERSION, $mailboxd_pid) if (!$dumped && $options{'a'});
     
     logmsg "\n *** Diagnostics collection done.  Data stored in $destination/.\n";
     my $dirname = `pwd`;

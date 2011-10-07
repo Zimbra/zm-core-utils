@@ -15,6 +15,10 @@
 # 
 use strict;
 use lib qw(/opt/zimbra/zimbramon/lib /opt/zimbra/libexec/scripts);
+use Net::DNS;
+use Socket;
+use Net::LDAP;
+use Net::LDAP::LDIF;
 use Getopt::Long;
 
 my (%c,%loaded,%saved,$rc);
@@ -53,7 +57,7 @@ exit 0;
 # ***** Subroutines *****
 sub usage {
   print "\n";
-  print "Usage: $0 [-h] [-f] [-v]\n";
+  print "Usage: $0 [-h] [-d] [-f] [-v+]\n";
   print " --help: print this usage statement.\n";
   print " --force: Force the rename, bypassing safety checks.\n";
   print " --verbose: Set the verbosity level.\n";
@@ -93,16 +97,14 @@ sub getLdapGlobalConfig($) {
   close(ZMPROV);
 
   while (scalar(@CONFIG) > 0)  {
-    my $line = shift(@CONFIG);
+    chomp(my $line = shift(@CONFIG));
     my ($k, $v) = $line =~ m/^(\w+):\s(.*)/;
-    if (scalar(@CONFIG) > 0) {
-      $v .= "\n";
-    }
     while ($CONFIG[0] !~ m/^\w+:\s.*/ && scalar(@CONFIG) > 0) {
-      $v .= shift(@CONFIG);
+      chomp($v .= shift(@CONFIG));
     }
 
     next if ($k =~ m/cn|objectClass/);
+    $val .= (($val eq "") ? "$v" : " $v") if ($k eq $key);
     $loaded{gcf}{$k} .= 
       (($loaded{gcf}{$k} eq "") ? "$v" : " $v");;
   }

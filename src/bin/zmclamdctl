@@ -28,18 +28,22 @@ zmsetvars \
 
 
 pidfile=${zimbra_log_directory}/clamd.pid
+fpidfile=${zimbra_log_directory}/freshclam.pid
 
 if [ ! -d "/opt/zimbra/data/clamav/db" ]; then
     mkdir -p /opt/zimbra/data/clamav/db
 fi
 
 rewriteconfig() {
-  /opt/zimbra/libexec/configrewrite antivirus > /dev/null 2>&1
+  /opt/zimbra/libexec/zmmtaconfig antivirus > /dev/null 2>&1
 }
 
 getpid() {
   if [ -f $pidfile ]; then
     cpid=`cat $pidfile`
+  fi
+  if [ -f $fpidfile ]; then
+    fpid=`cat $fpidfile`
   fi
 }
 
@@ -58,19 +62,20 @@ checkrunning() {
       running=1
     fi
   fi
+  # freshclam
+  if [ "x$fpid" = "x" ]; then
+    frunning=0
+  else
+    kill -0 $fpid 2> /dev/null
+    if [ $? != 0 ]; then
+      rm $fpidfile
+      fpid=""
+      frunning=0
+    else
+      frunning=1
+    fi
+  fi
 }
-
-pskillall() {
-  ps_cmd="/bin/ps ax -o pid,ppid,command"
-  killsig="$1"
-  pname=`echo "$2" | sed -e 's%/%\\\/%g'`
-  plist=`${ps_cmd} | awk '{ if ( $3 ~ /'${pname}'/ ) { print $1 " " $2 } }' | sort -nr -k2 -k1 | awk '{ print $1 }'`
-  for p in ${plist}
-  do
-    kill ${killsig} ${p}
-  done
-}
-
 
 #
 # Main
@@ -84,12 +89,25 @@ case "$1" in
         ${zimbra_home}/data/clamav/db/daily.cvd
       cp -f ${zimbra_home}/clamav/db/main.cvd.init \
         ${zimbra_home}/data/clamav/db/main.cvd
+      # Init the db
+      ${zimbra_home}/clamav/bin/freshclam --quiet \
+        --config-file=${zimbra_home}/conf/freshclam.conf &
     fi
     if [ x$2 = "x" ]; then
       rewriteconfig
     fi
 
     checkrunning
+    echo -n "Starting freshclam..."
+    if [ $frunning = 1 ]; then
+      echo "freshclam is already running.";
+    else
+      ${zimbra_home}/clamav/bin/freshclam \
+        --config-file=${zimbra_home}/conf/freshclam.conf --quiet --daemon --checks=12 \
+          >> ${zimbra_log_directory}/freshclam.log 2>&1 &
+      echo "done."
+    fi
+
     echo -n "Starting clamd..."
     if [ $running = 1 ]; then
       echo "clamd is already running.";
@@ -113,16 +131,40 @@ case "$1" in
    ;;
   
   'kill')
+    if [ -f /opt/zimbra/log/freshclam.pid ]; then
+      cpid=`cat /opt/zimbra/log/freshclam.pid`
+      kill -9 "$cpid" 2> /dev/null
+    fi
     if [ -f /opt/zimbra/log/clamd.pid ]; then
       cpid=`cat /opt/zimbra/log/clamd.pid`
       kill -9 "$cpid" 2> /dev/null
     fi
-    pskillall -9 ${zimbra_home}/clamav/sbin/clamd
+    if [ "x$platform" = "xMACOSX" -o "x$platform" = "xMACOSXx86" ]; then
+      killall -9 freshclam
+      killall -9 clamd
+    else
+      killall -9 ${zimbra_home}/clamav/bin/freshclam
+      killall -9 ${zimbra_home}/clamav/sbin/clamd
+    fi
     exit 0
    ;;
 
   'stop')
     checkrunning
+    echo -n "Stopping freshclam..."
+    if [ $frunning = 0 ]; then
+      echo "freshclam is not running.";
+    else 
+      if [ x"$fpid" != "x" ]; then  
+        kill -9 "$fpid" 2> /dev/null
+        if [ $? = 0 ]; then
+          echo "done."
+        else 
+          echo "failed."
+        fi
+      fi
+    fi
+
     echo -n "Stopping clamd..."
     if [ $running = 0 ]; then
       echo "clamd is not running.";
@@ -151,7 +193,7 @@ case "$1" in
   
   'restart'|'reload')
     $0 stop
-    $0 start $2
+    $0 start
   ;;
   
   'status')

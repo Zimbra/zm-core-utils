@@ -20,14 +20,7 @@ zmsetvars \
   mysql_pidfile \
   mysql_mycnf \
   mysql_errlogfile \
-  zimbra_home \
-  zimbra_user \
   zimbra_tmp_directory 
-
-if [ x`whoami` != "x${zimbra_user}" ]; then
-  echo Error: must be run as zimbra user
-  exit 1
-fi
 
 if [ ! -d ${mysql_directory}/bin ]; then
   exit 0
@@ -98,21 +91,11 @@ case "$1" in
       --defaults-file=${mysql_mycnf} \
       --external-locking \
       --log-error=${mysql_errlogfile} \
-      --ledir=${mysql_directory}/bin < /dev/null > /dev/null 2>&1 &
-    SQLSTARTED=0
-    for ((i = 0; i < 60; i++))
-    do
-      ${zimbra_home}/bin/mysqladmin -s ping 2>&1 > /dev/null
-      if [ $? = 0 ]; then
-        SQLSTARTED=1
-        break
-      fi
-      sleep 2
-    done
-    if [ ${SQLSTARTED} -ne 1 ]; then
-      echo "failed."
-    else 
+      --ledir=${mysql_directory}/libexec < /dev/null > /dev/null 2>&1 &
+    if [ $? = 0 ]; then
       echo "done."
+    else 
+      echo "failed."
     fi
     ;;
     

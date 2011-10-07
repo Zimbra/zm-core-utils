@@ -22,8 +22,8 @@ zmsetvars \
 
 MYSQL="${zimbra_home}/bin/mysql -u zimbra --password=${zimbra_mysql_password}"
 
-START_ORDER="mysql.server zmmailboxdctl"
-STOP_ORDER="zmmailboxdctl mysql.server"
+START_ORDER="zmmtaconfigctl mysql.server zmmailboxdctl"
+STOP_ORDER="zmmtaconfigctl zmmailboxdctl mysql.server"
 
 STATUS=0
 
@@ -49,7 +49,7 @@ flushDirtyPages() {
   # wait for 600 seconds or until there are no more dirty pages
   local i=0
   while [ $i -lt 600 ]; do
-    local pages=$(${MYSQL} -e "show engine innodb status\G" | grep '^Modified db pages' | grep -Eo '[0-9]+$')
+    local pages=$(${MYSQL} -e "show innodb status\G" | grep '^Modified db pages' | grep -Eo '[0-9]+$')
     if [ "$pages" = "0" ]; then
       break
     fi
@@ -62,8 +62,7 @@ flushDirtyPages() {
 case "$1" in 
   start)
     if [ x$2 = "x" ]; then
-	  # Call tlsctl to get all the mailbox config files
-      ${zimbra_home}/bin/zmtlsctl >/dev/null 2>&1
+      ${zimbra_home}/libexec/zmmtaconfig mailbox >/dev/null 2>&1
     fi
     for i in $START_ORDER; do
       ${zimbra_home}/bin/$i start norewrite >/dev/null 2>&1
@@ -107,7 +106,7 @@ case "$1" in
       R=$?
       if [ $R -ne "0" ]; then
         echo "$i is not running."
-        if [ x"$i" != "xzmconfigdctl" ]; then
+        if [ x"$i" != "xzmmtaconfigctl" ]; then
           STATUS=$R
         fi
       fi
