@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2008, 2009, 2010 Zimbra, Inc.
+# Copyright (C) 2007, 2008, 2009, 2010, 2011 VMware, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -250,7 +250,7 @@ loadConfigKey() {
 createCAKey() {
 
   if [ ! -f ${zimbra_ca_ssl_conf} ]; then
-    createConf "${zimbra_ca_ssl_conf}" ca "$subject_alt_names"
+    createConf "${zimbra_ca_ssl_conf}" "$subject_alt_names"
   fi
 
   createCASerial
@@ -460,7 +460,7 @@ createCA() {
   fi
   
   if [ ! -f ${zimbra_ca_ssl_conf} -o x"${IS_NEW_CA}" = "x-new" ]; then
-    createConf "${zimbra_ca_ssl_conf}" ca "$subject_alt_names"
+    createConf "${zimbra_ca_ssl_conf}" "$subject_alt_names"
   fi
 
 
@@ -834,9 +834,7 @@ getCertFromLdap() {
 createConf() {
   ssl_conf=$1
   shift
-  conf_type=$1
-  shift
-  conf_type=${conf_type:=cert}
+
   ALTNAMES=""
   tmphosts=`echo $* | sed -e "s/,/ /g" -e "s/${zimbra_server_hostname}//g"` 
   # remove any duplicate hosts.
@@ -850,16 +848,9 @@ createConf() {
     fi
   done
   echo -n "** Creating ${ssl_conf}..."
-  if [ x"$conf_type" == "xca" ]; then
-    cat ${zimbra_conf_directory}/zmssl.cnf.in | \
-      sed -e "s/CA:FALSE/CA:TRUE/" \
-      -e "s/@@HOSTNAME@@/$zimbra_server_hostname/" \
-      -e "s/@@SUBJECT_ALT_NAMES@@/$ALTNAMES/"  > ${ssl_conf}
-  else 
-    cat ${zimbra_conf_directory}/zmssl.cnf.in | \
-      sed -e "s/@@HOSTNAME@@/$zimbra_server_hostname/" \
-      -e "s/@@SUBJECT_ALT_NAMES@@/$ALTNAMES/"  > ${ssl_conf}
-  fi
+  cat ${zimbra_conf_directory}/zmssl.cnf.in | \
+    sed -e "s/@@HOSTNAME@@/$zimbra_server_hostname/" \
+    -e "s/@@SUBJECT_ALT_NAMES@@/$ALTNAMES/"  > ${ssl_conf}
   chmod 640 ${ssl_conf}
   chown ${zimbra_uid}:${zimbra_gid} ${ssl_conf}
   echo "done"
@@ -881,7 +872,7 @@ createCASerial() {
 createServerCertReq() {
 
   if [ ! -f "${zimbra_cert_ssl_conf}" ]; then
-    createConf "${zimbra_cert_ssl_conf}" cert "$subject_alt_names"
+    createConf "${zimbra_cert_ssl_conf}" "$subject_alt_names"
   fi
 
   type=$1
@@ -963,7 +954,7 @@ createCert() {
 
   createCASerial  
 
-  createConf "${zimbra_cert_ssl_conf}" cert "$subject_alt_names"
+  createConf "${zimbra_cert_ssl_conf}" "$subject_alt_names"
   
   # see if we already have a valid cert, we don't want to recreate
   # self-signed certs on upgrade
@@ -1343,7 +1334,7 @@ createCSR() {
       echo "${ERROR_PREFIX} The Certificate Signing Request already existed."
       usage
     fi
-    createConf "${zimbra_cert_ssl_conf}" cert "$subject_alt_names"
+    createConf "${zimbra_cert_ssl_conf}" "$subject_alt_names"
   fi
   
   backupSSLDirs ${zimbra_ssl_directory}
