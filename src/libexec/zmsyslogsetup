@@ -2,7 +2,7 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2011 VMware, Inc.
+# Copyright (C) 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -260,9 +260,6 @@ sub updateSyslog {
       if ( $rsyslog == 0 ) {
         s/^\*\.info/\*\.info;local0.none;local1.none;auth.none/;
       }
-      if ($rsyslog == 1 || -e "/etc/init.d/sysklogd") {
-        s/;mail.none//g;
-      }
       if ( $rsyslog == 1 || -e "/etc/init.d/sysklogd" ) {
         s/^\*\.\*;auth,authpriv.none/\*\.\*;auth,authpriv.none;local0.none;local1.none;mail.none/;
         s/^\*\.=debug;\\/\*.=debug;\\\n\tlocal0,local1.none;\\/;
@@ -305,7 +302,7 @@ sub updateSyslog {
     local @ARGV=("/etc/logrotate.d/zimbra");
     while (<>) {
       if ( $rsyslog == 1 ) {
-        s/syslogd.pid/rsyslogd.pid/g;
+        s/\-HUP\s+syslog/-HUP rsyslog/g;
       }
       s/USER/zimbra/;
       s/GROUP/zimbra/;
@@ -401,7 +398,7 @@ sub updateRsyslogd {
     local $^I="~";
     local @ARGV=("/etc/logrotate.d/zimbra");
     while (<>) {
-      s/kill\s+\-HUP\s+.+syslog\*\.pid.+\/dev\/null/\/usr\/sbin\/service rsyslog restart >\/dev\/null/g;
+      s/killall\s+\-HUP\s+syslog/\/usr\/sbin\/service rsyslog restart >\/dev\/null/g;
       if ($platform eq "UBUNTU10_64") {
         s/USER/syslog/;
         s/GROUP/adm/;
@@ -486,8 +483,7 @@ if ( $platform =~ /UBUNTU/ || $platform =~ /DEBIAN4/ ) {
     exit 1;
   }
 } else {
-  my $syslog_PID=`cat /var/run/syslog*.pid`;
-  `kill -HUP $syslog_PID`;
+  `killall -HUP syslogd`;
 }
 
 sub getLocalConfig {

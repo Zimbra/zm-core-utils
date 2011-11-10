@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2009, 2010, 2011 VMware, Inc.
+# Copyright (C) 2005, 2006, 2007, 2009, 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -31,7 +31,7 @@ getPubKey() {
 replacePubKey() {
 	server=$1
 	key=$2
-  echo "Updating keys for $server"
+
 	keyhost=`echo ${key} | awk '{print $3}'`
 
 	echo "${authkeys}" > ${tempkeysfile}
@@ -52,13 +52,7 @@ replacePubKey() {
 command=\"/opt/zimbra/libexec/zmrcd\" ${key}"
 	
 	/bin/rm -f ${tempkeysfile} ${tempkeysfile}.new
-}
 
-updateAllServers() {
-  for s in ${servers}; do
-    echo "Updating authkeys on remote server $s"
-    echo "HOST:$s zmupdateauthkeys" | /opt/zimbra/libexec/zmrc $s
-  done
 }
 
 # Get all the public keys from ldap, and replace them in 
@@ -74,7 +68,7 @@ if [ ! -d ${zimbra_tmp_directory} ]; then
   mkdir -p ${zimbra_tmp_directory} > /dev/null 2>&1
 fi
 
-tempkeysfile=`mktemp -t auth_keys.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+tempkeysfile="${zimbra_tmp_directory}/auth_keys.tmp"
 
 if [ -f $authkeysfile ]; then
 	authkeys=`cat ${authkeysfile}`
@@ -84,13 +78,8 @@ fi
 
 servers=`${zmprov} gas`
 
-#
-if [ x$1 == "x-a" ]; then
- updateAllServers
-fi
-
 for s in ${servers}; do
-	echo "Updating keys for ${s}"
+	echo "updating ${s}"
 	getPubKey ${s}
 	if [ "x$pubkey" != "x" ]; then
 		replacePubKey ${s} "${pubkey}"
@@ -100,6 +89,10 @@ for s in ${servers}; do
 done
 
 echo "Updating ${authkeysfile}"
-echo "${authkeys}" > ${tempkeysfile} && mv ${tempkeysfile} ${authkeysfile}
+echo ""
+
+echo "${authkeys}" > ${tempkeysfile}
+
+mv ${tempkeysfile} ${authkeysfile}
 chmod 644 ${authkeysfile}
 

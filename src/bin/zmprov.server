@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2011 VMware, Inc.
+# Copyright (C) 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -121,7 +121,7 @@ if (fork()) {
 	select(undef, undef, undef, 0.2);  # sleep 1/5th second
 
 	my $buf;
-	my $sock = new IO::Socket::INET6 (PeerAddr => 'localhost',
+	my $sock = new IO::Socket::INET (PeerAddr => 'localhost',
 		      PeerPort => $port,
 		      Proto    => 'tcp') || die "$!";
 

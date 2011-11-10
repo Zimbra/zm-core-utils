@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007, 2009, 2010, 2011 VMware, Inc.
+# Copyright (C) 2004, 2005, 2006, 2007, 2009, 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -51,7 +51,7 @@ start()
 		#if [ -x /opt/zimbra/sleepycat/bin/db_recover ]; then
 		#	/opt/zimbra/sleepycat/bin/db_recover -h /opt/zimbra/openldap/var/openldap-data -v
 		#fi
-		sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -u `whoami` -h "ldap://:389/" \
+		sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -4 -u `whoami` -h "ldap://:389/" \
 			-f /opt/zimbra/conf/slapd.conf
 		sleep 2
 		getpid
