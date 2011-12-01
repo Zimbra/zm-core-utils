@@ -18,7 +18,6 @@ use lib qw(/opt/zimbra/zimbramon/lib /opt/zimbra/libexec/scripts);
 use Net::DNS;
 use Socket;
 use Net::LDAP;
-use Net::LDAP::LDIF;
 use Getopt::Long;
 
 my (%c,%loaded,%saved,$rc);
@@ -41,11 +40,34 @@ $c{zimbra_home} = getLocalConfig("zimbra_home");
 $c{zmprov}="$c{zimbra_home}/bin/zmprov -l --";
 
 # ***** Main *****
-my $enabled = getLdapGlobalConfig("zimbraDomainMandatoryMailSignatureEnabled");
+
+my $ldappass = `$c{zmlocalconfig} -s -m nokey zimbra_ldap_password`;
+my $ldapdn  = `$c{zmlocalconfig} -s -m nokey zimbra_ldap_userdn`;
+my $ldapurl  = `$c{zmlocalconfig} -s -m nokey ldap_url`;
+chop($ldappass);
+chop($ldapdn);
+chop($ldapurl);
+
+my $ldap = Net::LDAP->new( $ldapurl ) or die "Error connecting to LDAP server: $ldapurl";
+my $mesg = $ldap->bind( $ldapdn, password => $ldappass );
+$mesg->code && die "Error binding to LDAP server: $mesg->error";
+
+my $ldapquery = "(objectClass=zimbraGlobalConfig)";
+$mesg = $ldap->search(
+                  base => '',
+                  filter => $ldapquery,
+                  attrs => [
+                      'zimbraDomainMandatoryMailSignatureEnabled',
+                      'zimbraDomainMandatoryMailSignatureText',
+                      'zimbraDomainMandatoryMailSignatureHTML'
+                  ]
+              );
+my $i = 0;
+my $enabled = $mesg->entry($i)->get_value('zimbraDomainMandatoryMailSignatureEnabled');
 
 if (lc($enabled) eq "true") {
-  my $text = getLdapGlobalConfig("zimbraDomainMandatoryMailSignatureText");
-  my $html = getLdapGlobalConfig("zimbraDomainMandatoryMailSignatureHTML");
+  my $text = $mesg->entry($i)->get_value('zimbraDomainMandatoryMailSignatureText');
+  my $html = $mesg->entry($i)->get_value('zimbraDomainMandatoryMailSignatureHTML');
   writeFile("$c{zimbra_home}/data/altermime/global-default.txt", "$text");
   writeFile("$c{zimbra_home}/data/altermime/global-default.html", "$html");
 }
@@ -83,34 +105,5 @@ sub getLocalConfig {
   $loaded{lc}{$key} = $val;
   print "$val\n"; 
   return $val;
-}
-
-sub getLdapGlobalConfig($) {
-  my ($key) = @_;
-  my ($val); 
-  return $loaded{gcf}{$key}
-    if (exists $loaded{gcf}{$key});
-
-  print "Getting global config $key=";
-  open(ZMPROV, "$c{zmprov} gcf $key|");
-  my @CONFIG = <ZMPROV>;
-  close(ZMPROV);
-
-  while (scalar(@CONFIG) > 0)  {
-    my $line = shift(@CONFIG);
-    my ($k, $v) = $line =~ m/^(\w+):\s(.*)/;
-    if (scalar(@CONFIG) > 0) {
-      $v .= "\n";
-    }
-    while ($CONFIG[0] !~ m/^\w+:\s.*/ && scalar(@CONFIG) > 0) {
-      $v .= shift(@CONFIG);
-    }
-
-    next if ($k =~ m/cn|objectClass/);
-    $loaded{gcf}{$k} .= 
-      (($loaded{gcf}{$k} eq "") ? "$v" : " $v");;
-  }
-  print "$loaded{gcf}{$key}\n";
-  return $loaded{gcf}{$key};
 }
 
