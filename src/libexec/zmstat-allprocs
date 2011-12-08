@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2009, 2010, 2011 VMware, Inc.
+# Copyright (C) 2009, 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -61,6 +61,17 @@ sub get_pid_tree() {
                 }
             }
             close(STATUS);
+
+			if ($cmd =~ /java/) {
+				if (open(CMDLINE, "<$PROCFS/$pid/cmdline")) { # else pid has gone away
+					while (my $line = <CMDLINE>) {
+						my @args = split('\0',$line);
+						$cmd = 'zmconfigd' if ($args[$#args] =~ /\/opt\/zimbra\/libexec\/zmconfigd/);
+						$cmd = 'zmmailboxd' if ($args[$#args] =~ /\/opt\/zimbra\/mailboxd\/etc\/jetty.xml/);
+					}
+				}
+			}
+
             next if (!defined($ppid));
             next if (!defined($cmd));
             $pid_names{$pid} = $cmd;
