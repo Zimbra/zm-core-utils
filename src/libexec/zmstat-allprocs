@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2009, 2010, 2011 VMware, Inc.
+# Copyright (C) 2009, 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -61,6 +61,17 @@ sub get_pid_tree() {
                 }
             }
             close(STATUS);
+
+			if ($cmd =~ /java/) {
+				if (open(CMDLINE, "<$PROCFS/$pid/cmdline")) { # else pid has gone away
+					while (my $line = <CMDLINE>) {
+						my @args = split('\0',$line);
+						$cmd = 'zmconfigd' if ($args[$#args] =~ /\/opt\/zimbra\/libexec\/zmconfigd/);
+						$cmd = 'zmmailboxd' if ($args[$#args] =~ /\/opt\/zimbra\/mailboxd\/etc\/jetty.xml/);
+					}
+				}
+			}
+
             next if (!defined($ppid));
             next if (!defined($cmd));
             $pid_names{$pid} = $cmd;
@@ -115,7 +126,14 @@ sub delta_stat($$$$) {
     my $pid  = shift;
     my $stat = shift;
 
-    $curr_stats->{$pid}->{$stat} - $prev_stats->{$pid}->{$stat};
+    #  Handle the possibility that proc stats are not obtained due to a process dying before stat data is actually retrieved.
+    if (!defined($curr_stats->{$pid}->{$stat})) {
+        0;
+    } elsif (!defined($prev_stats->{$pid}->{$stat})) {
+        $curr_stats->{$pid}->{$stat};
+    } else {
+        $curr_stats->{$pid}->{$stat} - $prev_stats->{$pid}->{$stat};
+    }
 }
 
 sub get_pids_by_name($$) {
