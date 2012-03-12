@@ -29,7 +29,7 @@ my ($i1, $i2, $i3, $i4, $p1, $p2, $p3, $p4, $w1, $w2, $w3, $w4);
 
 my %packageServiceMap = (
   mailbox   => "zimbra-store",
-  proxy => "zimbra-proxy",
+  imapproxy => "zimbra-proxy",
 );
 
 my $ImapEnabled="7143:143:7993:993";
@@ -46,7 +46,7 @@ our %loaded = ();
 
 getopts('a:defhH:i:mop:rstwx:',\%options) or die "Unable to set options\n";
 
-our $ZMPROV = "/opt/zimbra/bin/zmprov -l 1>/dev/null";
+our $ZMPROV = "/opt/zimbra/bin/zmprov -l";
 our $platform = `/opt/zimbra/libexec/get_plat_tag.sh`;
 chomp ($platform);
 
@@ -214,7 +214,7 @@ if ($options{e}) {
             }
             if (!isEnabled("zimbra-proxy")) {
                  print ZMPROV "ms $hostname ".
-                      "+zimbraServiceEnabled proxy\n";
+                      "+zimbraServiceEnabled imapproxy\n";
             }
   } else {
        if (isEnabled("zimbra-store") || (isInstalled("zimbra-store") && $options{o})) {
@@ -271,7 +271,7 @@ if ($options{e}) {
      	   }
             if (!isEnabled("zimbra-proxy")) {
                  print ZMPROV "ms $hostname ".
-                      "+zimbraServiceEnabled proxy\n";
+                      "+zimbraServiceEnabled imapproxy\n";
             }
        }
   }
@@ -330,7 +330,7 @@ if ($options{d}) {
        $enabledMailProxy = getLdapServerValue("zimbraReverseProxyMailEnabled");
        if ($enabledHTTPProxy eq "FALSE" && $enabledMailProxy eq "FALSE" && isEnabled("zimbra-proxy")) {
             print ZMPROV "ms $hostname ".
-               "-zimbraServiceEnabled proxy\n";
+               "-zimbraServiceEnabled imapproxy\n";
        }
        if ($enabledHTTPProxy eq "FALSE" && $enabledMailProxy eq "FALSE") {
             print ZMPROV "ms $hostname ".
@@ -402,15 +402,14 @@ if ($options{d}) {
             $enabledMailProxy = getLdapServerValue("zimbraReverseProxyMailEnabled");
             if ($enabledHTTPProxy eq "FALSE" && $enabledMailProxy eq "FALSE" && isEnabled("zimbra-proxy")) {
                  print ZMPROV "ms $hostname ".
-                    "-zimbraServiceEnabled proxy\n";
+                    "-zimbraServiceEnabled imapproxy\n";
             }
        }
   }
 }
 
-print ZMPROV "exit\n";
 close ZMPROV;
-exit ($? >> 8);
+exit 0;
 
 sub usage() {
   print "Usage: $0 [-h] [-o] [-m] [-w] [-d [-r] [-s] [-a w1:w2:w3:w4] [-i p1:p2:p3:p4] [-p p1:p2:p3:p4] [-x mailmode]] [-e [-a w1:w2:w3:w4] [-i p1:p2:p3:p4] [-p p1:p2:p3:p4] [-x mailmode]] [-f] -H hostname\n";

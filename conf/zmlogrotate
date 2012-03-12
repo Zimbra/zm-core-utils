@@ -4,7 +4,7 @@
     notifempty
     create 0644 USER GROUP
     postrotate
-      kill -HUP `cat /var/run/syslog*.pid 2> /dev/null` 2> /dev/null || true
+      killall -HUP syslogd 2> /dev/null || true
       su - zimbra -c "/opt/zimbra/bin/zmswatchctl restart" > /dev/null 2>&1 || true
     endscript
     compress
@@ -16,7 +16,7 @@
     notifempty
     create 0644 USER GROUP
     postrotate
-      kill -HUP `cat /var/run/syslog*.pid 2> /dev/null` 2> /dev/null || true
+      killall -HUP syslogd 2> /dev/null || true
       su - zimbra -c "/opt/zimbra/bin/zmlogswatchctl restart" > /dev/null 2>&1 || true
     endscript
     rotate 0
@@ -97,6 +97,19 @@
     compress
 }
 
+/opt/zimbra/log/zmmtaconfig.log {
+    daily
+    missingok
+    copytruncate
+    notifempty
+    create 0740 zimbra zimbra
+    postrotate
+      su - zimbra -c "/opt/zimbra/bin/zmmtaconfigctl restart" > /dev/null 2>&1 || true
+    endscript
+    rotate 5
+    compress
+}
+
 /opt/zimbra/log/nginx.log /opt/zimbra/log/nginx.access.log {
     daily
     sharedscripts
@@ -118,17 +131,3 @@
     notifempty
     compress
 }
-
-/opt/zimbra/log/cbpolicyd.log {
-    daily
-    missingok
-    rotate 7
-    notifempty
-    create 0644 USER GROUP
-    postrotate
-      kill -HUP `cat /var/run/syslog*.pid 2> /dev/null` 2> /dev/null || true
-      su - zimbra -c "/opt/zimbra/bin/zmcbpolicydctl restart" > /dev/null 2>&1 || true
-    endscript
-    compress
-}   
-

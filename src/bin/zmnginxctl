@@ -70,22 +70,12 @@ case "$1" in
       exit 0
     fi
     if [ "x$2" = "x" ]; then
-      ${zimbra_home}/libexec/configrewrite proxy > /dev/null 2>&1
+      ${zimbra_home}/libexec/zmmtaconfig imapproxy > /dev/null 2>&1
     fi
 
     if [ ! -f ${configfile} ]; then
       echo "failed.  ${configfile} is missing."
       exit 1
-    fi
-
-    # read the last line of nginx.conf which indicates the conf gen result
-    res=`tail -n 1 ${configfile}`
-    if ! [[ $res =~ __SUCCESS__ ]]; then
-        echo "failed."
-        msg=`echo $res | awk -F ':' '{print $2}'`
-        if [ x"$msg" = "x" ]; then msg="unknown"; fi
-        echo "nginx start failed. reason: $msg"
-        exit 1
     fi
 
     sudo ${zimbra_home}/${servicename}/sbin/${servicename} -c ${configfile}
@@ -130,7 +120,7 @@ case "$1" in
   ;;
   restart)
     $0 stop
-    $0 start $2
+    $0 start
   ;;
   reload)
     checkrunning

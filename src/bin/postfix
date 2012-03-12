@@ -19,8 +19,6 @@ progdir=`dirname $0`
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
 	zimbra_home \
-  postfix_mail_owner \
-  postfix_setgid_group \
 	zimbra_server_hostname 
 
 if [ "x${zimbra_home}" = "x" ]; then
@@ -29,21 +27,12 @@ fi
 
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
-rewritemtaconfig() {
-    /opt/zimbra/libexec/zmmtainit
-}
-
 rewriteconfig() {
-    /opt/zimbra/libexec/configrewrite mta > /dev/null 2>&1
+    /opt/zimbra/libexec/zmmtainit
+    /opt/zimbra/libexec/zmmtaconfig mta > /dev/null 2>&1
 }
 
 if [ "x$1" = "xstatus" -o "x$1" = "xstart" ]; then
-  if [ -L ${zimbra_home}/postfix ]; then
-    if [ ! -f ${zimbra_home}/postfix/conf/main.cf ]; then
-      touch ${zimbra_home}/postfix/conf/main.cf
-      ${zimbra_home}/postfix/sbin/postconf -e mail_owner=${postfix_mail_owner} setgid_group=${postfix_setgid_group}
-    fi
-  fi
   sudo ${zimbra_home}/libexec/zmmtastatus 2> /dev/null
 	R=$?
 	if [ "x$1" = "xstart" ]; then
@@ -60,10 +49,14 @@ if [ "x$1" = "xstatus" -o "x$1" = "xstart" ]; then
 fi
 
 if [ "x$1" = "xstart" -o "x$1" = "xreload" ]; then
-	rewritemtaconfig
-	if [ "x$2" != "xnorewrite" ]; then
-		rewriteconfig
-	fi
+	rewriteconfig
+  #postfix_header_checks=${zimbra_home}/conf/postfix_header_checks
+  #TEMPFILE=`mktemp ${postfix_header_checks}.XXXXXX` && cp -f ${postfix_header_checks} ${TEMPFILE}
+  #if [ $? = 0 -a -s "$TEMPFILE" ]; then
+	  #${zimbra_home}/postfix/sbin/postmap ${TEMPFILE} && mv -f ${TEMPFILE}.db ${postfix_header_checks}.db
+    #rm -f ${TEMPFILE}
+  #fi
+    
 fi
 
 if [ -f /etc/aliases ]; then

@@ -39,7 +39,6 @@ our %saved=();
 
 my $zimbra_home=getLocalConfig("zimbra_home");
 my $zimbra_user=getLocalConfig("zimbra_user");
-my $zimbra_tmp_directory=getLocalConfig("zimbra_tmp_directory");
 my $ldap_master_url=getLocalConfig("ldap_master_url");
 my $ldap_starttls_supported=getLocalConfig("ldap_starttls_supported");
 my $source_config_dir="/opt/zimbra/openldap/etc/openldap";
@@ -78,7 +77,7 @@ my $zimbra_ssha_password = $ctx->generate;
 # Update config database
 #
 my $infile="$ldap_config_dir/olcDatabase\=\{0\}config.ldif";
-my $outfile="$zimbra_tmp_directory/olcDatabase\=\{0\}config.ldif.$$";
+my $outfile="/tmp/olcDatabase\=\{0\}config.ldif.$$";
 my $mime_root_passwd=MIME::Base64::encode($root_ssha_password);
 chomp ($mime_root_passwd);
 open(IN,"<$infile");
@@ -189,24 +188,7 @@ while ( not $ldifin->eof() ) {
     }
 }
 
-$infile = "$source_config_dir/zimbra_defaultexternalcos.ldif";
-$ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
-while ( not $ldifin->eof() ) {
-    my $entry = $ldifin->read_entry();
-    if ( $ldifin->error() ) {
-      print "Error msg: ", $ldifin->error ( ), "\n";
-      print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-    } else {
-      $entry->changetype("add");
-      $entry->update($ldap);
-    }
-}
-
-if (-f "/opt/zimbra/conf/ldap/zimbra_mimehandlers.ldif") {
-  $infile = "/opt/zimbra/conf/ldap/zimbra_mimehandlers.ldif";
-} else {
-  $infile = "$source_config_dir/zimbra_mimehandlers.ldif";
-}
+$infile = "$source_config_dir/zimbra_mimehandlers.ldif";
 $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
 while ( not $ldifin->eof() ) {
     my $entry = $ldifin->read_entry();

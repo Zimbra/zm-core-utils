@@ -15,7 +15,7 @@
 # 
 
 BASE=/opt/zimbra
-SCRIPTS="zmamavisdctl antispam-mysql.server"
+SCRIPTS="zmmtaconfigctl zmamavisdctl"
 
 source /opt/zimbra/.bashrc
 
@@ -42,7 +42,9 @@ case "$1" in
 			R=$?
 			if [ $R -ne "0" ]; then
 				echo "$i is not running"
-				STATUS=$R
+        if [ x"$i" != "xzmmtaconfigctl" ]; then
+				  STATUS=$R
+        fi
 			fi
 		done
 		exit $STATUS
