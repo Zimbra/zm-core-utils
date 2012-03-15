@@ -2,7 +2,7 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2008, 2009, 2010, 2011 VMware, Inc.
+# Copyright (C) 2008, 2009, 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -29,7 +29,7 @@ my ($i1, $i2, $i3, $i4, $p1, $p2, $p3, $p4, $w1, $w2, $w3, $w4);
 
 my %packageServiceMap = (
   mailbox   => "zimbra-store",
-  imapproxy => "zimbra-proxy",
+  proxy => "zimbra-proxy",
 );
 
 my $ImapEnabled="7143:143:7993:993";
@@ -200,6 +200,7 @@ if ($options{e}) {
                if ($options{x}) {
                  $proxyMailMode=$options{x};
                }
+               my $mailMode = getStoreMailMode();
                chomp($proxyMailMode);
                print ZMPROV "ms $hostname ".
                "zimbraMailReferMode reverse-proxied ".
@@ -207,14 +208,14 @@ if ($options{e}) {
                "zimbraMailProxyPort $w2 ".
                "zimbraMailSSLPort $w3 ".
                "zimbraMailSSLProxyPort $w4 ".
-               "zimbraMailMode http ".
+               "zimbraMailMode $mailMode ".
                "zimbraReverseProxyMailMode $proxyMailMode ".
                "zimbraReverseProxyLookupTarget TRUE ".
                "zimbraReverseProxyHttpEnabled TRUE\n";
             }
             if (!isEnabled("zimbra-proxy")) {
                  print ZMPROV "ms $hostname ".
-                      "+zimbraServiceEnabled imapproxy\n";
+                      "+zimbraServiceEnabled proxy\n";
             }
   } else {
        if (isEnabled("zimbra-store") || (isInstalled("zimbra-store") && $options{o})) {
@@ -233,6 +234,7 @@ if ($options{e}) {
                  "zimbraPop3CleartextLoginEnabled TRUE\n";
             }
             if ($options{w}) {
+               my $mailMode = getStoreMailMode();
                print ZMPROV "ms $hostname ".
                "zimbraMailReferMode reverse-proxied ".
                "zimbraMailPort $w1 ".
@@ -240,7 +242,7 @@ if ($options{e}) {
                "zimbraMailSSLPort $w3 ".
                "zimbraMailSSLProxyPort $w4 ".
                "zimbraReverseProxyLookupTarget TRUE ".
-               "zimbraMailMode http\n";
+               "zimbraMailMode $mailMode\n";
             }
        }
        if (isInstalled("zimbra-proxy")) {
@@ -271,7 +273,7 @@ if ($options{e}) {
      	   }
             if (!isEnabled("zimbra-proxy")) {
                  print ZMPROV "ms $hostname ".
-                      "+zimbraServiceEnabled imapproxy\n";
+                      "+zimbraServiceEnabled proxy\n";
             }
        }
   }
@@ -330,7 +332,7 @@ if ($options{d}) {
        $enabledMailProxy = getLdapServerValue("zimbraReverseProxyMailEnabled");
        if ($enabledHTTPProxy eq "FALSE" && $enabledMailProxy eq "FALSE" && isEnabled("zimbra-proxy")) {
             print ZMPROV "ms $hostname ".
-               "-zimbraServiceEnabled imapproxy\n";
+               "-zimbraServiceEnabled proxy\n";
        }
        if ($enabledHTTPProxy eq "FALSE" && $enabledMailProxy eq "FALSE") {
             print ZMPROV "ms $hostname ".
@@ -402,7 +404,7 @@ if ($options{d}) {
             $enabledMailProxy = getLdapServerValue("zimbraReverseProxyMailEnabled");
             if ($enabledHTTPProxy eq "FALSE" && $enabledMailProxy eq "FALSE" && isEnabled("zimbra-proxy")) {
                  print ZMPROV "ms $hostname ".
-                    "-zimbraServiceEnabled imapproxy\n";
+                    "-zimbraServiceEnabled proxy\n";
             }
        }
   }
@@ -552,4 +554,28 @@ sub getLocalConfig {
   chomp $val;
   $main::loaded{lc}{$key} = $val;
   return $val;
+}
+
+# bug 71198, the zimbra server's mail mode is not always "http" when enabling proxy
+sub getStoreMailMode {
+    my @res = `/opt/zimbra/bin/zmprov -l gs $hostname zimbraMailMode zimbraReverseProxySSLToUpstreamEnabled\n`;
+    my $mailMode = "http";
+    my $sslToUp = "FALSE";
+
+    if ($res[1] =~ /zimbraMailMode:\ (.+)/) {
+        $mailMode = $1;
+    }
+    if ($res[2] =~ /zimbraReverseProxySSLToUpstreamEnabled:\ (.+)/) {
+        $sslToUp = $1;
+    }
+
+    if ($sslToUp eq "TRUE") {
+        if ($mailMode eq "http" || $mailMode eq "both") {
+            return "both";
+        } else {
+            return "https";
+        }
+    } else {
+        return "http";
+    }
 }
