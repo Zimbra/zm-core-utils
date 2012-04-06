@@ -50,8 +50,9 @@ ${PATHSEP}${ZMROOT}/lib/jars/commons-codec-1.4.jar\
 ${PATHSEP}${ZMROOT}/lib/jars/guava-r09.jar\
 ${PATHSEP}${ZMROOT}/lib/jars/dom4j-1.5.2.jar\
 ${PATHSEP}${ZMROOT}/lib/jars/log4j-1.2.16.jar\
-${PATHSEP}${ZMROOT}/lib/jars/json.jar
-
+${PATHSEP}${ZMROOT}/lib/jars/json.jar\
+${PATHSEP}${ZMROOT}/lib/jars/servlet-api.jar\
+${PATHSEP}${ZMROOT}/lib/jars/jetty-6.1.22.z6.jar
 
 
 java_version=$(${java} -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
