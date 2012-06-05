@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2009, 2010 Zimbra, Inc.
+# Copyright (C) 2007, 2009, 2010, 2011 VMware, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -18,11 +18,11 @@ use strict;
 use Getopt::Long;
 
 my @interfaces = ();
-open INTS, "/sbin/ifconfig | grep 'inet[6] ' |";
+open INTS, "/sbin/ifconfig | grep 'inet ' |";
 foreach (<INTS>) {
   chomp;
-  s/.*inet[6] //;
-  s/addr: //;
+  s/.*inet //;
+  s/.addr: //;
   s/.(bcast|broadcast)[0-9:.\s]*//ig;
   s/.netmask\s/  Mask:/;
 #  s/\s.*//;
