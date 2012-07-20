@@ -64,6 +64,7 @@ $mesg = $ldap->search(
               );
 my $i = 0;
 my $enabled = $mesg->entry($i)->get_value('zimbraDomainMandatoryMailSignatureEnabled');
+print "Getting global config zimbraDomainMandatoryMailSignatureEnabled=$enabled\n";
 
 if (lc($enabled) eq "true") {
   my $text = $mesg->entry($i)->get_value('zimbraDomainMandatoryMailSignatureText');
