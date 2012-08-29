@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2009, 2010 Zimbra, Inc.
+# Copyright (C) 2007, 2009, 2010, 2011 VMware, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -24,7 +24,6 @@ BEGIN {
 use Getopt::Long;
 use IPC::Open3;
 use FileHandle;
-use XML::Simple;
 my ($sendmail,$mailto,$verbose,$debug,$help);
 unless ( GetOptions("verbose" => \$verbose,
                     "mailto:s"    => \$mailto,
@@ -38,7 +37,6 @@ my $report = [];
 my %mysqld;
 my $maxcnt=1;
 
-my $localxml = XMLin("/opt/zimbra/conf/localconfig.xml");
 my $table = new Proc::ProcessTable;
 foreach my $p ( @{$table->table} ) {
   my ($pid,$ppid,$pgrp,$cmdline) = ($p->pid, $p->ppid, $p->pgrp, $p->cmndline);
@@ -51,7 +49,7 @@ foreach my $p ( @{$table->table} ) {
 }
 
 if (scalar keys %mysqld > $maxcnt) {
- addToReport("More than $maxcnt mysqld processes are running\n");
+ addToReport("More then $maxcnt mysqld processes are running\n");
  my $procs = join " ", keys %mysqld;
  addToReport("Parent processes include: $procs\n\n");
  addToReport("This should be investigated immediately as it may lead\n");
@@ -62,14 +60,34 @@ $sendmail && scalar(@$report) ?  sendEmailReport($report) : print @$report;
 
 # Functions
 
+sub getLocalConfig {
+  my $key = shift;
+  if (defined ($ENV{zmsetvars})) {
+    return $ENV{$key};
+  }
+  open CONF,
+    "/opt/zimbra/bin/zmlocalconfig -q -m shell |" or die "Can't open local config: $!";
+  my @conf = <CONF>;
+  close CONF;
+
+  chomp @conf;
+
+  foreach (@conf) {
+    my ($key, $val) = split '=', $_, 2;
+    $val =~ s/;$//;
+    $val =~ s/'$//;
+    $val =~ s/^'//;
+    $ENV{$key} = $val;
+  }
+  $ENV{zmsetvars} = 'true';
+  return $ENV{$key};
+}
+
 sub sendEmailReport {
   my $msg = shift;
   my $subject =  "ZCS: Duplicate mysqld processes detected!";
-  my $from_address = $localxml->{key}->{smtp_source}->{value};
-  chomp($from_address);
-  my $alt_to = $localxml->{key}->{smtp_destination}->{value};
-  chomp($alt_to);
-  my $to_address = ($mailto ? $mailto : $alt_to);
+  my $from_address = getLocalConfig("smtp_source");
+  my $to_address = ($mailto ? $mailto : getLocalConfig("smtp_destination"));
   my $smtphost = getLdapConfigValue("zimbraSmtpHostname");
     
   print "Sending report to $to_address via $smtphost\n" if $debug;
@@ -103,8 +121,7 @@ sub getLdapServerConfigValue {
   my $attrib = shift;
   my ($val,$err);
   my ($rfh,$wfh,$efh,$cmd,$rc);
-  my $server = $localxml->{key}->{zimbra_server_hostname}->{value};
-  chomp($server);
+  my $server = getLocalConfig("zimbra_server_hostname");
   $rfh = new FileHandle;
   $wfh = new FileHandle;
   $efh = new FileHandle;
