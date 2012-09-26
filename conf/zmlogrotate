@@ -43,6 +43,18 @@
     rotate 7
 } 
 
+/opt/zimbra/log/zmconfigd.log {
+    daily
+    missingok
+    copytruncate
+    notifempty
+    create 0660 zimbra zimbra
+    postrotate
+      su - zimbra -c "/opt/zimbra/bin/zmconfigdctl restart" > /dev/null 2>&1 || true
+    endscript
+    rotate 30
+}
+
 /opt/zimbra/log/clamd.log {
     daily
     missingok

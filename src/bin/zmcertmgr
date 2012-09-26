@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2008, 2009, 2010, 2011 VMware, Inc.
+# Copyright (C) 2007, 2008, 2009, 2010 Zimbra, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -92,8 +92,8 @@ subject_alt_names=""
 export RANDFILE=${zimbra_home}/ssl/.rnd
 
 #Default subject with the RDN values
-SUBJECT="/C=US/ST=N\/A/L=N\/A/O=Zimbra Collaboration Suite/OU=Zimbra Collaboration Suite/CN=${zimbra_server_hostname}"
-validation_days=365
+SUBJECT="/C=US/ST=N\/A/L=N\/A/O=Zimbra Collaboration Server/OU=Zimbra Collaboration Server/CN=${zimbra_server_hostname}"
+validation_days=1825
 
 #OUTPUT_PREFIX="##### OUTPUT:"
 ERROR_PREFIX="XXXXX ERROR:"
@@ -258,9 +258,11 @@ createCAKey() {
   echo -n "** Creating CA private key ${zimbra_ca_key}..."
   tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
   ${openssl} req -batch -subj "${SUBJECT}" \
+    -days ${validation_days} \
     -config ${zimbra_ca_ssl_conf} \
     -new -newkey rsa:${KEYSIZE} -nodes  \
-    -out ${zimbra_ca_csr} \
+    -out ${zimbra_ca_crt} \
+    -extensions v3_ca -x509 \
     -keyout ${zimbra_ca_key} > ${tmpfile} 2>&1
 
   if [ $? != 0 ]; then
@@ -285,6 +287,7 @@ createCACert() {
     -signkey ${zimbra_ca_key} \
     -days ${validation_days} \
     -CAserial ${zimbra_ca_srl} \
+    -extensions v3_ca \
     -req -in ${zimbra_ca_csr} \
     -out ${zimbra_ca_crt} > ${tmpfile} 2>&1
 
@@ -433,13 +436,18 @@ updateCACERTS() {
 
 createCA() {
 
-  if [ ! -d "${zimbra_ssl_directory}" ]; then
-    initSSLDirs
-  fi
+  initSSLDirs
 
   if [ x"$1" = "x-new" ]; then
     IS_NEW_CA=$1 #Allow the scripts to overwrite the existing csr
     shift
+  fi
+
+  # silently ignore the -new flag if this is not the ldap master
+  # we only create CA's on the ldap master 
+  ldap_is_master="$(echo ${ldap_is_master} | tr 'A-Z' 'a-z')"
+  if [ x"$ldap_is_master" = "xfalse" -a x"$IS_NEW_CA" != "x-new" ]; then
+    IS_NEW_CA=""
   fi
   
   if [ x"$1" = "x-keysize" ]; then
@@ -519,11 +527,11 @@ createCA() {
     createCAKey
   fi
 
-  if [ ! -s "${zimbra_ca_crt}" -o x"${IS_NEW_CA}" = "x-new" ]; then
-    createCACert
-  elif [ ! -s "${zimbra_ca_crt}" -o x"$(grep "TRUSTED CERT" $zimbra_ca_crt)" = "x" ]; then
-    createCACert
-  fi
+  #if [ ! -s "${zimbra_ca_crt}" -o x"${IS_NEW_CA}" = "x-new" ]; then
+    #createCACert
+  #elif [ ! -s "${zimbra_ca_crt}" -o x"$(grep "TRUSTED CERT" $zimbra_ca_crt)" = "x" ]; then
+    #createCACert
+  #fi
 
 }
 
@@ -571,7 +579,12 @@ deployCA() {
   if [ -s "${zimbra_conf_directory}/ca/commercial_ca.pem" ]; then
     cd ${zimbra_conf_directory}/ca
     for pem in commercial_ca*.pem; do
-      ln -f -s $pem ${zimbra_conf_directory}/ca/`${openssl} x509 -hash -noout -in ${zimbra_conf_directory}/ca/$pem`.0
+      incr=0
+      hash=`${openssl} x509 -hash -noout -in ${zimbra_conf_directory}/ca/$pem`
+      while [ -L ${zimbra_conf_directory}/ca/${hash}.${incr} ]; do
+        incr=$[$incr+1]
+      done
+      ln -f -s $pem ${zimbra_conf_directory}/ca/${hash}.${incr}
       chmod 644 ${zimbra_conf_directory}/ca/$pem
     done
   fi
@@ -742,7 +755,12 @@ deployCert() {
     if [ -s "${zimbra_conf_directory}/ca/commercial_ca.pem" ]; then
       cd ${zimbra_conf_directory}/ca
       for pem in commercial_ca*.pem; do
-        ln -f -s $pem ${zimbra_conf_directory}/ca/`${openssl} x509 -hash -noout -in ${zimbra_conf_directory}/ca/$pem`.0
+        incr=0
+        hash=`${openssl} x509 -hash -noout -in ${zimbra_conf_directory}/ca/$pem`
+        while [ -L ${zimbra_conf_directory}/ca/${hash}.${incr} ]; do
+          incr=$[$incr+1]
+        done
+        ln -f -s $pem ${zimbra_conf_directory}/ca/${hash}.${incr}
         chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/$pem
         chmod 640 ${zimbra_conf_directory}/ca/$pem
       done
@@ -834,7 +852,6 @@ getCertFromLdap() {
 createConf() {
   ssl_conf=$1
   shift
-
   ALTNAMES=""
   tmphosts=`echo $* | sed -e "s/,/ /g" -e "s/${zimbra_server_hostname}//g"` 
   # remove any duplicate hosts.
@@ -858,9 +875,7 @@ createConf() {
 
 createCASerial() {
 
-  if [ ! -d "${zimbra_ssl_directory}" ]; then
-    initSSLDirs
-  fi
+  initSSLDirs
 
   SER=`date "+%s"`
   echo "$SER" > ${zimbra_ca_srl}
@@ -1567,7 +1582,7 @@ usage () {
   echo "-  Default <subject>"
   echo "     \"$SUBJECT\""
   echo "-  Default RSA <keysize> is 1024."
-  echo "-  Default <validation_days> is 365. "
+  echo "-  Default <validation_days> is 1825 (5 years). "
   echo "-  Default <csr_file> is ${zimbra_csr}"
   echo "-  deploycrt self installs the certificates using self signed csr in ${zimbra_self_cert_directory}"
   echo "-  deploycrt comm installs the certificates using commercially signed certificate in ${zimbra_comm_cert_directory} "
