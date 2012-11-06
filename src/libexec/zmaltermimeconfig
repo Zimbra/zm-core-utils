@@ -40,6 +40,7 @@ $c{zimbra_home} = getLocalConfig("zimbra_home");
 $c{zmprov}="$c{zimbra_home}/bin/zmprov -l --";
 
 # ***** Main *****
+
 my $ldappass = `$c{zmlocalconfig} -s -m nokey zimbra_ldap_password`;
 my $ldapdn  = `$c{zmlocalconfig} -s -m nokey zimbra_ldap_userdn`;
 my $ldapurl  = `$c{zmlocalconfig} -s -m nokey ldap_url`;
@@ -91,7 +92,6 @@ sub writeFile($$) {
   my ($file, $content) = @_;
   open(DATA, ">$file");
   print DATA "$content";
-  print DATA "\n";
   close(DATA);
 }
 
