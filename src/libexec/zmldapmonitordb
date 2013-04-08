@@ -1,0 +1,177 @@
+#!/usr/bin/perl
+use strict;
+use lib qw (/opt/zimbra/zimbramon/lib);
+use XML::Simple;
+use Getopt::Long;
+use Filesys::Df;
+use POSIX;
+
+if ( ! -d "/opt/zimbra/openldap/etc" ) {
+  print "ERROR: openldap does not appear to be installed - exiting\n";
+  exit(1);
+}
+
+my $id = getpwuid($<);
+chomp $id;
+if ($id ne "zimbra") {
+    print STDERR "Error: must be run as zimbra user\n";
+    exit (1);
+}
+
+my ($help, $debug);
+
+my $opts_good = GetOptions(
+  'd|debug' => \$debug,
+  'h|help' => \$help,
+);
+if (!$opts_good) {
+  print STDERR "\n";
+  usage();
+}
+if ($help) {
+  usage(0);
+}
+
+my $localxml = XMLin("/opt/zimbra/conf/localconfig.xml");
+
+my $ldap_monitor_mdb = $localxml->{key}->{ldap_monitor_mdb};
+my $ldap_monitor_alert_only = $localxml->{key}->{ldap_monitor_alert_only};
+my $ldap_monitor_warning = $localxml->{key}->{ldap_monitor_warning};
+my $ldap_monitor_critical = $localxml->{key}->{ldap_monitor_critical};
+my $ldap_db_maxsize = $localxml->{key}->{ldap_db_maxsize}->{value};
+my $ldap_accesslog_maxsize = $localxml->{key}->{ldap_accesslog_maxsize}->{value};
+my $ldap_is_master = $localxml->{key}->{ldap_is_master}->{value};
+my $zimbra_home = $localxml->{key}->{zimbra_home}->{value};
+
+chomp($ldap_db_maxsize);
+chomp($ldap_accesslog_maxsize);
+chomp($ldap_is_master);
+chomp($zimbra_home);
+
+if ($zimbra_home eq "") {
+   $zimbra_home = "/opt/zimbra";
+}
+
+if ($ldap_db_maxsize eq "") {
+  $ldap_db_maxsize = 85899345920;
+}
+
+if ($ldap_accesslog_maxsize eq "") {
+  $ldap_accesslog_maxsize = 85899345920;
+}
+
+if ($ldap_monitor_mdb eq "") {
+  $ldap_monitor_mdb = "true";
+}
+
+if ($ldap_monitor_alert_only eq "") {
+  $ldap_monitor_alert_only = "true";
+}
+
+if ($ldap_monitor_warning eq "") {
+  $ldap_monitor_warning = .8;
+}
+
+if ($ldap_monitor_critical eq "") {
+  $ldap_monitor_critical = .9;
+}
+
+if (isdigit($ldap_monitor_mdb) && $ldap_monitor_mdb == 1) {
+  $ldap_monitor_mdb = "true";
+}
+
+if (isdigit($ldap_monitor_mdb) && $ldap_monitor_mdb == 0) {
+  $ldap_monitor_mdb = "false";
+}
+
+if (isdigit($ldap_monitor_alert_only) && $ldap_monitor_alert_only == 1) {
+  $ldap_monitor_alert_only = "true";
+}
+
+if (isdigit($ldap_monitor_alert_only) && $ldap_monitor_alert_only == 0) {
+  $ldap_monitor_alert_only = "false";
+}
+
+if ($ldap_monitor_warning > 1) {
+  $ldap_monitor_warning/=100;
+}
+
+if ($ldap_monitor_critical > 1) {
+  $ldap_monitor_critical/=100;
+}
+
+if ($ldap_monitor_mdb ne "true") {
+  exit 0;
+}
+
+my $zmlocalconfig="${zimbra_home}/bin/zmlocalconfig";
+my $db="${zimbra_home}/data/ldap/mdb/db/data.mdb";
+my $adb="${zimbra_home}/data/ldap/accesslog/db/data.mdb";
+my $blocksize=(stat $db)[11]/8;
+my $mdb_used=(stat $db)[12];
+$mdb_used*=$blocksize;
+
+my $alog_used=0;
+if ($ldap_is_master && -f "${zimbra_home}/data/ldap/accesslog/db/data.mdb") {
+  $blocksize=(stat $adb)[11]/8;
+  $alog_used=(stat $adb)[12];
+  $alog_used*=$blocksize;
+}
+
+my $mdb_warning_size = .8*$ldap_db_maxsize;
+my $alog_warning_size = .8*$ldap_accesslog_maxsize;
+
+my $mdb_critical_size = .9*$ldap_db_maxsize;
+my $alog_critical_size = .9*$ldap_accesslog_maxsize;
+
+my $mdb_alarm=0;
+if ($mdb_used >= $mdb_critical_size) {
+   $mdb_alarm=2;
+} elsif ($mdb_used >= $mdb_warning_size) {
+   $mdb_alarm=1;
+}
+
+my $alog_alarm=0;
+if ($alog_used >= $alog_critical_size) {
+  $alog_alarm=2;
+} elsif ($alog_used >= $alog_warning_size) {
+  $alog_alarm=1;
+}
+
+if ($debug) {
+  print "ldap_db_maxsize=$ldap_db_maxsize\n";
+  print "ldap_accesslog_maxsize=$ldap_accesslog_maxsize\n";
+  print "mdb_used=$mdb_used\n";
+  print "alog_used=$alog_used\n";
+  print "mdb_warning_size=$mdb_warning_size\n";
+  print "alog_warning_size=$alog_warning_size\n";
+  print "mdb_critical_size=$mdb_critical_size\n";
+  print "alog_critical_size=$alog_critical_size\n";
+  print "mdb_alarm=$mdb_alarm\n";
+  print "alog_alarm=$alog_alarm\n";
+}
+
+my $partUsage=df("/opt/zimbra/data/ldap/mdb/db");
+if(defined($partUsage) && $debug) {
+  print "Total 1k blocks: $partUsage->{blocks}\n";
+  print "Total 1k blocks free: $partUsage->{bfree}\n";
+  print "Total 1k blocks used: $partUsage->{used}\n";
+}
+
+if ($mdb_alarm && $ldap_monitor_alert_only eq "false") {
+  #  Do zmlocalconfig bits
+}
+
+sub setLocalConfig {
+  my $key = shift;
+  my $val = shift;
+  print "Setting local config $key=$val\n" if $debug;
+  runCommand("$zmlocalconfig -f -e ${key}=\'${val}\' 2> /dev/null");
+}
+
+sub runCommand {
+  my $cmd = shift;
+  my $rc;
+  $rc = 0xffff & system("$cmd > /dev/null 2>&1 ");
+  return $rc;
+}
