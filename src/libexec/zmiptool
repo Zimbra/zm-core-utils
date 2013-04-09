@@ -166,7 +166,7 @@ if ($zimbraIPMode eq "ipv4") {
     } else {
       setLocalConfig("mailboxd_java_options", $mailboxd_java_options);
     }
-    if ( $mysql_bind_address =~ /localhost/ || $mysql_bind_address =~ /::1/ || $mysql_bind_address =~ /127.0.0.1/ ) {
+    if ( $mysql_bind_address eq "" || $mysql_bind_address =~ /localhost/ || $mysql_bind_address =~ /::1/ || $mysql_bind_address =~ /127.0.0.1/ ) {
       if ($dryrun) {
         print "Would set mysql_bind_address to 127.0.0.1\n";
       } else {
@@ -178,7 +178,7 @@ if ($zimbraIPMode eq "ipv4") {
     }
   }
   if($mtaserver){
-    if ( $antispam_mysql_host =~ /localhost/ || $antispam_mysql_host =~ /::1/ || $antispam_mysql_host =~ /127.0.0.1/ ) {
+    if ( $antispam_mysql_host eq "" || $antispam_mysql_host =~ /localhost/ || $antispam_mysql_host =~ /::1/ || $antispam_mysql_host =~ /127.0.0.1/ ) {
       if ($dryrun) {
         print "Would set antispam_mysql_host to 127.0.0.1\n";
       } else {
@@ -221,7 +221,7 @@ if ($zimbraIPMode eq "ipv4") {
     } else {
       setLocalConfig("mailboxd_java_options", $mailboxd_java_options);
     }
-    if ( $mysql_bind_address =~ /localhost/ || $mysql_bind_address =~ /::1/ || $mysql_bind_address =~ /127.0.0.1/ ) {
+    if ( $mysql_bind_address eq "" || $mysql_bind_address =~ /localhost/ || $mysql_bind_address =~ /::1/ || $mysql_bind_address =~ /127.0.0.1/ ) {
       if ($dryrun) {
         print "Would set mysql_bind_address to ::1\n";
       } else {
@@ -233,7 +233,7 @@ if ($zimbraIPMode eq "ipv4") {
     }
   }
   if ($mtaserver) {
-    if ( $antispam_mysql_host =~ /localhost/ || $antispam_mysql_host =~ /::1/ || $antispam_mysql_host =~ /127.0.0.1/ ) {
+    if ( $antispam_mysql_host eq "" || $antispam_mysql_host =~ /localhost/ || $antispam_mysql_host =~ /::1/ || $antispam_mysql_host =~ /127.0.0.1/ ) {
       if ($dryrun) {
         print "Would set antispam_mysql_host to ::1\n";
       } else {
@@ -272,7 +272,7 @@ if ($zimbraIPMode eq "ipv4") {
     } else {
       setLocalConfig("mailboxd_java_options", $mailboxd_java_options);
     }
-    if ( $mysql_bind_address =~ /localhost/ || $mysql_bind_address =~ /::1/ || $mysql_bind_address =~ /127.0.0.1/ ) {
+    if ( $mysql_bind_address eq "" || $mysql_bind_address =~ /localhost/ || $mysql_bind_address =~ /::1/ || $mysql_bind_address =~ /127.0.0.1/ ) {
       if ($dryrun) {
         print "Would set mysql_bind_address to ::1\n";
       } else {
@@ -284,7 +284,7 @@ if ($zimbraIPMode eq "ipv4") {
     }
   }
   if ($mtaserver) {
-    if ( $antispam_mysql_host =~ /localhost/ || $antispam_mysql_host =~ /::1/ || $antispam_mysql_host =~ /127.0.0.1/ ) {
+    if ( $antispam_mysql_host eq "" || $antispam_mysql_host =~ /localhost/ || $antispam_mysql_host =~ /::1/ || $antispam_mysql_host =~ /127.0.0.1/ ) {
       if ($dryrun) {
         print "Would set antispam_mysql_host to ::1\n";
       } else {
