@@ -18,7 +18,6 @@ use lib qw(/opt/zimbra/zimbramon/lib /opt/zimbra/libexec/scripts);
 use Net::DNS;
 use Socket;
 use Net::LDAP;
-use MIME::Base64;
 use Getopt::Long;
 
 my (%c,%loaded,%saved,$rc);
@@ -46,9 +45,9 @@ $c{zimbra_home} = getLocalConfig("zimbra_home");
 $c{zmprov}="$c{zimbra_home}/bin/zmprov -l --";
 
 # ***** Main *****
-my $ldappass = qx($c{zmlocalconfig} -s -m nokey zimbra_ldap_password);
-my $ldapdn  = qx($c{zmlocalconfig} -s -m nokey zimbra_ldap_userdn);
-my $ldapurl  = qx($c{zmlocalconfig} -s -m nokey ldap_url);
+my $ldappass = `$c{zmlocalconfig} -s -m nokey zimbra_ldap_password`;
+my $ldapdn  = `$c{zmlocalconfig} -s -m nokey zimbra_ldap_userdn`;
+my $ldapurl  = `$c{zmlocalconfig} -s -m nokey ldap_url`;
 chop($ldappass);
 chop($ldapdn);
 chop($ldapurl);
@@ -76,15 +75,6 @@ if (lc($enabled) eq "true") {
   my $html = $mesg->entry($i)->get_value('zimbraDomainMandatoryMailSignatureHTML');
   writeFile("$c{zimbra_home}/data/altermime/global-default.txt", "$text");
   writeFile("$c{zimbra_home}/data/altermime/global-default.html", "$html");
-  if ( -f "$c{zimbra_home}/data/altermime/global-default.txt") {
-    open(FILE, "$c{zimbra_home}/data/altermime/global-default.txt");
-    my $buf;
-    while (read(FILE, $buf, 60*57)) {
-      my $b64 = MIME::Base64::encode_base64($buf);
-      writeFile("$c{zimbra_home}/data/altermime/global-default.b64", "$b64");
-    }
-    close(FILE);
-  }
 }
 
 exit 0;
@@ -116,7 +106,7 @@ sub getLocalConfig {
   return $loaded{lc}{$key}
     if (exists $loaded{lc}{$key} && !$force);
   print "Getting local config $key=";
-  my $val = qx($c{zmlocalconfig} -x -s -m nokey ${key} 2> /dev/null);
+  my $val = `$c{zmlocalconfig} -x -s -m nokey ${key} 2> /dev/null`;
   chomp $val;
   $loaded{lc}{$key} = $val;
   print "$val\n"; 
