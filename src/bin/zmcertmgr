@@ -39,12 +39,9 @@ zmsetvars -f \
   mailboxd_keystore_password \
   mailboxd_truststore_password \
   postfix_smtpd_tls_cert_file \
-  postfix_smtpd_tls_key_file \
-  ssl_default_digest
+  postfix_smtpd_tls_key_file
   
 export JAVA_HOME=${zimbra_java_home}
-
-DIGEST=${ssl_default_digest}
 
 java_version=$(${zimbra_java_home}/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
 if [ x"$java_version" = "x1.6.0" ]; then
@@ -266,7 +263,7 @@ loadConfigKey() {
 createCAKey() {
 
   if [ ! -f ${zimbra_ca_ssl_conf} ]; then
-    createConf "${zimbra_ca_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+    createConf "${zimbra_ca_ssl_conf}" "$subject_alt_names"
   fi
 
   createCASerial
@@ -274,7 +271,6 @@ createCAKey() {
   echo -n "** Creating CA private key ${zimbra_ca_key}..."
   tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
   ${openssl} req -batch -subj "${SUBJECT}" \
-    -${DIGEST} \
     -days ${validation_days} \
     -config ${zimbra_ca_ssl_conf} \
     -new -newkey rsa:${KEYSIZE} -nodes  \
@@ -476,11 +472,6 @@ createCA() {
   fi
   #echo "createCA: RSA keysize: $KEYSIZE"
   
-  if [ x"${1}" = "x-digest" ]; then
-    shift
-    DIGEST="${1}"
-    shift
-  fi
 
   if [ x"${1}" = "x-subject" ]; then
     shift
@@ -490,7 +481,7 @@ createCA() {
   fi
   
   if [ ! -f ${zimbra_ca_ssl_conf} -o x"${IS_NEW_CA}" = "x-new" ]; then
-    createConf "${zimbra_ca_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+    createConf "${zimbra_ca_ssl_conf}" "$subject_alt_names"
   fi
 
 
@@ -883,9 +874,8 @@ createConf() {
   ssl_conf=$1
   shift
   ALTNAMES=""
-  tmphosts=`echo $* | sed -e "s/,/ /g"`
+  tmphosts=`echo $* | sed -e "s/,/ /g" -e "s/${zimbra_server_hostname}//g"` 
   # remove any duplicate hosts.
-  tmphosts=`perl -e '$zimbra_server_hostname=$ARGV[0];foreach $h (@ARGV) { if ($h eq $zimbra_server_hostname) {next;} else {print "$h ";}}' $tmphosts`
   althosts=`perl -e '%uniq = map {$_ => 1} @ARGV; print join(" ", sort keys %uniq), "\n"' $tmphosts`
   
   for alt in $althosts; do
@@ -898,7 +888,6 @@ createConf() {
   echo -n "** Creating ${ssl_conf}..."
   cat ${zimbra_conf_directory}/zmssl.cnf.in | \
     sed -e "s/@@HOSTNAME@@/$zimbra_server_hostname/" \
-    -e "s/@@ssl_default_digest@@/$ssl_default_digest/" \
     -e "s/@@SUBJECT_ALT_NAMES@@/$ALTNAMES/"  > ${ssl_conf}
   chmod 640 ${ssl_conf}
   chown ${zimbra_uid}:${zimbra_gid} ${ssl_conf}
@@ -919,7 +908,7 @@ createCASerial() {
 createServerCertReq() {
 
   if [ ! -f "${zimbra_cert_ssl_conf}" ]; then
-    createConf "${zimbra_cert_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+    createConf "${zimbra_cert_ssl_conf}" "$subject_alt_names"
   fi
 
   type=$1
@@ -934,9 +923,15 @@ createServerCertReq() {
 
   echo -n "** Creating server cert request ${current_csr}..."
 
-  ${openssl} req -new -${DIGEST} -nodes -out ${current_csr} -keyout ${current_key} \
+  if [ x"$DIGEST" != "x" ]; then
+    ${openssl} req -new -${DIGEST} -nodes -out ${current_csr} -keyout ${current_key} \
       -newkey rsa:${KEYSIZE} -config ${zimbra_cert_ssl_conf} \
       -subj "${SUBJECT}" -batch > ${tmpfile} 2>&1
+  else
+    ${openssl} req -new -nodes -out ${current_csr} -keyout ${current_key} \
+      -newkey rsa:${KEYSIZE} -config ${zimbra_cert_ssl_conf} \
+      -subj "${SUBJECT}" -batch > ${tmpfile} 2>&1
+  fi
 
   if [ $? != 0 ]; then
     echo "failed."
@@ -1007,7 +1002,7 @@ createCert() {
 
   createCASerial  
 
-  createConf "${zimbra_cert_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+  createConf "${zimbra_cert_ssl_conf}" "$subject_alt_names"
   
   # see if we already have a valid cert, we don't want to recreate
   # self-signed certs on upgrade
@@ -1037,10 +1032,18 @@ createCert() {
   if [ x"${ALLSERVERS}" = "x-allserver" ]; then
     # merge these with cli specified. -bp
     subject_alt_names=`su - zimbra -c "${zimbra_home}/bin/zmprov -m -l gas | xargs "`
-    createCSR self -new -keysize ${KEYSIZE} -digest ${DIGEST}
+    if [ x"$DIGEST" != "x" ]; then
+      createCSR self -new -keysize ${KEYSIZE} -digest ${DIGEST}
+    else
+      createCSR self -new -keysize ${KEYSIZE}
+    fi
     shift
   elif [ ! -s "${server_csr}" -o x"${IS_NEW_CRT}" = "x-new" ]; then
-    createCSR self ${IS_NEW_CRT} -keysize ${KEYSIZE} -digest ${DIGEST}
+    if [ x"$DIGEST" != "x" ]; then
+      createCSR self ${IS_NEW_CRT} -keysize ${KEYSIZE} -digest ${DIGEST}
+    else
+      createCSR self ${IS_NEW_CRT} -keysize ${KEYSIZE}
+    fi
   fi
 
   tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
@@ -1056,7 +1059,6 @@ createCert() {
   ${openssl} ca -out ${server_crt} -notext \
     -config ${zimbra_ca_ssl_conf} \
     -days ${validation_days} \
-    -md ${DIGEST} \
     -in ${server_csr} -keyfile ${zimbra_ca_key} \
     -extensions v3_req -extfile ${zimbra_ca_ssl_conf} \
     -cert ${zimbra_ca_crt} -batch > ${tmpfile} 2>&1
@@ -1396,12 +1398,12 @@ createCSR() {
       echo "${ERROR_PREFIX} The Certificate Signing Request already existed."
       usage
     fi
-    createConf "${zimbra_cert_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+    createConf "${zimbra_cert_ssl_conf}" "$subject_alt_names"
   fi
   
   backupSSLDirs ${zimbra_ssl_directory}
   initSSLDirs
-  createCA -keysize ${KEYSIZE} -digest ${DIGEST}
+  createCA -keysize ${KEYSIZE}
   createServerCertReq $type
   
   if [ x"$type" = "xcomm" ]; then 
@@ -1603,7 +1605,7 @@ migrate () {
 usage () {
   echo "Usage: "
   echo "  $0 -help"
-  echo "  $0 createca [-new] [-keysize 1024] [-digest digest] [-subject subject]"
+  echo "  $0 createca [-new] [-keysize 1024] [-subject subject]"
   echo "  $0 deployca"
   echo "  $0 createcsr <self|comm> [-new] [-digest digest] [-keysize 1024] [-subject subject] [-subjectAltNames \"host1,host2\"]"
   echo "  $0 createcrt [-new] [-days validation days] [-digest digest] [-keysize 1024] [-subject subject] [-subjectAltNames \"host1,host2\"]"
