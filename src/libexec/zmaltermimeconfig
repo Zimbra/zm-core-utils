@@ -18,10 +18,11 @@ use lib qw(/opt/zimbra/zimbramon/lib /opt/zimbra/libexec/scripts);
 use Net::DNS;
 use Socket;
 use Net::LDAP;
+use MIME::Base64;
 use Getopt::Long;
 
 my (%c,%loaded,%saved,$rc);
-my ($help, $verbose, $force);
+my ($help, $verbose, $force, $enable, $disable);
 
 my (undef, undef,$uid,$gid) = getpwnam('zimbra');
 if ($> ne $uid) {
@@ -29,13 +30,19 @@ if ($> ne $uid) {
   &usage
 }
 
-my $opts_good = GetOptions("help" => \$help, 
-    "force" => \$force,
-    "verbose+" => \$verbose);
+my $opts_good = GetOptions("h|help" => \$help, 
+    "e|enable=s" => \$enable,
+    "d|disable=s" => \$disable,
+    "f|force" => \$force,
+    "v|verbose+" => \$verbose);
 
 if (!$opts_good) {
   print STDERR "\n";
   usage();
+}
+
+if ($enable && $disable) {
+  &usage;
 }
 
 &usage if ($help);
@@ -45,9 +52,9 @@ $c{zimbra_home} = getLocalConfig("zimbra_home");
 $c{zmprov}="$c{zimbra_home}/bin/zmprov -l --";
 
 # ***** Main *****
-my $ldappass = `$c{zmlocalconfig} -s -m nokey zimbra_ldap_password`;
-my $ldapdn  = `$c{zmlocalconfig} -s -m nokey zimbra_ldap_userdn`;
-my $ldapurl  = `$c{zmlocalconfig} -s -m nokey ldap_url`;
+my $ldappass = qx($c{zmlocalconfig} -s -m nokey zimbra_ldap_password);
+my $ldapdn  = qx($c{zmlocalconfig} -s -m nokey zimbra_ldap_userdn);
+my $ldapurl  = qx($c{zmlocalconfig} -s -m nokey ldap_url);
 chop($ldappass);
 chop($ldapdn);
 chop($ldapurl);
@@ -55,6 +62,14 @@ chop($ldapurl);
 my $ldap = Net::LDAP->new( $ldapurl ) or die "Error connecting to LDAP server: $ldapurl";
 my $mesg = $ldap->bind( $ldapdn, password => $ldappass );
 $mesg->code && die "Error binding to LDAP server: $mesg->error";
+
+if ($enable) {
+  &enableDomain;
+}
+
+if ($disable) {
+  &disableDomain;
+}
 
 my $ldapquery = "(objectClass=zimbraGlobalConfig)";
 $mesg = $ldap->search(
@@ -66,15 +81,55 @@ $mesg = $ldap->search(
                       'zimbraDomainMandatoryMailSignatureHTML'
                   ]
               );
-my $i = 0;
-my $enabled = $mesg->entry($i)->get_value('zimbraDomainMandatoryMailSignatureEnabled');
+my $enabled = $mesg->entry(0)->get_value('zimbraDomainMandatoryMailSignatureEnabled');
 print "Getting global config zimbraDomainMandatoryMailSignatureEnabled=$enabled\n";
 
 if (lc($enabled) eq "true") {
-  my $text = $mesg->entry($i)->get_value('zimbraDomainMandatoryMailSignatureText');
-  my $html = $mesg->entry($i)->get_value('zimbraDomainMandatoryMailSignatureHTML');
+  my $text = $mesg->entry(0)->get_value('zimbraDomainMandatoryMailSignatureText');
+  my $html = $mesg->entry(0)->get_value('zimbraDomainMandatoryMailSignatureHTML');
   writeFile("$c{zimbra_home}/data/altermime/global-default.txt", "$text");
   writeFile("$c{zimbra_home}/data/altermime/global-default.html", "$html");
+  if ( -f "$c{zimbra_home}/data/altermime/global-default.txt") {
+    open(FILE, "$c{zimbra_home}/data/altermime/global-default.txt");
+    my $buf;
+    while (read(FILE, $buf, 60*57)) {
+      my $b64 = MIME::Base64::encode_base64($buf);
+      writeFile("$c{zimbra_home}/data/altermime/global-default.b64", "$b64");
+    }
+    close(FILE);
+  }
+  $ldapquery = "(&(objectClass=zimbraDomain)(amavisDisclaimerOptions=*))";
+  $mesg = $ldap->search(
+                  base => '',
+                  filter => $ldapquery,
+                  attrs => [
+                      'amavisDisclaimerOptions',
+                      'zimbraDomainMandatoryMailSignatureText',
+                      'zimbraDomainMandatoryMailSignatureHTML'
+                  ],
+  );
+  my $total = $mesg->count();
+  my $domain;
+  if ($total > 0) {
+    my $loop=0;
+    while($loop < $total) {
+      $text = $mesg->entry($loop)->get_value('zimbraDomainMandatoryMailSignatureText');
+      $html = $mesg->entry($loop)->get_value('zimbraDomainMandatoryMailSignatureHTML');
+      $domain = $mesg->entry($loop)->get_value('amavisDisclaimerOptions');
+      writeFile("$c{zimbra_home}/data/altermime/$domain.txt", "$text");
+      writeFile("$c{zimbra_home}/data/altermime/$domain.html", "$html");
+      if ( -f "$c{zimbra_home}/data/altermime/$domain.txt") {
+        open(FILE, "$c{zimbra_home}/data/altermime/$domain.txt");
+        my $buf;
+        while (read(FILE, $buf, 60*57)) {
+          my $b64 = MIME::Base64::encode_base64($buf);
+          writeFile("$c{zimbra_home}/data/altermime/$domain.b64", "$b64");
+        }
+        close(FILE);
+      }
+      $loop++;
+    }
+  }
 }
 
 exit 0;
@@ -84,8 +139,10 @@ exit 0;
 # ***** Subroutines *****
 sub usage {
   print "\n";
-  print "Usage: $0 [-h] [-f] [-v]\n";
+  print "Usage: $0 [-h] [-f] [-v] [-d <domain>] [-e <domain>]\n";
   print " -h|--help: print this usage statement.\n";
+  print " -d|--disable <domain>: Disable domain-specific disclaimer for domain <domain>.\n";
+  print " -e|--enable <domain>: Enable domain-specific disclaimer for domain <domain>.\n";
   print " -f|--force: Force the rename, bypassing safety checks.\n";
   print " -v|--verbose: Set the verbosity level.\n";
   print "\n";
@@ -100,13 +157,54 @@ sub writeFile($$) {
   close(DATA);
 }
 
+sub enableDomain() {
+  my $ldapquery = "(&(objectClass=zimbraDomain)(zimbraDomainName=$enable))";
+  $mesg = $ldap->search(
+                  base => '',
+                  filter => $ldapquery,
+                  attrs => [ 'zimbraDomainName' ],
+              );
+  if($mesg->count == 1) {
+	my $dn=$mesg->entry(0)->dn();
+	$mesg = $ldap->modify(
+      $dn,
+      add => { amavisDisclaimerOptions => "$enable", },
+    );
+  } else {
+    print "Warning: Domain $enable does not exist.  Disclaimer not enabled\n";
+  }
+}
+
+sub disableDomain() {
+  my $ldapquery = "(&(objectClass=zimbraDomain)(zimbraDomainName=$disable)(amavisDisclaimerOptions=*))";
+  $mesg = $ldap->search(
+                  base => '',
+                  filter => $ldapquery,
+                  attrs => [
+                      'amavisDisclaimerOptions',
+                  ],
+              );
+  if($mesg->count == 1) {
+    my $dn=$mesg->entry(0)->dn();
+    $mesg = $ldap->modify(
+      $dn,
+      delete => ['amavisDisclaimerOptions'],
+    );
+  } else {
+    print "Warning: Domain $disable does not have disclaimers enabled\n";
+  }
+  unlink("$c{zimbra_home}/data/altermime/$disable.txt");
+  unlink("$c{zimbra_home}/data/altermime/$disable.html");
+  unlink("$c{zimbra_home}/data/altermime/$disable.b64");
+}
+
 sub getLocalConfig {
   my ($key,$force) = @_;
 
   return $loaded{lc}{$key}
     if (exists $loaded{lc}{$key} && !$force);
   print "Getting local config $key=";
-  my $val = `$c{zmlocalconfig} -x -s -m nokey ${key} 2> /dev/null`;
+  my $val = qx($c{zmlocalconfig} -x -s -m nokey ${key} 2> /dev/null);
   chomp $val;
   $loaded{lc}{$key} = $val;
   print "$val\n"; 
