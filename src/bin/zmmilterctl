@@ -1,8 +1,8 @@
 #!/bin/bash
-# 
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2011 Zimbra Software, LLC.
+# Copyright (C) 2010, 2011 VMware, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -12,7 +12,7 @@
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
-# 
+#
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
@@ -21,6 +21,7 @@ zmsetvars \
 
 libjars=${zimbra_home}/lib/jars
 configfile=${zimbra_home}/conf/localconfig.xml
+log4jfile=${zimbra_home}/conf/milter.log4j.properties
 pidfile=${zimbra_log_directory}/milter.pid
 pid=""
 java="${zimbra_home}/bin/zmjava"
@@ -39,8 +40,8 @@ else
   java_options=""
 fi
 
-runcmd="${java} ${java_options} -Dzimbra.home=\"${zimbra_home}\" -Dzimbra.config=\"${configfile}\" -cp \"$CP\" \
-   com.zimbra.cs.milter.MinaMilterServer" 
+runcmd="${java} ${java_options} -Dlog4j.configuration=file:${log4jfile} -Dzimbra.home=\"${zimbra_home}\" -Dzimbra.config=\"${configfile}\" -cp \"$CP\" \
+   com.zimbra.cs.milter.MilterServer"
 
 getpid()
 {
@@ -75,7 +76,7 @@ refresh()
   fi
 }
 
-case "$1" in 
+case "$1" in
   start)
     checkrunning
     echo -n "Starting milter server..."
@@ -84,7 +85,7 @@ case "$1" in
       exit 0
     fi
 
-    nohup sh -c "exec ${runcmd} 2>&1" > ${zimbra_home}/log/milter.out &
+    nohup sh -c "exec ${runcmd} 2>&1" > ${zimbra_home}/log/milter.out 2>&1 &
 
     pid=$!
     if [ "x$pid" != 'x' ]; then

@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2008, 2009, 2010, 2011 Zimbra Software, LLC.
+# Copyright (C) 2008, 2009, 2010, 2012 VMware, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -118,7 +118,7 @@ remote "zmlocalconfig -e ldap_is_master=false";
 print "About to start ldap locally - if you get a password prompt, it's because the 'ldap start' script is trying to sudo -- add yourself to sudoers, or type your password\n";
 loc "ldap start";
 loc "zmprov -l cs $SECONDARY";
-loc "zmprov -l ms $SECONDARY zimbraServiceInstalled mailbox zimbraServiceEnabled mailbox";
+loc "zmprov -l ms $SECONDARY +zimbraServiceInstalled mailbox +zimbraServiceEnabled mailbox";
 loc "zmprov -l ms $SECONDARY zimbraMailMode http zimbraMailPort 7070 zimbraSmtpHostname $PRIMARY";
 
 #7) Add the new server account to the pool of mail servers.  This is necessary so you can create mailboxes on either server.

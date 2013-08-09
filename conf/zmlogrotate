@@ -39,9 +39,21 @@
     notifempty
     create 0660 zimbra zimbra
     compress
-    size 5000k
+    size 1000k
     rotate 7
 } 
+
+/opt/zimbra/log/zmconfigd.log {
+    daily
+    missingok
+    copytruncate
+    notifempty
+    create 0660 zimbra zimbra
+    postrotate
+      su - zimbra -c "/opt/zimbra/bin/zmconfigdctl restart" > /dev/null 2>&1 || true
+    endscript
+    rotate 30
+}
 
 /opt/zimbra/log/clamd.log {
     daily
@@ -67,7 +79,7 @@
      kill -HUP `cat /opt/zimbra/log/freshclam.pid 2> /dev/null` 2> /dev/null || true
     endscript
     compress
-    size 5000k
+    size 1000k
     rotate 7
 }   
 
@@ -132,3 +144,11 @@
     compress
 }   
 
+/opt/zimbra/log/vmware-heartbeat.log {
+    daily
+    missingok
+    copytruncate
+    rotate 7
+    notifempty
+    compress
+}

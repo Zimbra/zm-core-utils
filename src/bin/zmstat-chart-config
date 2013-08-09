@@ -2,7 +2,7 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2008, 2009, 2010, 2011 Zimbra Software, LLC.
+# Copyright (C) 2007, 2008, 2009, 2010, 2012 VMware, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -37,6 +37,7 @@ my $convertdCsv = 'convertd.csv';
 my $nginxCsv = 'nginx.csv';
 my $mysqlCsv = 'mysql.csv';
 my $soapCsv = 'soap.csv';
+my $ldapCsv = 'ldap.csv';
 
 my @DEVICE_LIST;        # list of device names (e.g. "sda", "sdb")
 my %DEVICE_PARTITIONS;  # $DEVICE_PARTITIONS{device} = arrayref of partitions
@@ -68,7 +69,7 @@ sub getDiskInfo() {
     # Get device list.
 
     if ($isMac) {
-        my $devs = `iostat -d | head -1`;
+        my $devs = qx(iostat -d | head -1);
         chomp($devs);
         $devs =~ s/^\s+//;
         $devs =~ s/\s+$//;
@@ -154,7 +155,7 @@ sub getHostAndProcsInfo() {
     $ZIMBRA_HOSTNAME = getZimbraServerHostname();
 
     my $svc;
-    my @enabledServices = `zmprov -l gs $ZIMBRA_HOSTNAME | grep zimbraServiceEnabled`;
+    my @enabledServices = qx(zmprov -l gs $ZIMBRA_HOSTNAME | grep zimbraServiceEnabled);
     foreach $svc (@enabledServices) {
         if ($svc =~ /mailbox/) {
             push(@ENABLED_PROCS, 'mailbox');
@@ -244,7 +245,7 @@ sub cpuPstatConfig() {
 
 _HERE_
 
-    my $numCPUs = `egrep '^cpu[0-9]+' /proc/stat 2> /dev/null | wc -l`;
+    my $numCPUs = qx(egrep '^cpu[0-9]+' /proc/stat 2> /dev/null | wc -l);
     chomp($numCPUs);
     if ($numCPUs > 1) {
         my @categories = ('user', 'nice', 'sys', 'idle', 'iowait', 'irq', 'softirq');
@@ -983,6 +984,75 @@ _HERE_
     print "  </chart>\n\n";
 }
 
+sub ldapConfig() {
+    print <<_HERE_;
+  <!-- LDAP Stats -->
+
+  <chart title="Host $ZIMBRA_HOSTNAME: LDAP: Invocation Count: Summary (Top 10 max)"
+         category="ldap"
+         height="400"
+         topPlots="10"
+         topPlotsType="max"
+         infile="ldap.csv"
+         outfile="${ZIMBRA_HOSTNAME}_ldap_call_count.png"
+         yAxis="calls/min">
+    <groupplot data="exec_count"  groupBy="command" aggregateFunction="max"/>
+  </chart>
+  
+  <chart title="Host $ZIMBRA_HOSTNAME: LDAP: Average Call Duration: Summary (Top 10 avg)"
+         category="ldap"
+         height="1200"
+         topPlots="10"
+         topPlotsType="avg"
+         infile="ldap.csv"
+         outfile="${ZIMBRA_HOSTNAME}_ldap_avg_duration.png"
+         yAxis="ms avg">
+    <groupplot data="exec_ms_avg"  groupBy="command"/>
+  </chart>
+  <chart title="Host $ZIMBRA_HOSTNAME: LDAP: Invocation Count: %s"
+         category="ldap"
+         outDocument="ldap.html"
+         infile="ldap.csv"
+         outfile="${ZIMBRA_HOSTNAME}_ldap_call_count_%s.png"
+         yAxis="calls/min">
+    <groupplot data="exec_count" groupBy="command" aggregateFunction="max"/>
+  </chart>
+  
+  <chart title="Host $ZIMBRA_HOSTNAME: LDAP: Average Call Duration: %s"
+         category="ldap"
+         outDocument="ldap.html"
+         infile="ldap.csv"
+         outfile="${ZIMBRA_HOSTNAME}_ldap_avg_duration_%s.png"
+         yAxis="ms avg">
+    <groupplot data="exec_ms_avg" groupBy="command"/>
+  </chart>
+
+  
+
+
+_HERE_
+}
+
+sub mobileSyncConfig() {
+print <<_HERE_;
+  <!-- mobile sync stats -->
+  <chart title="Host $ZIMBRA_HOSTNAME: MobileSync: SyncState cache Hit Rate"
+         category="mobile"
+         infile="$mailboxdCsv"
+         outfile="${ZIMBRA_HOSTNAME}_mobile-syncstate-cache.png"
+         yAxis="rate">
+    <plot data="mobile_syncstate_cache_hit_rate" legend="SyncState cache hit rate"/>
+  </chart>
+
+  <chart title="Host $ZIMBRA_HOSTNAME: MobileSync: Ping cache Hit Rate"
+         category="mobile"
+         infile="$mailboxdCsv"
+         outfile="${ZIMBRA_HOSTNAME}_mobile-ping-cache.png"
+         yAxis="rate">
+    <plot data="mobile_ping_cache_hit_rate" legend="Ping cache hit rate"/>
+  </chart>
+_HERE_
+}
 
 
 #
@@ -1009,5 +1079,7 @@ if ($HAS_MAILBOX) {
     heapConfig();
     convertdConfig() if !$isMac;
     nginxConfig();
+    ldapConfig();
+    mobileSyncConfig();
 }
 print "</charts>\n";
