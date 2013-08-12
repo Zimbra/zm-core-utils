@@ -2,10 +2,10 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2009, 2010, 2012 VMware, Inc.
+# Copyright (C) 2007, 2009, 2010, 2011, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
-# Version 1.3 ("License"); you may not use this file except in
+# Version 1.4 ("License"); you may not use this file except in
 # compliance with the License.  You may obtain a copy of the License at
 # http://www.zimbra.com/license.
 # 
@@ -18,20 +18,13 @@ use strict;
 use Getopt::Long;
 
 my @interfaces = ();
-open INTS, "/sbin/ifconfig | grep ' addr' |";
+open INTS, "/sbin/ifconfig | grep 'inet ' |";
 foreach (<INTS>) {
   chomp;
-  if ($_ =~ /inet6/) {
-    s/.*inet6 //;
-    s/addr: //;
-	s/ Scope:.*//;
-	s/\// Mask:/;
-  } else {
-    s/.*inet //;
-    s/addr://;
-    s/.(bcast|broadcast)[0-9:.\s]*//ig;
-    s/.netmask\s/  Mask:/;
-  }
+  s/.*inet //;
+  s/.addr: //;
+  s/.(bcast|broadcast)[0-9:.\s]*//ig;
+  s/.netmask\s/  Mask:/;
 #  s/\s.*//;
 #  s/[a-zA-Z:]//g;
   next if /^$/;

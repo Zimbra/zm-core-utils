@@ -2,10 +2,10 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2012 VMware, Inc.
+# Copyright (C) 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
-# Version 1.3 ("License"); you may not use this file except in
+# Version 1.4 ("License"); you may not use this file except in
 # compliance with the License.  You may obtain a copy of the License at
 # http://www.zimbra.com/license.
 # 
@@ -33,19 +33,6 @@ if [ $u != ${zimbra_user} ]; then
     exit 1
 fi
 
-zgood=no
-bgood=no
-zcat=`which zcat 2>/dev/null`
-bzcat=`which bzcat 2>/dev/null`
-
-if [ -x $zcat ]; then
-	zgood=yes
-fi
-
-if [ -x $bzcat ]; then
-	bgood=yes
-fi
-
 if [ x$1 = "x" -o x$1 = "x-h" -o x$1 = "x--help" ]; then
 	echo "USAGE: Imports LDAP databases"
 	echo "Main database: zmslapadd <FILE>"
@@ -54,6 +41,7 @@ if [ x$1 = "x" -o x$1 = "x-h" -o x$1 = "x--help" ]; then
 	exit 1
 fi
 
+D=`date +%Y%m%d%H%M%S`
 CONFIG=no
 ALOG=no
 if [ x$1 = "x-c" ]; then
@@ -66,54 +54,15 @@ else
 	SRC=$1
 fi
 
-comp=0
-computil=
-
-if [ ! -f $SRC ]; then
-	echo "Error: Input file does not exist"
-	exit 1
-fi
-
-if [[ "$SRC" == *".gz" ]]; then
-	if [ x$zgood = "xno" ]; then
-		echo "Error: zcat is missing."
-		exit 1
-	fi
-	computil=$zcat
-	comp=1
-elif [[ "$SRC" == *".bz2" ]]; then
-	if [ x$bgood = "xno" ]; then
-		echo "Error: bzcat is missing."
-		exit 1
-	fi
-	computil=$bzcat
-	comp=1
-fi
-
 if [ x$CONFIG = "xyes" ]; then
-	if [ x$comp = "x0" ]; then
-		${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -n 0 -l $SRC
-		RETVAL=$?
-	else
-		$computil $SRC | ${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -n 0
-		RETVAL=$?
-	fi
+	${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -n 0 -l $SRC
+	RETVAL=$?
 elif [ x$ALOG = "xyes" ]; then
-	if [ x$comp = "x0" ]; then
-		${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -b "cn=accesslog" -l $SRC
-		RETVAL=$?
-	else
-		$computil $SRC | ${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -b "cn=accesslog"
-		RETVAL=$?
-	fi
+	${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -b "cn=accesslog" -l $SRC
+	RETVAL=$?
 else
-	if [ x$comp = "x0" ]; then
-		${zimbra_home}/openldap/sbin/slapadd -w -q -F ${zimbra_home}/data/ldap/config -b "" -l $SRC
-		RETVAL=$?
-	else
-		$computil $SRC | ${zimbra_home}/openldap/sbin/slapadd -w -q -F ${zimbra_home}/data/ldap/config -b ""
-		RETVAL=$?
-	fi
+	${zimbra_home}/openldap/sbin/slapadd -w -q -F ${zimbra_home}/data/ldap/config -b "" -l $SRC
+	RETVAL=$?
 fi
 
 exit $RETVAL

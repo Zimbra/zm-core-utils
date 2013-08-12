@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2011 VMware, Inc.
+# Copyright (C) 2011, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -327,10 +327,10 @@ if (defined($subject)) {
 } else {
     printMsg($out, "Args: --mailbox $mbox --uid $uid --outdir $outdir\n");
 }
-my $date = qx(date);
+my $date = `date`;
 chomp($date);
 printMsg($out, "Date: $date\n");
-my $hostname = qx(hostname);
+my $hostname = `hostname`;
 chomp($hostname);
 printMsg($out, "Hostname: $hostname\n");
 printMsg($out, "\n\n");
