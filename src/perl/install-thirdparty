@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2008, 2009, 2010, 2011, 2012, 2013 Zimbra Software, LLC.
+# Copyright (C) 2008, 2009, 2010, 2011, 2012 VMware, Inc.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -37,12 +37,16 @@ my %BINARIES = (
     "openssl" => "1.0.1c",
     "rsync" => "3.0.9",
     "tcmalloc" => "2.0",
-    "jetty" => "distribution-7.6.12.v20130726"
+    "jetty" => "distribution-9.0.3.v20130506"
 );
 my $P4_CMD = "p4";
 
 if (! -d $CACHE_DIR) {
     mkdir($CACHE_DIR) || die "Could not create directory: $CACHE_DIR";
+}
+
+if (! -d $LIB_DIR) {
+    mkdir($LIB_DIR) || die "Could not create directory: $LIB_DIR";
 }
 
 # Remove old binaries to make sure there's no cruft.
