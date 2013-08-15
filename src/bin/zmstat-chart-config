@@ -2,7 +2,7 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2008, 2009, 2010, 2012 VMware, Inc.
+# Copyright (C) 2007, 2008, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -69,7 +69,7 @@ sub getDiskInfo() {
     # Get device list.
 
     if ($isMac) {
-        my $devs = qx(iostat -d | head -1);
+        my $devs = `iostat -d | head -1`;
         chomp($devs);
         $devs =~ s/^\s+//;
         $devs =~ s/\s+$//;
@@ -155,7 +155,7 @@ sub getHostAndProcsInfo() {
     $ZIMBRA_HOSTNAME = getZimbraServerHostname();
 
     my $svc;
-    my @enabledServices = qx(zmprov -l gs $ZIMBRA_HOSTNAME | grep zimbraServiceEnabled);
+    my @enabledServices = `zmprov -l gs $ZIMBRA_HOSTNAME | grep zimbraServiceEnabled`;
     foreach $svc (@enabledServices) {
         if ($svc =~ /mailbox/) {
             push(@ENABLED_PROCS, 'mailbox');
@@ -245,7 +245,7 @@ sub cpuPstatConfig() {
 
 _HERE_
 
-    my $numCPUs = qx(egrep '^cpu[0-9]+' /proc/stat 2> /dev/null | wc -l);
+    my $numCPUs = `egrep '^cpu[0-9]+' /proc/stat 2> /dev/null | wc -l`;
     chomp($numCPUs);
     if ($numCPUs > 1) {
         my @categories = ('user', 'nice', 'sys', 'idle', 'iowait', 'irq', 'softirq');
@@ -1033,26 +1033,6 @@ sub ldapConfig() {
 _HERE_
 }
 
-sub mobileSyncConfig() {
-print <<_HERE_;
-  <!-- mobile sync stats -->
-  <chart title="Host $ZIMBRA_HOSTNAME: MobileSync: SyncState cache Hit Rate"
-         category="mobile"
-         infile="$mailboxdCsv"
-         outfile="${ZIMBRA_HOSTNAME}_mobile-syncstate-cache.png"
-         yAxis="rate">
-    <plot data="mobile_syncstate_cache_hit_rate" legend="SyncState cache hit rate"/>
-  </chart>
-
-  <chart title="Host $ZIMBRA_HOSTNAME: MobileSync: Ping cache Hit Rate"
-         category="mobile"
-         infile="$mailboxdCsv"
-         outfile="${ZIMBRA_HOSTNAME}_mobile-ping-cache.png"
-         yAxis="rate">
-    <plot data="mobile_ping_cache_hit_rate" legend="Ping cache hit rate"/>
-  </chart>
-_HERE_
-}
 
 
 #
@@ -1080,6 +1060,5 @@ if ($HAS_MAILBOX) {
     convertdConfig() if !$isMac;
     nginxConfig();
     ldapConfig();
-    mobileSyncConfig();
 }
 print "</charts>\n";
