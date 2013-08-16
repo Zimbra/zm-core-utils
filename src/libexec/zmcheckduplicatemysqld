@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2009, 2010, 2012, 2013 VMware, Inc.
+# Copyright (C) 2007, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.3 ("License"); you may not use this file except in
@@ -174,8 +174,7 @@ sub logError {
 
 sub usage {
   print STDERR "Usage: $0 [-h] [-v] [-d] [-m]\n";
-  print STDERR "-d   Add basic debug information to output.\n";
   print STDERR "-h   This usage page.\n";
   print STDERR "-v   Verbose output.\n";
-  print STDERR "-m   Mail output to admin account.\n";
+  print STDERR "-m   Mail output to admin account \n";
 }
