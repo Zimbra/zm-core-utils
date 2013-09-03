@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2012, 2013 Zimbra Software, LLC.
+# Copyright (C) 2010, 2011, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -19,14 +19,7 @@
 # MySQL.
 #
 source `dirname $0`/zmshutil || exit 1
-zmsetvars zimbra_home antispam_mysql_user antispam_mysql_root_password antispam_mysql_enabled
-
-antispam_mysql_enabled=`echo ${antispam_mysql_enabled} | tr [:upper:] [:lower:]`
-if [ "${antispam_mysql_enabled}x" != "truex" ]
-then
-    echo "Spamassassin is not set up to use MySQL backend database!  Aborting..."
-    exit 1
-fi
+zmsetvars zimbra_home antispam_mysql_user antispam_mysql_root_password
 
 #
 # Usage.
@@ -69,7 +62,6 @@ if [ ${password_key} = antispam_mysql_password ]; then
     # Change the password in mysql.
     cat <<EOF | ${zimbra_home}/bin/antispam-mysql -u root --password="${antispam_mysql_root_password}"
 SET PASSWORD FOR '${antispam_mysql_user}' = PASSWORD('${newpassword}');
-SET PASSWORD FOR '${antispam_mysql_user}'@'127.0.0.1' = PASSWORD('${newpassword}');
 SET PASSWORD FOR '${antispam_mysql_user}'@'localhost' = PASSWORD('${newpassword}');
 SET PASSWORD FOR '${antispam_mysql_user}'@'localhost.localdomain' = PASSWORD('${newpassword}');
 EOF
@@ -85,8 +77,8 @@ fi
 # For mysql_root_password
 #
 if [ ${password_key} = antispam_mysql_root_password ]; then
-    echo ${zimbra_home}/bin/antispam-mysqladmin -u root --password="${antispam_mysql_root_password}" password "${newpassword}"
-    ${zimbra_home}/bin/antispam-mysqladmin -u root --password="${antispam_mysql_root_password}" password "${newpassword}"
+    echo ${zimbra_home}/bin/antispammysqladmin -u root --password="${antispam_mysql_root_password}" password "${newpassword}"
+    ${zimbra_home}/bin/antispammysqladmin -u root --password="${antispam_mysql_root_password}" password "${newpassword}"
     if [ $? = 0 ]; then
         echo '*' Changed antispam mysql root user password
     else

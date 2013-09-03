@@ -1,8 +1,8 @@
-#!/bin/bash
-# 
+#!/usr/bin/perl
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2011, 2013 Zimbra Software, LLC.
+# Copyright (C) 2010, 2011, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -12,8 +12,20 @@
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
-# 
-source /opt/zimbra/bin/zmshutil || exit 1
-zmsetvars -f zimbra_home
+#
 
-exec `dirname $0`/zmjava com.zimbra.cs.account.ldap.upgrade.LdapUpgrade "$@"
+use strict;
+no strict "refs";
+
+use Zimbra::Util::LDAP;
+
+sub logMsg{
+	print join (' ',@_),"\n";
+}
+
+our %config = (
+	ldap_is_master	=>	$ARGV[0],
+	ldap_root_password	=>	$ARGV[1],
+	);
+
+Zimbra::Util::LDAP->doLdap($ARGV[2],$ARGV[3]);

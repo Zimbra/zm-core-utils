@@ -2,7 +2,7 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2011, 2012, 2013 Zimbra Software, LLC.
+# Copyright (C) 2011, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -642,7 +642,7 @@ sub printRecip {
 
     $ph ||= $msg->{host};
     $pi ||= "";
-    ( $ph, $pi ) = ( $msg->{host}, "" ) if ( $pi eq "127.0.0.1" or $pi eq "::1" );
+    ( $ph, $pi ) = ( $msg->{host}, "" ) if ( $pi eq "127.0.0.1" );
 
     print( $indent, "$at - $ph ",
         ( $pi ? "($pi) "     : "" ),

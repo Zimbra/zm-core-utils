@@ -27,21 +27,13 @@ else
   root_group=root
 fi
 
-if [ "X$PLAT" = "XMACOSXx86_10.5" -o "X$PLAT" = "XMACOSXx86_10.6" -o "X$PLAT" = "XMACOSXx86_10.7" ]; then
+if [ "X$PLAT" = "XMACOSXx86_10.5" -o "X$PLAT" = "XMACOSXx86_10.6" ]; then
   root_group=wheel
   postfix_owner=_postfix
   postfix_suid_group=_postdrop
 else
   postfix_owner=postfix
   postfix_suid_group=postdrop
-fi
-
-if [ "X$PLAT" = "XUBUNTU10_64" -o "X$PLAT" = "XUBUNTU12_64" ]; then
-  syslog_user=syslog
-  syslog_group=adm
-else
-  syslog_user=zimbra
-  syslog_group=zimbra
 fi
 
 zimbra_user=zimbra
@@ -65,7 +57,6 @@ components="\
   keyview \
   libtool \
   memcached \
-  mariadb \
   mysql \
   net-snmp \
   nginx \
@@ -162,19 +153,6 @@ if [ -d ${zimbra_home} ]; then
     chmod 640 ${zimbra_home}/${i}
   done
 
-  if [ -f /selinux/enforce ]; then
-    if [ "`cat /selinux/enforce 2> /dev/null`" = "1" ]; then
-      # make sure ssh keys are in home dir selinux type
-      chcon -R -v -u system_u -t user_home_t ${zimbra_home}/.ssh/
-      if [ -f ${zimbra_home}/httpd/modules/libphp5.so ]; then
-        # allow text relocation for these problem files
-        chcon -t textrel_shlib_t ${zimbra_home}/httpd/modules/libphp5.so
-      fi
-      # Fix Zimbra upgrades selinux perms
-      restorecon -R /etc/security
-    fi
-  fi
-
   if [ -d ${zimbra_home}/contrib ]; then
     chown -R ${root_user}:${root_group} ${zimbra_home}/contrib
     chmod 755 ${zimbra_home}/contrib/* 2> /dev/null
@@ -243,11 +221,6 @@ if [ -d ${zimbra_home} ]; then
       chmod 640 ${zimbra_home}/conf/localconfig.xml
     fi
 
-    if [ -f ${zimbra_home}/conf/attrs/zimbra-attrs.xml ]; then
-      chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/attrs/zimbra-attrs.xml
-      chmod 444 ${zimbra_home}/conf/attrs/zimbra-attrs.xml
-    fi
-
     if [ -d ${zimbra_home}/conf/spamassassin ]; then
       printMsg "Fixing permissions on ${zimbra_home}/conf/spamassassin"
       chmod 755 ${zimbra_home}/conf/spamassassin
@@ -267,23 +240,6 @@ if [ -d ${zimbra_home} ]; then
     if [ -f ${zimbra_home}/conf/my.cnf ]; then
       chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/my.cnf
       chmod 640 ${zimbra_home}/conf/my.cnf
-    fi
-
-    if [ -f ${zimbra_home}/conf/saslauthd.conf.in ]; then
-      chmod 640 ${zimbra_home}/conf/saslauthd.conf.in
-      chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/saslauthd.conf.in
-    fi
-    if [ -f ${zimbra_home}/conf/saslauthd.conf ]; then
-      chmod 440 ${zimbra_home}/conf/saslauthd.conf
-      chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/saslauthd.conf
-    fi
-    if [ -f ${zimbra_home}/conf/sasl2/smtpd.conf.in ]; then
-      chmod 640 ${zimbra_home}/conf/sasl2/smtpd.conf.in
-      chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/sasl2/smtpd.conf.in
-    fi
-    if [ -f ${zimbra_home}/conf/sasl2/smtpd.conf ]; then
-      chmod 640 ${zimbra_home}/conf/sasl2/smtpd.conf
-      chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/sasl2/smtpd.conf
     fi
   fi
 
@@ -347,7 +303,7 @@ if [ -d /var/log/ ]; then
   if [ ! -f /var/log/zimbra.log ]; then
     touch /var/log/zimbra.log
   fi
-  chown ${syslog_user}:${syslog_group} /var/log/zimbra.log
+  chown ${zimbra_user}:${zimbra_group} /var/log/zimbra.log
   chmod 644 /var/log/zimbra.log
 fi
 
@@ -357,15 +313,12 @@ for i in ${components}; do
     for l in ${zimbra_home}/${i}-*; do
       chown ${root_user}:${root_group} ${l} 2> /dev/null
     done
-    for l in ${zimbra_home}/${i}/* ${zimbra_home}/${i}/.???*; do
+    for l in ${zimbra_home}/${i}-*/* ${zimbra_home}/${i}/.???*; do
       chown -R ${root_user}:${root_group} ${l} 2> /dev/null
     done
   elif [ -d ${zimbra_home}/${i} ]; then
     printMsg "Fixing ownership and permissions on ${zimbra_home}/${i}"
     chown -R ${root_user}:${root_group} ${zimbra_home}/${i} 2> /dev/null
-    if [ x$i = "xzimbramon/pylibs" ]; then
-      chmod a+r ${zimbra_home}/${i}/*.class 2>/dev/null
-    fi
   fi
 done
 
@@ -408,10 +361,8 @@ if [ -d ${zimbra_home}/db ]; then
 fi
 
 if [ -L ${zimbra_home}/cbpolicyd ]; then
-  printMsg "Fixing ownership and permissions on ${zimbra_home}/cbpolicyd"
-  chown -fR ${root_user}:${root_group} ${zimbra_home}/cbpolicyd*
   if [ -d ${zimbra_home}/cbpolicyd/bin ]; then
-    for i in ${zimbra_home}/cbpolicyd/bin/* ${zimbra_home}/cbpolicyd/share/database/*tsql; do
+    for i in ${zimbra_home}/cbpolicyd/bin/*; do
       chmod 755 ${i}
     done
   fi
@@ -431,12 +382,21 @@ if [ -d ${zimbra_home}/mta ]; then
 fi
 
 if [ -L ${zimbra_home}/cyrus-sasl ]; then
-  printMsg "Fixing ownership and permissions on ${zimbra_home}/data/sasl2/state"
-  if [ ! -d ${zimbra_home}/data/sasl2/state ]; then  
-    mkdir -p ${zimbra_home}/data/sasl2/state
+  printMsg "Fixing ownership and permissions on ${zimbra_home}/cyrus-sasl"
+  if [ ! -d ${zimbra_home}/cyrus-sasl/state ]; then  
+    mkdir -p ${zimbra_home}/cyrus-sasl/state
   fi
-  chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/sasl2/state
-  chmod 755 ${zimbra_home}/data/sasl2/state 
+  chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/cyrus-sasl/{etc,state}
+  chmod 755 ${zimbra_home}/cyrus-sasl/state 
+
+  if [ -f ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf.in ]; then
+    chmod 640 ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf.in
+    chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf.in
+  fi
+  if [ -f ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf ]; then
+    chmod 440 ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf
+    chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/cyrus-sasl/etc/saslauthd.conf
+  fi
 fi
 
 if [ -L ${zimbra_home}/dspam ]; then
@@ -546,19 +506,13 @@ if [ -L ${zimbra_home}/jetty ]; then
 
   if [ -d ${zimbra_home}/jetty/common ]; then
     find ${zimbra_home}/jetty/common -type d -exec chown ${root_user}:${root_group} {} \; -exec chmod 755 {} \;
-  fi  
+  fi
 
   if [ ! -d ${zimbra_home}/data/mailboxd ]; then
     mkdir -p ${zimbra_home}/data/mailboxd
   fi
   chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/mailboxd
   chmod 755 ${zimbra_home}/data/mailboxd
-
-  if [ ! -d ${zimbra_home}/data/mailboxd/spnego ]; then
-    mkdir -p ${zimbra_home}/data/mailboxd/spnego
-  fi
-  chown ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/mailboxd/spnego
-  chmod 755 ${zimbra_home}/data/mailboxd/spnego
 
 fi
 
@@ -640,24 +594,6 @@ if [ -d ${zimbra_home}/zimbramon/lib ]; then
   chown -R ${root_user}:${root_group} ${zimbra_home}/zimbramon/lib
 fi
 
-if [ -L ${zimbra_home}/libmemcached ]; then
-  printMsg "Fixing ownership and permissions on ${zimbra_home}/libmemcached"
-  chown -fR ${root_user}:${root_group} ${zimbra_home}/libmemcached*
-fi
-
-if [ -L ${zimbra_home}/opendkim ]; then
-  printMsg "Fixing ownership and permissions on ${zimbra_home}/opendkim"
-  chown -fR ${root_user}:${root_group} ${zimbra_home}/opendkim*
-  if [ -d ${zimbra_home}/data/opendkim ]; then
-    chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/opendkim
-  fi
-fi
-
-if [ -L ${zimbra_home}/zeromq ]; then
-  printMsg "Fixing ownership and permissions on ${zimbra_home}/zeromq"
-  chown -fR ${root_user}:${root_group} ${zimbra_home}/zeromq*
-fi
-
 if [ -L ${zimbra_home}/postfix ]; then
   printMsg "Fixing ownership and permissions on ${zimbra_home}/postfix"
   chown -fR ${root_user}:${root_group} ${zimbra_home}/postfix* 2> /dev/null
@@ -689,14 +625,7 @@ if [ -L ${zimbra_home}/postfix ]; then
     chmod -f g+s ${zimbra_home}/postfix/sbin/postqueue
     chmod -f g+s ${zimbra_home}/postfix/sbin/postdrop
   fi
-  if [ ! -d ${zimbra_home}/conf/sa ]; then
-    mkdir -p ${zimbra_home}/conf/sa
-    chown -f ${zimbra_user}:${zimbra_group} ${zimbra_home}/conf/sa
-  fi
-  if [ -f ${zimbra_home}/bin/zmbackup ]; then
-    mkdir -p ${zimbra_home}/data/postfix-journal
-    chown -R ${zimbra_user}:${zimbra_group} ${zimbra_home}/data/postfix-journal
-  fi
+
 fi
 
 if [ -d ${zimbra_home}/data/postfix ]; then
