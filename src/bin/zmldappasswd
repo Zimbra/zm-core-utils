@@ -99,13 +99,15 @@ if (!$options{r} && !$options{c}) {
 
 # startTLS Operation, add later
 
-if ( $ldap_starttls_supported ) {
-  my $mesg = $ldap->start_tls(
-          verify => 'require',
-          capath => "$zimbra_home/conf/ca",
-          ) or die "start_tls: $@";
-
-  $mesg->code && die "TLS: " . $mesg->error . "\n";
+if (!$options{r} && !$options{c}) {
+  if ( $ldap_starttls_supported ) {
+    my $mesg = $ldap->start_tls(
+            verify => 'require',
+            capath => "$zimbra_home/conf/ca",
+            ) or die "start_tls: $@";
+  
+    $mesg->code && die "TLS: " . $mesg->error . "\n";
+  }
 }
 
 if ( $options{r}) {
