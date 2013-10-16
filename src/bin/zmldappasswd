@@ -96,7 +96,7 @@ print "Updating local config and LDAP\n";
 if (!$options{r} && !$options{c}) {
   $ldap = Net::LDAP->new($master_ref)  or  die "$@";
 } else {
-  $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fopenldap%2fvar%2frun%2fldapi/')  or  die "$@";
+  $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fdata%2fldap%2fstate%2frun%2fldapi/')  or  die "$@";
 }
 
 if (!$options{r} && !$options{c}) {
@@ -466,7 +466,7 @@ sub setLocalConfig {
     return;
   }
   $main::saved{lc}{$key} = $val;
-  `/opt/zimbra/bin/zmlocalconfig -f -e ${key}=\'${val}\' 2> /dev/null`;
+  qx(/opt/zimbra/bin/zmlocalconfig -f -e ${key}=\'${val}\' 2> /dev/null);
 }
 
 sub getLocalConfig {
@@ -475,7 +475,7 @@ sub getLocalConfig {
   return $main::loaded{lc}{$key}
     if (exists $main::loaded{lc}{$key});
 
-  my $val = `/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null`;
+  my $val = qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null);
   chomp $val;
   $main::loaded{lc}{$key} = $val;
   return $val;
