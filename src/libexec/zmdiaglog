@@ -33,11 +33,11 @@ use vars qw(
 
 my $isMac = isMac();
 
-chomp($ZMHOSTNAME = qx(/opt/zimbra/bin/zmhostname));
+chomp($ZMHOSTNAME = `/opt/zimbra/bin/zmhostname`);
 
 my $zimbra_tmp_directory = "/opt/zimbra/data/tmp";
 if (-f "/opt/zimbra/bin/zmlocalconfig") {
-  $zimbra_tmp_directory=qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey zimbra_tmp_directory);
+  $zimbra_tmp_directory=`/opt/zimbra/bin/zmlocalconfig -x -s -m nokey zimbra_tmp_directory`;
   chomp($zimbra_tmp_directory);
 }
 
@@ -474,9 +474,9 @@ sub run() {
     
     logmsg "\n *** Diagnostics collection done. Data stored in $destination/.\n\n";
     
-    my $dirname = qx(pwd);
+    my $dirname = `pwd`;
     chomp($dirname);
-    chomp($dirname = qx(basename $dirname));
+    chomp($dirname = `basename $dirname`);
     if ($options{'z'} || $options{'Z'}) {
       logmsg "Zipping contents of $destination into $destination.zip\n";
       $LOG_FILE = "$destination/$LOG_FILE";
