@@ -100,7 +100,7 @@ start()
 {
    checkrunning
    if [ $RUNNING = 0 ]; then
-     if [ ! -d /opt/zimbra/data/mdb ]; then
+     if [ ! -d /opt/zimbra/data/ldap/mdb ]; then
        if [ ! -f /opt/zimbra/data/ldap/hdb/db/DB_CONFIG -o ! -s /opt/zimbra/data/ldap/hdb/db/DB_CONFIG ]; then
          if [ -f /opt/zimbra/conf/custom/ldap/DB_CONFIG ]; then
            mkdir -p /opt/zimbra/data/ldap/hdb/db
