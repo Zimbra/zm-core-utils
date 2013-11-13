@@ -132,8 +132,6 @@ print "done.\n";
 
 print "Updating localconfig values...";
 qx(${zimbra_home}/bin/zmlocalconfig -e "ldap_common_toolthreads=2");
-qx(${zimbra_home}/bin/zmlocalconfig -e "ldap_db_checkpoint='0 0'");
-qx(${zimbra_home}/bin/zmlocalconfig -e "ldap_accesslog_checkpoint='0 0'");
 qx(${zimbra_home}/bin/zmlocalconfig -e -f "ldap_db_maxsize=85899345920");
 qx(${zimbra_home}/bin/zmlocalconfig -e -f "ldap_accesslog_maxsize=85899345920");
 print "done.\n";
