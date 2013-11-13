@@ -3,6 +3,12 @@ use strict;
 use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Util::Common;
 
+my (undef, undef,$uid,$gid) = getpwnam('zimbra');
+if ($> ne $uid) {
+  print "Must be run as user zimbra.\n";
+  &usage
+}
+
 my $zimbra_home=getLocalConfig("zimbra_home");
 print "Stopping Zimbra...";
 qx($zimbra_home/bin/zmcontrol stop);
