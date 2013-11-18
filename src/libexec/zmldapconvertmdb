@@ -6,8 +6,18 @@ use Zimbra::Util::Common;
 my (undef, undef,$uid,$gid) = getpwnam('zimbra');
 if ($> ne $uid) {
   print "Must be run as user zimbra.\n";
-  &usage
+  exit 1;
 }
+
+my $platform = `/opt/zimbra/libexec/get_plat_tag.sh`;
+chomp ($platform);
+
+if ($platform !~ /_64$/) {
+  print "ERROR: MDB is only supported for 64-bit servers\n";
+  exit 1;
+}
+
+exit;
 
 my $zimbra_home=getLocalConfig("zimbra_home");
 print "Stopping Zimbra...";
