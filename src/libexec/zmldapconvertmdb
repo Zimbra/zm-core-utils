@@ -13,7 +13,12 @@ my $platform = `/opt/zimbra/libexec/get_plat_tag.sh`;
 chomp ($platform);
 
 if ($platform !~ /_64$/) {
-  print "ERROR: MDB is only supported for 64-bit servers\n";
+  print "ERROR: MDB is only supported for 64-bit servers.\n";
+  exit 1;
+}
+
+if ( -d  "/opt/zimbra/data/ldap/mdb/db" ) {
+  print "ERROR: MDB conversion has already occurred.\n";
   exit 1;
 }
 
