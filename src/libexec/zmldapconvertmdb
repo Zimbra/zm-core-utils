@@ -17,8 +17,6 @@ if ($platform !~ /_64$/) {
   exit 1;
 }
 
-exit;
-
 my $zimbra_home=getLocalConfig("zimbra_home");
 print "Stopping Zimbra...";
 qx($zimbra_home/bin/zmcontrol stop);
