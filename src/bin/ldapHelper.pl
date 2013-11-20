@@ -1,8 +1,8 @@
-#!/bin/bash
-# 
+#!/usr/bin/perl
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2008, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
+# Copyright (C) 2010, 2012, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -12,7 +12,20 @@
 # Software distributed under the License is distributed on an "AS IS"
 # basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
-# 
+#
 
-export LD_PRELOAD=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so
-exec /opt/zimbra/unbound/sbin/unbound "$@"
+use strict;
+no strict "refs";
+
+use Zimbra::Util::LDAP;
+
+sub logMsg{
+	print join (' ',@_),"\n";
+}
+
+our %config = (
+	ldap_is_master	=>	$ARGV[0],
+	ldap_root_password	=>	$ARGV[1],
+	);
+
+Zimbra::Util::LDAP->doLdap($ARGV[2],$ARGV[3]);
