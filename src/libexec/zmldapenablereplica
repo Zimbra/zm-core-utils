@@ -138,6 +138,7 @@ verifySyncProv() {
 		exit 1
 	fi
 	ARGS="-x -H ldapi:/// -D cn=config -w ${ldap_root_password} -b olcOverlay={0}syncprov,olcDatabase={2}mdb,cn=config -s base"
+	OUTPUT=`$LDS $ARGS 2>&1`
 	if [ $? -eq 0 ]; then
 		echo 'Error: Syncprov already enabled. Exiting...'
 		exit 1
