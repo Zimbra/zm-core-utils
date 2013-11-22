@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2007, 2009, 2010, 2011, 2012, 2013 Zimbra Software, LLC.
+# Copyright (C) 2005, 2007, 2009, 2010, 2011, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -47,6 +47,12 @@ GetOptions("verbose" => \$verbose, "user=s" => \$user, "password=s" => \$passwor
 if ($usage) {
     usage();
     exit(0);
+}
+
+if ($user eq "root") {
+  if (!($password)) {
+    $password = getLocalConfig("mysql_root_password");
+  }
 }
 
 # Descriptions of status variables for verbose mode
@@ -263,7 +269,7 @@ sub runSql($) {
 sub getLocalConfig {
   my ($key,$force) = @_;
 
-  my $val = `/opt/zimbra/bin/zmlocalconfig -q -x -s -m nokey ${key} 2> /dev/null`;
+  my $val = qx(/opt/zimbra/bin/zmlocalconfig -q -x -s -m nokey ${key} 2> /dev/null);
   chomp $val;
   return $val;
 }
