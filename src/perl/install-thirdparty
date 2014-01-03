@@ -23,30 +23,25 @@ if (scalar(@ARGV) != 1) {
 
 my $BASE_DIR = "/opt/zimbra";
 my $CACHE_DIR = "$BASE_DIR/third-party-cache";
-my $LIB_DIR = "$BASE_DIR/lib/";
-my $THIRD_PARTY_BUILDS_DIR = "//depot/zimbra/$ARGV[0]/ThirdPartyBuilds/";
-my $P4_ROOT = $THIRD_PARTY_BUILDS_DIR . getPlatformDirName();
+my $P4_ROOT = "//depot/zimbra/$ARGV[0]/ThirdPartyBuilds/" . getPlatformDirName();
 my $JETTY_P4_PATH = "//depot/zimbra/$ARGV[0]/ThirdParty/jetty";
 my %BINARIES = (
-    "curl" => "7.25.0",
-    "cyrus-sasl" => "2.1.25.4z",
-    "heimdal" => "1.5.2",
+    "bdb" => "4.7.25.4",
+    "curl" => "7.24.0",
+    "cyrus-sasl" => "2.1.23.3z",
+    "heimdal" => "1.3.3",
     "libtool" => "2.2.6b",
-    "openldap" => "2.4.33.3z",
-    "openldap-libs" => "2.4.33.3z",
-    "openssl" => "1.0.1c",
-    "rsync" => "3.0.9",
-    "tcmalloc" => "2.0",
-    "jetty" => "distribution-9.0.6.v20130930"
+    "openldap" => "2.4.33.2z",
+    "openldap-libs" => "2.4.33.2z",
+    "openssl" => "1.0.0j",
+    "tcmalloc" => "1.8.2",
+    "rsync" => "3.0.8",
+    "jetty" => "6.1.22.z6"
 );
 my $P4_CMD = "p4";
 
 if (! -d $CACHE_DIR) {
     mkdir($CACHE_DIR) || die "Could not create directory: $CACHE_DIR";
-}
-
-if (! -d $LIB_DIR) {
-    mkdir($LIB_DIR) || die "Could not create directory: $LIB_DIR";
 }
 
 # Remove old binaries to make sure there's no cruft.
@@ -86,8 +81,6 @@ for my $binaryName (keys %BINARIES) {
     }
 }
 
-installJunixsocketNativeLib();
-
 sub runCommand($) {
     my $cmd = shift();
     print("$cmd\n");
@@ -113,22 +106,20 @@ sub getPlatformDirName() {
 	if ($version eq "8") {
 	    $dirName = "MACOSXx86";
 	} elsif ($version eq "9") {
-	    $dirName = "MACOSXx86_10.6";
-        } elsif ($version eq "11") {
-	    $dirName = "MACOSXx86_10.7";
+	    $dirName = "MACOSXx86_10.5";
 	} else {
 	    $dirName = "MACOSXx86_10.6";
 	}
     } else {
 	if (-f "/etc/redhat-release") {
 	    my $uname = `uname -a`;
-            if ($uname =~ /el6/) {
+            if ($uname =~ /release 6/) {
                 if ($uname =~ /64/) {
                     $dirName = "RHEL6_64";
                 } else {
                     $dirName = "RHEL6";
                 }
-            } elsif ($uname =~ /el5/) {
+            } elsif ($uname =~ /release 5/) {
 		if ($uname =~ /64/) {
 		    $dirName = "RHEL5_64";
 		} else {
@@ -143,7 +134,7 @@ sub getPlatformDirName() {
 	    }
         } else {
 	    if (`uname -m` =~ /i686/) {
-                $dirName = "UBUNTU8_64";
+                $dirName = "UBUNTU8";
 	    } else {
                 $dirName = "UBUNTU10_64";
 	    }
@@ -151,45 +142,4 @@ sub getPlatformDirName() {
     }
 
     return $dirName;
-}
-
-sub installJunixsocketNativeLib() {
-    my $cmd;
-    my $srcDir;
-    my $srcName;
-    
-    my $libSrcDir = "/java/junixsocket/";
-    my $libPrefix = "libjunixsocket";
-    
-    my $os = `uname -s`;
-    chomp($os);
-    
-    if ($os eq "Darwin") {
-        $srcDir = $THIRD_PARTY_BUILDS_DIR . "OSXx86_64" . $libSrcDir;
-        $srcName = "$libPrefix-macosx-1.5-x86_64.dylib";
-    } else {
-        $srcDir = $THIRD_PARTY_BUILDS_DIR . "x86_64" . $libSrcDir;
-        $srcName = "$libPrefix-linux-1.5-amd64.so";
-    }
-    
-    my $srcPath = $srcDir . $srcName;
-    my $destPath = $LIB_DIR . $srcName;
-    
-    # print(STDERR "srcPath is: $srcPath\n");
-    # print(STDERR "destPath is: $destPath\n");
-    
-    # Remove old binaries to make sure there's no cruft.
-    $cmd = "rm -rf $LIB_DIR" . "$libPrefix*";
-    runCommand($cmd);
-    
-    # Copy file to the third party cache directory if necessary.
-    my $cachedPath = "$CACHE_DIR/$srcName";
-    if (! -f $cachedPath) {
-        $cmd = "$P4_CMD print -o $cachedPath $srcPath";
-        runCommand($cmd);
-    }
-    
-    # Copy file from the third party cache directory to the destination 
-    $cmd = "cp $cachedPath $destPath";
-    runCommand($cmd);
 }

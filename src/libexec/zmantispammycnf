@@ -60,9 +60,12 @@ tmpdir         = ${zimbra_tmp_directory}
 external-locking
 slow_query_log = 1
 slow_query_log_file = ${zimbra_log_directory}/myslow.log
+ignore-builtin-innodb
 
-long_query_time  = 1
-log_queries_not_using_indexes
+plugin-load=innodb=ha_innodb_plugin.so;innodb_trx=ha_innodb_plugin.so;innodb_locks=ha_innodb_plugin.so;innodb_lock_waits=ha_innodb_plugin.so;innodb_cmp=ha_innodb_plugin.so;innodb_cmp_reset=ha_innodb_plugin.so;innodb_cmpmem=ha_innodb_plugin.so;innodb_cmpmem_reset=ha_innodb_plugin.so
+
+long-query-time  = 1
+log-queries-not-using-indexes
 
 thread_cache_size = 110
 max_connections   = 110
@@ -74,14 +77,14 @@ sort_buffer_size = 1048576
 read_buffer_size = 1048576
 
 # (Num mailbox groups * Num tables in each group) + padding
-table_open_cache = 1200
+table_cache = 1200
 
 innodb_buffer_pool_size        = ${bufferPoolSize}
 innodb_log_file_size           = 104857600
 innodb_log_buffer_size         = 8388608
 innodb_file_per_table
 
-# Value is: 200 + max_connections + 2 * table_open_cache
+# Value is: 200 + max_connections + 2 * table_cache
 innodb_open_files              = 2710
 
 innodb_max_dirty_pages_pct     = 10

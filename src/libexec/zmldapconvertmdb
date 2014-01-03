@@ -1,0 +1,186 @@
+#!/usr/bin/perl
+use strict;
+use lib "/opt/zimbra/zimbramon/lib";
+use Zimbra::Util::Common;
+
+my (undef, undef,$uid,$gid) = getpwnam('zimbra');
+if ($> ne $uid) {
+  print "Must be run as user zimbra.\n";
+  exit 1;
+}
+
+my $platform = `/opt/zimbra/libexec/get_plat_tag.sh`;
+chomp ($platform);
+
+if ($platform !~ /_64$/) {
+  print "ERROR: MDB is only supported for 64-bit servers.\n";
+  exit 1;
+}
+
+if ( -d  "/opt/zimbra/data/ldap/mdb/db" ) {
+  print "ERROR: MDB conversion has already occurred.\n";
+  exit 1;
+}
+
+my $zimbra_home=getLocalConfig("zimbra_home");
+print "Stopping Zimbra...";
+qx($zimbra_home/bin/zmcontrol stop);
+print "done.\n";
+
+qx(mkdir -p /opt/zimbra/data/tmp/mdb-conversion);
+qx($zimbra_home/libexec/zmslapcat -c ${zimbra_home}/data/tmp/mdb-conversion);
+
+if ( -f "${zimbra_home}/data/ldap/accesslog/db/dn2id.bdb" ) {
+  print "Exporting accesslog database...";
+  qx($zimbra_home/libexec/zmslapcat -a ${zimbra_home}/data/tmp/mdb-conversion);
+  qx($zimbra_home/bdb/bin/db_recover -h ${zimbra_home}/data/ldap/accesslog/db);
+  print "done.\n";
+}
+
+print "Exporting primary database...";
+qx(${zimbra_home}/libexec/zmslapcat ${zimbra_home}/data/tmp/mdb-conversion);
+qx($zimbra_home/bdb/bin/db_recover -h ${zimbra_home}/data/ldap/hdb/db);
+print "done.\n";
+
+print "Converting configuration DB from hdb to mdb...";
+my $infile = "$zimbra_home/data/tmp/mdb-conversion/ldap-config.bak";
+my $outfile = "$zimbra_home/data/tmp/mdb-conversion/ldap-config-mdb.ldif";
+open(IN,"<$infile");
+open(OUT,">$outfile");
+while (<IN>) {
+  if ($_ =~ /olcSpSessionlog:/) {
+    next;
+  }
+  if ($_ =~ /^olcModuleLoad: \{0\}back_hdb.la/) {
+    print OUT "olcModuleLoad: {0}back_mdb.la\n";
+    next;
+  }
+  if ($_ =~ /^olcToolThreads: /) {
+    print OUT "olcToolThreads: 2\n";
+    next;
+  }
+  if ($_ =~ /^dn: olcDatabase=\{3\}hdb,cn=config/) {
+    print OUT "dn: olcDatabase={3}mdb,cn=config\n";
+    next;
+  }
+  if ($_ =~ /^objectClass: olcHdbConfig/) {
+    print OUT "objectClass: olcMdbConfig\n";
+    next;
+  }
+  if ($_ =~ /^olcDatabase: \{3\}hdb/) {
+    print OUT "olcDatabase: {3}mdb\n";
+    next;
+  }
+  if ($_ =~ /^olcDbDirectory: \/opt\/zimbra\/data\/ldap\/hdb\/db/) {
+    print OUT "olcDbDirectory: /opt/zimbra/data/ldap/mdb/db\n";
+    next;
+  }
+  if ($_ =~ /^structuralObjectClass: olcHdbConfig/) {
+    print OUT "structuralObjectClass: olcMdbConfig\n";
+    next;
+  }
+  if ($_ =~ /^olcDbMode:/) {
+    print OUT $_;
+    print OUT "olcDbMaxsize: 85899345920\n";
+    next;
+  }
+  if ($_ =~ /^olcDbCheckpoint:/) {
+    print OUT "olcDbCheckpoint: 0 0\n";
+    print OUT "olcDbEnvFlags: writemap\n";
+    print OUT "olcDbEnvFlags: nometasync\n";
+    next;
+  }
+  if ($_ =~ /olcDbNoSync:/) {
+    print OUT "olcDbNoSync: TRUE\n";
+    next;
+  }
+  if ($_ =~ /olcDbCacheSize:/) {
+    next;
+  }
+  if ($_ =~ /^olcDbConfig:/) {
+    next;
+  }
+  if ($_ =~ /^olcDbDirtyRead:/) {
+    next;
+  }
+  if ($_ =~ /^olcDbIDLcacheSize:/) {
+    next;
+  }
+  if ($_ =~ /^olcDbLinearIndex:/) {
+    next;
+  }
+  if ($_ =~ /^olcDbShmKey:/) {
+    next;
+  }
+  if ($_ =~ /^olcDbCacheFree:/) {
+    next;
+  }
+  if ($_ =~ /^olcDbDNcacheSize:/) {
+    next;
+  }
+  if ($_ =~ /^dn: olcDatabase=\{2\}hdb,cn=config/) {
+    print OUT "dn: olcDatabase={2}mdb,cn=config\n";
+    next;
+  }
+  if ($_ =~ /^olcDatabase: \{2\}hdb/) {
+    print OUT "olcDatabase: {2}mdb\n";
+    next;
+  }
+  if ($_ =~ /\{2\}hdb/) {
+    $_ =~ s/\{2\}hdb/{2}mdb/;
+    print OUT $_;
+    next;
+  }
+  if ($_ =~ /\{3\}hdb/) {
+    $_ =~ s/\{3\}hdb/{3}mdb/;
+    print OUT $_;
+    next;
+  }
+  print OUT $_;
+}
+close IN;
+close OUT;
+
+print "done.\n";
+
+print "Updating localconfig values...";
+qx(${zimbra_home}/bin/zmlocalconfig -e "ldap_common_toolthreads=2");
+qx(${zimbra_home}/bin/zmlocalconfig -e -f "ldap_db_maxsize=85899345920");
+qx(${zimbra_home}/bin/zmlocalconfig -e -f "ldap_accesslog_maxsize=85899345920");
+print "done.\n";
+
+qx(mkdir -p ${zimbra_home}/data/ldap/mdb/db);
+
+if (-f "${zimbra_home}/data/ldap/accesslog/db/dn2id.bdb") {
+  qx(mv ${zimbra_home}/data/ldap/accesslog ${zimbra_home}/data/ldap/accesslog.hdb);
+  qx(mkdir -p ${zimbra_home}/data/ldap/accesslog/db);
+}
+
+print "Importing MDB-based config db...\n";
+qx(mv ${zimbra_home}/data/ldap/config ${zimbra_home}/data/ldap/config.hdb);
+qx(mkdir -p ${zimbra_home}/data/ldap/config);
+qx(${zimbra_home}/libexec/zmslapadd -c ${zimbra_home}/data/tmp/mdb-conversion/ldap-config-mdb.ldif);
+print "done.\n";
+
+if ( -f "${zimbra_home}/data/tmp/mdb-conversion/ldap-accesslog.bak" ) {
+  print "Importing accesslog db...\n";
+  qx(${zimbra_home}/libexec/zmslapadd -a ${zimbra_home}/data/tmp/mdb-conversion/ldap-accesslog.bak);
+  print "done.\n";
+}
+
+qx(mv ${zimbra_home}/data/ldap/hdb ${zimbra_home}/data/ldap/hdb.pre-mdb);
+print "Importing primary db...\n";
+qx(${zimbra_home}/libexec/zmslapadd ${zimbra_home}/data/tmp/mdb-conversion/ldap.bak);
+print "done.\n";
+
+sub getLocalConfig {
+  my $key = shift;
+
+  return $main::loaded{lc}{$key}
+    if (exists $main::loaded{lc}{$key});
+
+  my $val = qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null);
+  chomp $val;
+  $main::loaded{lc}{$key} = $val;
+  return $val;
+}
