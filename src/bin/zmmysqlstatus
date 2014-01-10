@@ -49,12 +49,6 @@ if ($usage) {
     exit(0);
 }
 
-if ($user eq "root") {
-  if (!($password)) {
-    $password = getLocalConfig("mysql_root_password");
-  }
-}
-
 # Descriptions of status variables for verbose mode
 my %descriptions = (
     "Connections" =>
@@ -205,7 +199,7 @@ print("\n");
 
 # Print the interesting part of InnoDB status
 print("InnoDB Status:\n");
-@results = runSql("SHOW ENGINE INNODB STATUS");
+@results = runSql("SHOW INNODB STATUS");
 @results = split(/\\n/, $results[0]);
 my $printLine = 0;
 foreach my $line (@results) {
@@ -269,7 +263,7 @@ sub runSql($) {
 sub getLocalConfig {
   my ($key,$force) = @_;
 
-  my $val = qx(/opt/zimbra/bin/zmlocalconfig -q -x -s -m nokey ${key} 2> /dev/null);
+  my $val = `/opt/zimbra/bin/zmlocalconfig -q -x -s -m nokey ${key} 2> /dev/null`;
   chomp $val;
   return $val;
 }
