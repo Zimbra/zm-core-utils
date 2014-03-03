@@ -2,7 +2,7 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2013 Zimbra Software, LLC.
+# Copyright (C) 2010, 2012, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -113,8 +113,8 @@ print("Reading CPU usage from column $columnNumber in $procStatsFile1 and $procS
 # Read proc-stats files.
 my $lastcmd = "awk '{print \$1, \$$columnNumber}' $procStatsFile2";
 my $firstcmd = "awk '{print \$1, \$$columnNumber}' $procStatsFile1";
-my @lastarray = qx($lastcmd);
-my @firstarray = qx($firstcmd);
+my @lastarray = `$lastcmd`;
+my @firstarray = `$firstcmd`;
 
 sub trim($)
   {

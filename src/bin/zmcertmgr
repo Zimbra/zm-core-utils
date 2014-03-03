@@ -36,8 +36,10 @@ zmsetvars -f \
   mailboxd_keystore \
   mailboxd_keystore_password \
   mailboxd_truststore_password \
+  postfix_smtpd_tls_cert_file \
+  postfix_smtpd_tls_key_file \
   ssl_default_digest
-
+  
 export JAVA_HOME=/opt/zimbra/java
 
 
@@ -117,8 +119,8 @@ checkDigest() {
        x"$DIGEST" != "xsha224" -a x"$DIGEST" != "xsha256" -a \
        x"$DIGEST" != "xsha384" -a x"$DIGEST" != "xsha512" ]; then
          echo "WARNING: Unknown digest method: $DIGEST"
-         echo "Defaulting digest method to sha256"
-         DIGEST="sha256"
+         echo "Defaulting digest method to sha1"
+         DIGEST="sha1"
   fi
 }
 
@@ -268,7 +270,7 @@ loadConfigKey() {
 createCAKey() {
 
   if [ ! -f ${zimbra_ca_ssl_conf} ]; then
-    createConf "${zimbra_ca_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+    createConf "${zimbra_ca_ssl_conf}" "$subject_alt_names"
   fi
 
   createCASerial
@@ -492,7 +494,7 @@ createCA() {
   fi
   
   if [ ! -f ${zimbra_ca_ssl_conf} -o x"${IS_NEW_CA}" = "x-new" ]; then
-    createConf "${zimbra_ca_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+    createConf "${zimbra_ca_ssl_conf}" "$subject_alt_names"
   fi
 
 
@@ -732,11 +734,11 @@ deployCert() {
 
   if [ x"$DEPLOY" = "xall" -o x"$DEPLOY" = "xmta" ]; then
     echo -n "** Installing mta certificate and key..."
-    cp -f ${current_crt} ${zimbra_conf_directory}/smtpd.crt
-    cp -f ${current_key} ${zimbra_conf_directory}/smtpd.key
-    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/smtpd.crt
-    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/smtpd.key
-    chmod 640 ${zimbra_conf_directory}/smtpd.crt ${zimbra_conf_directory}/smtpd.key
+    cp -f ${current_crt} ${postfix_smtpd_tls_cert_file}
+    cp -f ${current_key} ${postfix_smtpd_tls_key_file}
+    chown ${zimbra_uid}:${zimbra_gid} ${postfix_smtpd_tls_cert_file}
+    chown ${zimbra_uid}:${zimbra_gid} ${postfix_smtpd_tls_key_file}
+    chmod 640 ${postfix_smtpd_tls_cert_file} ${postfix_smtpd_tls_key_file}
 
     echo "done."
   fi
@@ -885,9 +887,8 @@ createConf() {
   ssl_conf=$1
   shift
   ALTNAMES=""
-  tmphosts=`echo $* | sed -e "s/,/ /g"`
+  tmphosts=`echo $* | sed -e "s/,/ /g" -e "s/${zimbra_server_hostname}//g"` 
   # remove any duplicate hosts.
-  tmphosts=`perl -e '$zimbra_server_hostname=$ARGV[0];foreach $h (@ARGV) { if ($h eq $zimbra_server_hostname) {next;} else {print "$h ";}}' $tmphosts`
   althosts=`perl -e '%uniq = map {$_ => 1} @ARGV; print join(" ", sort keys %uniq), "\n"' $tmphosts`
   
   for alt in $althosts; do
@@ -921,7 +922,7 @@ createCASerial() {
 createServerCertReq() {
 
   if [ ! -f "${zimbra_cert_ssl_conf}" ]; then
-    createConf "${zimbra_cert_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+    createConf "${zimbra_cert_ssl_conf}" "$subject_alt_names"
   fi
 
   type=$1
@@ -1009,7 +1010,7 @@ createCert() {
 
   createCASerial  
 
-  createConf "${zimbra_cert_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+  createConf "${zimbra_cert_ssl_conf}" "$subject_alt_names"
   
   # see if we already have a valid cert, we don't want to recreate
   # self-signed certs on upgrade
@@ -1402,7 +1403,7 @@ createCSR() {
       echo "${ERROR_PREFIX} The Certificate Signing Request already existed."
       usage
     fi
-    createConf "${zimbra_cert_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
+    createConf "${zimbra_cert_ssl_conf}" "$subject_alt_names"
   fi
   
   backupSSLDirs ${zimbra_ssl_directory}
