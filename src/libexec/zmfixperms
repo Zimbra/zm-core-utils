@@ -76,7 +76,7 @@ components="\
   openldap \
   openldap-clibs \
   openssl \
-  perdition \
+  pflogsumm \
   rsync \
   snmp \
   tcmalloc \
