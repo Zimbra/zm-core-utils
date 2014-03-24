@@ -86,6 +86,9 @@ sub checkDbs() {
   $cmd .= " --auto-repair" if $options{r};
   unless (open(CMD, "$cmd --password=${mysql_root_passwd} |")) {
     addToReport("can't run $cmd: $!\n"); 
+    if(!$options{m}) {
+      return 1;
+    }
     return undef;
   }
   my @output = <CMD>;
@@ -93,11 +96,17 @@ sub checkDbs() {
     addToReport("Database errors found.\n");
     addToReport("$cmd --password=XXXXXXXX\n");
     addToReport("@output");
+    if(!$options{m}) {
+      return 1;
+    }
   } else {
     addToReport("No errors found\n") if $verbose;
   }
   unless (close(CMD)) {
     addToReport("command failed $!\n");;
+    if(!$options{m}) {
+      return 1;
+    }
     return undef;
   }
   return; 
