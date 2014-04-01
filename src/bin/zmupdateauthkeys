@@ -17,7 +17,6 @@
 source `dirname $0`/../bin/zmshutil || exit 1
 
 zmsetvars \
-	zimbra_home \
 	zimbra_server_hostname \
 	zimbra_tmp_directory
 
@@ -68,7 +67,7 @@ keyattr="zimbraSshPublicKey"
 
 zmprov="/opt/zimbra/bin/zmprov -m -l"
 
-authkeysfile="${zimbra_home}/.ssh/authorized_keys"
+authkeysfile="/opt/zimbra/.ssh/authorized_keys"
 
 if [ ! -d ${zimbra_tmp_directory} ]; then
   mkdir -p ${zimbra_tmp_directory} > /dev/null 2>&1

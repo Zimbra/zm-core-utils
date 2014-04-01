@@ -21,11 +21,10 @@ fi
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
-    zimbra_home \
     zimbra_log_directory
 
 servicename=memcached
-configfile=${zimbra_home}/conf/${servicename}.conf
+configfile=/opt/zimbra/conf/${servicename}.conf
 pidfile=${zimbra_log_directory}/${servicename}.pid
 pid=""
 
@@ -67,7 +66,7 @@ case "$1" in
       exit 0
     fi
 
-    ${zimbra_home}/${servicename}/bin/${servicename} -d -P ${pidfile}
+    /opt/zimbra/${servicename}/bin/${servicename} -d -P ${pidfile}
     for ((i=0; i < 30; i++)); do
       checkrunning
       if [ $running = 1 ]; then

@@ -63,4 +63,4 @@ for file in `ls ${download_dir}/${client_file_appglob}`; do
 done
 
 
-${zimbra_home}/bin/zmmailboxdctl update
+/opt/zimbra/bin/zmmailboxdctl update

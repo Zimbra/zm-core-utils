@@ -54,8 +54,8 @@ sub catchSignal {
   exit 0;
 }
 
+$zmrrdfetch = "/opt/zimbra/libexec/zmrrdfetch";
 Zimbra::Mon::Zmstat::getLocalConfig();
-$zmrrdfetch = $Zimbra::Mon::Zmstat::LC{zimbra_home} . "/libexec/zmrrdfetch";
 $zmrrdfetch_pid = $Zimbra::Mon::Zmstat::LC{zimbra_log_directory} . "/zmrrdfetch-server.pid";
 
 my @CREATE_DDL = (

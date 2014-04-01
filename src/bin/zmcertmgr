@@ -55,17 +55,16 @@ else
   java_options=""
 fi
 
-zimbra_home=/opt/zimbra
-zimbra_conf_directory=${zimbra_home}/conf
+zimbra_conf_directory=/opt/zimbra/conf
 exp_thres_days=${zimbra_zmcertmgr_expiration_threshold:=30}
 exp_thres_secs=$(($exp_thres_days*24*60*60))
 
-csr_download_directory=${zimbra_home}/mailboxd/webapps/zimbraAdmin/tmp
+csr_download_directory=/opt/zimbra/mailboxd/webapps/zimbraAdmin/tmp
 csr_download_file=${csr_download_directory}/current.csr
 crt_download_file=${csr_download_directory}/current.crt
 ca_chain_download_file=${csr_download_directory}/current_chain.crt
 
-zimbra_ssl_directory=${zimbra_home}/ssl/zimbra
+zimbra_ssl_directory=/opt/zimbra/ssl/zimbra
 zimbra_ca_directory=${zimbra_ssl_directory}/ca
 zimbra_self_cert_directory=${zimbra_ssl_directory}/server
 zimbra_comm_cert_directory=${zimbra_ssl_directory}/commercial
@@ -1554,7 +1553,7 @@ verifycrtchain () {
 
 migrate () {
   initSSLDirs
-  prev_ssl_directory=${zimbra_home}/ssl/ssl
+  prev_ssl_directory=/opt/zimbra/ssl/ssl
   echo "** Migrating ssl certs from ${prev_ssl_directory} to ${zimbra_ssl_directory}"
   prev_ca_directory=${prev_ssl_directory}/ca
   prev_cert_directory=${prev_ssl_directory}/server

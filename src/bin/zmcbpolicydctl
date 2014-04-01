@@ -21,13 +21,12 @@ fi
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
-  zimbra_home \
   zimbra_log_directory \
   cbpolicyd_pid_file \
   cbpolicyd_db_file
 
 pidfile=${cbpolicyd_pid_file:=${zimbra_log_directory}/cbpolicyd.pid}
-dbfile=${cbpolicyd_db_file:=${zimbra_home}/data/cbpolicyd/db/cbpolicyd.sqlitedb}
+dbfile=${cbpolicyd_db_file:=/opt/zimbra/data/cbpolicyd/db/cbpolicyd.sqlitedb}
 
 
 rewriteconfig() {
@@ -75,7 +74,7 @@ case "$1" in
         mkdir /opt/zimbra/data/cbpolicyd/db
       fi
       if [ ! -f ${dbfile} ]; then
-        ${zimbra_home}/libexec/zmcbpolicydinit
+        /opt/zimbra/libexec/zmcbpolicydinit
         if [ $? != 0 ]; then
           echo "Unable to initialize cbpolicyd database." 
           exit 1
@@ -84,7 +83,7 @@ case "$1" in
       if [ x$2 = "x" ]; then
         rewriteconfig
       fi
-      ${zimbra_home}/cbpolicyd/bin/cbpolicyd --config ${zimbra_home}/conf/cbpolicyd.conf 2> /dev/null
+      /opt/zimbra/cbpolicyd/bin/cbpolicyd --config /opt/zimbra/conf/cbpolicyd.conf 2> /dev/null
       for ((i=0; i < 30; i++)); do
         sleep 1
         checkrunning

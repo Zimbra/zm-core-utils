@@ -28,7 +28,6 @@ my %options = ();
 my $report = [];
 my $dbCheck = '';
 my $status = 0;
-my $zimbra_home = "/opt/zimbra";
 unless ( GetOptions ("mailReport" => \$options{m},
                      "repair"     => \$options{r},
                      "verbose"    => \$options{v},
@@ -75,9 +74,9 @@ sub usage {
 
 sub checkDbs() {
   my $mysql_root_passwd = getLocalConfig("mysql_root_password");
-  my $mysql_socket = getLocalConfig("mysql_socket") || "${zimbra_home}/db/mysql.sock";
-  my $mysql_mycnf = getLocalConfig("mysql_mycnf") || "${zimbra_home}/conf/my.cnf";
-  my $cmd = "${zimbra_home}/mysql/bin/mysqlcheck";
+  my $mysql_socket = getLocalConfig("mysql_socket") || "/opt/zimbra/db/mysql.sock";
+  my $mysql_mycnf = getLocalConfig("mysql_mycnf") || "/opt/zimbra/conf/my.cnf";
+  my $cmd = "/opt/zimbra/mysql/bin/mysqlcheck";
   $cmd .= " --defaults-file=${mysql_mycnf}";
   $cmd .= " -S ${mysql_socket}";
   $cmd .= " -A -C";
@@ -119,7 +118,7 @@ sub getLocalConfig {
 		return $ENV{$key};
 	}
 	open CONF, 
-		"${zimbra_home}/bin/zmlocalconfig -s -q -m shell |" or die "Can't open local config: $!";
+		"/opt/zimbra/bin/zmlocalconfig -s -q -m shell |" or die "Can't open local config: $!";
 	my @conf = <CONF>;
 	close CONF;
 

@@ -49,7 +49,7 @@ else
    STARTTLS="no"
 fi
 
-PLAT=`/bin/bash ${zimbra_home}/libexec/get_plat_tag.sh`
+PLAT=`/bin/bash /opt/zimbra/libexec/get_plat_tag.sh`
 if [ "X$PLAT" = "XMACOSXx86_10.5" -o "X$PLAT" = "XMACOSXx86_10.6" -o "X$PLAT" = "XMACOSXx86_10.7" ]; then
   postfix_owner=_postfix
 else

@@ -29,7 +29,6 @@ my $source_config_dir = "/opt/zimbra/openldap/etc/openldap";
 my $config_dir = "/opt/zimbra/conf";
 my $ldap_config_dir="/opt/zimbra/data/ldap/config/cn\=config";
 
-my $zimbra_home=getLocalConfig("zimbra_home");
 my $zimbra_user=getLocalConfig("zimbra_user");
 my $zimbra_ldap_userdn = getLocalConfig("zimbra_ldap_userdn");
 my $zimbra_ldap_password = getLocalConfig("zimbra_ldap_password");
@@ -39,7 +38,6 @@ my $ldap_is_master = getLocalConfig("ldap_is_master");
 my $ldap_starttls_supported = getLocalConfig("ldap_starttls_supported");
 my $zimbra_tmp_directory = getLocalConfig("zimbra_tmp_directory");
 
-$zimbra_home = "/opt/zimbra" if ($zimbra_home eq "");
 if (!-d $zimbra_tmp_directory) {
   File::Path::mkpath("$zimbra_tmp_directory");
 }

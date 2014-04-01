@@ -17,7 +17,7 @@
 use strict;
 use Getopt::Std;
 
-my $PIDFILE = $ENV{ZIMBRA_HOME} . "/log/tomcat.pid";
+my $PIDFILE = "/opt/zimbra/log/tomcat.pid";
 
 sub usage() {
     print <<USAGE;

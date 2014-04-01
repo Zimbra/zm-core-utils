@@ -23,7 +23,6 @@ platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
-  zimbra_home \
   zimbra_log_directory \
   vmware_heartbeat_interval
 
@@ -76,7 +75,7 @@ case "$1" in
     if [ $running = 1 ]; then
       echo "vmware-ha is already running.";
     else
-      ${zimbra_home}/libexec/vmware-heartbeat start
+      /opt/zimbra/libexec/vmware-heartbeat start
       for ((i = 0; i < 12; i++)); do
         checkrunning
         if [ $running = 1 ]; then
@@ -96,7 +95,7 @@ case "$1" in
       cpid=`cat ${zimbra_log_directory}/vmware-ha.pid`
       kill -9 "$cpid" 2> /dev/null
     fi
-    pskillall -9 ${zimbra_home}/libexec/vmware-heartbeat
+    pskillall -9 /opt/zimbra/libexec/vmware-heartbeat
     exit 0
    ;;
 
@@ -106,7 +105,7 @@ case "$1" in
     if [ $running = 0 ]; then
       echo  "vmware-ha is not running.";
     else
-      ${zimbra_home}/libexec/vmware-heartbeat stop
+      /opt/zimbra/libexec/vmware-heartbeat stop
       checkrunning
       if [ x"$cpid" != "x" ]; then
         kill -TERM "$cpid" 2> /dev/null

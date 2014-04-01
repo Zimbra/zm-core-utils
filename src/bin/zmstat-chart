@@ -15,8 +15,7 @@
 # 
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-    zimbra_home zimbra_user
+zmsetvars zimbra_user
 
 u=`id -un`
 if [ $u != ${zimbra_user} ]; then
@@ -38,7 +37,7 @@ if [ $optConf -eq 1 ]; then
 else
     # If no --conf option, look for /opt/zimbra/conf/zmstat-chart.xml and
     # generated one if necessary.
-    conf=${zimbra_home}/conf/zmstat-chart.xml
+    conf=/opt/zimbra/conf/zmstat-chart.xml
     confTmp=$conf.$$.tmp
     CONF_TIME=0
     CONFGEN_TIME=`stat -c %Z /opt/zimbra/bin/zmstat-chart-config`

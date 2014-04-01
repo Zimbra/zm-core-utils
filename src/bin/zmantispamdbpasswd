@@ -19,7 +19,7 @@
 # MySQL.
 #
 source `dirname $0`/zmshutil || exit 1
-zmsetvars zimbra_home antispam_mysql_user antispam_mysql_root_password antispam_mysql_enabled
+zmsetvars  antispam_mysql_user antispam_mysql_root_password antispam_mysql_enabled
 
 antispam_mysql_enabled=`echo ${antispam_mysql_enabled} | tr [:upper:] [:lower:]`
 if [ "${antispam_mysql_enabled}x" != "truex" ]
@@ -67,7 +67,7 @@ newpassword="$1"
 #
 if [ ${password_key} = antispam_mysql_password ]; then 
     # Change the password in mysql.
-    cat <<EOF | ${zimbra_home}/bin/antispam-mysql -u root --password="${antispam_mysql_root_password}"
+    cat <<EOF | /opt/zimbra/bin/antispam-mysql -u root --password="${antispam_mysql_root_password}"
 SET PASSWORD FOR '${antispam_mysql_user}' = PASSWORD('${newpassword}');
 SET PASSWORD FOR '${antispam_mysql_user}'@'127.0.0.1' = PASSWORD('${newpassword}');
 SET PASSWORD FOR '${antispam_mysql_user}'@'localhost' = PASSWORD('${newpassword}');
@@ -85,8 +85,8 @@ fi
 # For mysql_root_password
 #
 if [ ${password_key} = antispam_mysql_root_password ]; then
-    echo ${zimbra_home}/bin/antispam-mysqladmin -u root --password="${antispam_mysql_root_password}" password "${newpassword}"
-    ${zimbra_home}/bin/antispam-mysqladmin -u root --password="${antispam_mysql_root_password}" password "${newpassword}"
+    echo /opt/zimbra/bin/antispam-mysqladmin -u root --password="${antispam_mysql_root_password}" password "${newpassword}"
+    /opt/zimbra/bin/antispam-mysqladmin -u root --password="${antispam_mysql_root_password}" password "${newpassword}"
     if [ $? = 0 ]; then
         echo '*' Changed antispam mysql root user password
     else
@@ -94,7 +94,7 @@ if [ ${password_key} = antispam_mysql_root_password ]; then
         exit 1
     fi
     # Change for localhost socket clients also - useful for dev.
-    cat <<EOF | ${zimbra_home}/bin/antispam-mysql -u root --password="${newpassword}"
+    cat <<EOF | /opt/zimbra/bin/antispam-mysql -u root --password="${newpassword}"
 SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${newpassword}');
 SET PASSWORD FOR 'root'@'localhost.localdomain' = PASSWORD('${newpassword}');
 EOF
@@ -110,8 +110,8 @@ fi
 # Change the password in local config.  TODO: notify app server that
 # the password has changed, for now you will have to restart mailboxd
 #
-if ! ${zimbra_home}/bin/zmlocalconfig -f -e "${password_key}=${newpassword}"; then
-    echo Error: command failed: ${zimbra_home}/bin/zmlocalconfig -f -e ${password_key}='#'
+if ! /opt/zimbra/bin/zmlocalconfig -f -e "${password_key}=${newpassword}"; then
+    echo Error: command failed: /opt/zimbra/bin/zmlocalconfig -f -e ${password_key}='#'
     exit 1
 fi
 

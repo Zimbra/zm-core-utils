@@ -21,7 +21,6 @@ zmstatInit();
 
 my $isLinux = isLinux();
 my $isMac = isMac();
-my $ZIMBRA_HOME = getZimbraHome();
 
 my $mtaqstatCsv = 'mtaqueue.csv';
 my $cpustatCsv = 'cpu.csv';

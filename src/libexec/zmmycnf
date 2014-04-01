@@ -44,7 +44,7 @@ memKB=$(zmsysmemkb)
 #
 # Tell the JDBC driver how many mysql active connections to use.
 #
-${zimbra_home}/bin/zmlocalconfig -e zimbra_mysql_connector_maxActive=100
+/opt/zimbra/bin/zmlocalconfig -e zimbra_mysql_connector_maxActive=100
 
 #
 # Write config to stdout

@@ -76,15 +76,10 @@ my $ldap_master_url = $localxml->{key}->{ldap_master_url}->{value};
 my $zimbra_admin_dn = $localxml->{key}->{zimbra_ldap_userdn}->{value};
 my $zimbra_admin_password = $localxml->{key}->{zimbra_ldap_password}->{value};
 chomp($zimbra_admin_password);
-my $zimbra_home = $localxml->{key}->{zimbra_home}->{value};
 my $ldap_starttls_supported = $localxml->{key}->{ldap_starttls_supported}->{value};
 my $zimbra_require_interprocess_security = $localxml->{key}->{zimbra_require_interprocess_security}->{value};
 
-if ($zimbra_home eq "") {
-  $zimbra_home = "/opt/zimbra";
-}
-
-my $keygen = "${zimbra_home}/opendkim/sbin/opendkim-genkey";
+my $keygen = "/opt/zimbra/opendkim/sbin/opendkim-genkey";
 
 my $mesg;
 my @masters=split(/ /, $ldap_master_url);
@@ -95,7 +90,7 @@ if ($ldap_master_url !~ /^ldaps/i) {
   if ($ldap_starttls_supported) {
     $mesg = $ldap->start_tls(
         verify => 'none',
-        capath => "${zimbra_home}/conf/ca",
+        capath => "/opt/zimbra/conf/ca",
      ) or die "start_tls: $@";
      $mesg->code && die "Could not execute StartTLS\n";
   }
@@ -155,8 +150,8 @@ if($add) {
   } else {
     qx($keygen $subflag -s $selector -d $domain -D /opt/zimbra/data/tmp);
   }
-  my $privatekey = "${zimbra_home}/data/tmp/${selector}.private";
-  my $publickey = "${zimbra_home}/data/tmp/${selector}.txt";
+  my $privatekey = "/opt/zimbra/data/tmp/${selector}.private";
+  my $publickey = "/opt/zimbra/data/tmp/${selector}.txt";
   if (-f $privatekey && -s $privatekey && -f $publickey && -s $publickey) {
     my $private;
     my $public;
@@ -270,8 +265,8 @@ if($add) {
   } else {
     qx($keygen $subflag -s $selector -d $domain -D /opt/zimbra/data/tmp);
   }
-  my $privatekey = "${zimbra_home}/data/tmp/${selector}.private";
-  my $publickey = "${zimbra_home}/data/tmp/${selector}.txt";
+  my $privatekey = "/opt/zimbra/data/tmp/${selector}.private";
+  my $publickey = "/opt/zimbra/data/tmp/${selector}.txt";
   if (-f $privatekey && -s $privatekey && -f $publickey && -s $publickey) {
     my $private;
     my $public;

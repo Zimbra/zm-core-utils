@@ -48,8 +48,7 @@ if ($enable && $disable) {
 &usage if ($help);
 
 $c{zmlocalconfig}="/opt/zimbra/bin/zmlocalconfig";
-$c{zimbra_home} = getLocalConfig("zimbra_home");
-$c{zmprov}="$c{zimbra_home}/bin/zmprov -l --";
+$c{zmprov}="/opt/zimbra/bin/zmprov -l --";
 
 # ***** Main *****
 my $ldappass = qx($c{zmlocalconfig} -s -m nokey zimbra_ldap_password);
@@ -103,14 +102,14 @@ if (lc($enabled) eq "true") {
       $html = $mesg->entry($loop)->get_value('zimbraAmavisDomainDisclaimerHTML');
       $domain = $mesg->entry($loop)->get_value('amavisDisclaimerOptions');
       print "Generating disclaimers for domain $domain.\n";
-      writeFile("$c{zimbra_home}/data/altermime/$domain.txt", "$text");
-      writeFile("$c{zimbra_home}/data/altermime/$domain.html", "$html");
-      if ( -f "$c{zimbra_home}/data/altermime/$domain.txt") {
-        open(FILE, "$c{zimbra_home}/data/altermime/$domain.txt");
+      writeFile("/opt/zimbra/data/altermime/$domain.txt", "$text");
+      writeFile("/opt/zimbra/data/altermime/$domain.html", "$html");
+      if ( -f "/opt/zimbra/data/altermime/$domain.txt") {
+        open(FILE, "/opt/zimbra/data/altermime/$domain.txt");
         my $buf;
         while (read(FILE, $buf, 60*57)) {
           my $b64 = MIME::Base64::encode_base64($buf);
-          writeFile("$c{zimbra_home}/data/altermime/$domain.b64", "$b64");
+          writeFile("/opt/zimbra/data/altermime/$domain.b64", "$b64");
         }
         close(FILE);
       }
@@ -182,9 +181,9 @@ sub disableDomain() {
   } else {
     print "Warning: Domain $disable does not have disclaimers enabled\n";
   }
-  unlink("$c{zimbra_home}/data/altermime/$disable.txt");
-  unlink("$c{zimbra_home}/data/altermime/$disable.html");
-  unlink("$c{zimbra_home}/data/altermime/$disable.b64");
+  unlink("/opt/zimbra/data/altermime/$disable.txt");
+  unlink("/opt/zimbra/data/altermime/$disable.html");
+  unlink("/opt/zimbra/data/altermime/$disable.b64");
 }
 
 sub getLocalConfig {

@@ -28,7 +28,7 @@ use Zimbra::Mon::Logger;
 use vars qw($LOGFH $CONSOLE $LOGFILE $ROTATE_NOW $ROTATE_DEFER);
 
 Zimbra::Mon::Zmstat::osCheck();
-Zimbra::Mon::Zmstat::getLocalConfig('zimbra_home', 'zimbra_user', 'zimbra_server_hostname',
+Zimbra::Mon::Zmstat::getLocalConfig('zimbra_user', 'zimbra_server_hostname',
                'zmstat_interval', 'zmstat_disk_interval');
 my $zuser = $Zimbra::Mon::Zmstat::LC{zimbra_user};
 my ($zuid,$zgid) = (getpwnam($zuser))[2,3];

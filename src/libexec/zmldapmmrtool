@@ -85,17 +85,12 @@ my $ldap_root_password = $localxml->{key}->{ldap_root_password}->{value};
 chomp($ldap_root_password);
 my $ldap_is_master = $localxml->{key}->{ldap_is_master}->{value};
 chomp($ldap_is_master);
-my $zimbra_home = $localxml->{key}->{zimbra_home}->{value};
 my $ldap_replication_password = $localxml->{key}->{ldap_replication_password}->{value};
 my $ldap_starttls_supported = $localxml->{key}->{ldap_starttls_supported}->{value};
 my $zimbra_require_interprocess_security = $localxml->{key}->{zimbra_require_interprocess_security}->{value};
 
 if(lc($ldap_is_master) ne "true") {
   usage(0);
-}
-
-if ($zimbra_home eq "") {
-   $zimbra_home = "/opt/zimbra";
 }
 
 if(lc($ldap_is_master) eq "true") {

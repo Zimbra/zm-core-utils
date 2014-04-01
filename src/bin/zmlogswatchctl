@@ -17,11 +17,10 @@
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
-    zimbra_home \
     zimbra_tmp_directory \
     zimbra_log_directory
 
-configfile=${zimbra_home}/conf/logswatchrc
+configfile=/opt/zimbra/conf/logswatchrc
 pidfile=${zimbra_log_directory}/logswatch.pid
 zmrrdfetchpidfile=${zimbra_log_directory}/zmrrdfetch-server.pid
 zmrrdfetchpid=""
@@ -69,7 +68,7 @@ case "$1" in
       exit 0
     fi
 
-    ${zimbra_home}/bin/zmprov -l gs `${zimbra_home}/bin/zmhostname` zimbraServiceEnabled | grep -qw logger
+    /opt/zimbra/bin/zmprov -l gs `/opt/zimbra/bin/zmhostname` zimbraServiceEnabled | grep -qw logger
     if [ $? = 1 ]; then
         echo "zimbra logger service is not enabled!  failed."
         exit 1
@@ -79,7 +78,7 @@ case "$1" in
       mkdir -p ${zimbra_tmp_directory} > /dev/null 2>&1
     fi
 
-    ${zimbra_home}/libexec/logswatch --config-file=${configfile} \
+    /opt/zimbra/libexec/logswatch --config-file=${configfile} \
       --use-cpan-file-tail --pid-file=${pidfile} --daemon \
       --script-dir=${zimbra_tmp_directory} \
       -t /var/log/zimbra-stats.log > $logfile 2>&1

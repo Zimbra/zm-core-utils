@@ -21,11 +21,10 @@ fi
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
-    zimbra_home \
     zimbra_tmp_directory \
     zimbra_log_directory
 
-configfile=${zimbra_home}/conf/swatchrc
+configfile=/opt/zimbra/conf/swatchrc
 pidfile=${zimbra_log_directory}/swatch.pid
 logfile=${zimbra_log_directory}/zmswatch.out
 pid=""
@@ -55,7 +54,7 @@ checkrunning()
 
 case "$1" in 
   start)
-    ${zimbra_home}/libexec/zmsnmpinit
+    /opt/zimbra/libexec/zmsnmpinit
     checkrunning
     echo -n "Starting swatch..."
     if [ $running = 1 ]; then
@@ -67,7 +66,7 @@ case "$1" in
       mkdir -p ${zimbra_tmp_directory} > /dev/null 2>&1
     fi
 
-    ${zimbra_home}/libexec/swatch --config-file=${configfile} \
+    /opt/zimbra/libexec/swatch --config-file=${configfile} \
       --use-cpan-file-tail \
       --script-dir=${zimbra_tmp_directory} -t /var/log/zimbra.log > $logfile 2>&1 &
     pid=$!

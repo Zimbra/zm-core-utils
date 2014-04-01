@@ -20,8 +20,6 @@ my $id = qx(id -u -n);
 chomp $id;
 if ($id ne "zimbra") {die "Run as the zimbra user!\n";}
 
-our $zimbra_home = "/opt/zimbra";
-
 use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Util::Common;
 use Zimbra::Mon::Logger;
@@ -41,7 +39,7 @@ my (undef, $zmcontrolLogfile) = tempfile("zmcontrol.out.XXXXX", DIR=>"$zimbra_tm
 my $timeout = 180;
 $SIG{ALRM} = sub { print "Timeout after $timeout seconds\n"; exit(1) };
 my $now = time();
-my $cache_file = "${zimbra_home}/log/.zmcontrol.cache";
+my $cache_file = "/opt/zimbra/log/.zmcontrol.cache";
 my $localHostName = getHostName();
 my $ldapHere = isLdapLocal();
 my $services;
@@ -482,7 +480,7 @@ sub displayVersion {
   $string .= " edition";
 
   my $patch = "";
-  if (open(HIST_FILE, $zimbra_home . "/.install_history")) {
+  if (open(HIST_FILE, "/opt/zimbra/.install_history")) {
     my $hline;
     while ($hline = <HIST_FILE>) {
       my $entry;
@@ -540,8 +538,7 @@ sub hasAvailableSpace() {
     return undef unless (-e "$dir");
   $freeMbytes = getLocalConfig("zimbra_disk_threshold") || 100
     unless $freeMbytes;
-  my $zimbra_home = "/opt/zimbra";
-  my $platform=qx(${zimbra_home}/libexec/get_plat_tag.sh);
+  my $platform=qx(/opt/zimbra/libexec/get_plat_tag.sh);
   chomp $platform;
 
   my $DFCMD = ($platform =~ /MACOSX/ ? "df -ml " : "df -mlP ");

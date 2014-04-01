@@ -25,13 +25,12 @@ fi
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
-  zimbra_home \
   zimbra_log_directory
 
 PID=""
 PIDFILE=${zimbra_log_directory}/opendkim.pid
-odk=${zimbra_home}/opendkim/sbin/opendkim
-config=${zimbra_home}/conf/opendkim.conf
+odk=/opt/zimbra/opendkim/sbin/opendkim
+config=/opt/zimbra/conf/opendkim.conf
 
 rewriteconfig() {
     /opt/zimbra/libexec/configrewrite opendkim > /dev/null 2>&1

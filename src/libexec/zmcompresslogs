@@ -22,10 +22,8 @@ sub usage;
 my ($help, $verbose);
 GetOptions("help" => \$help,
            "verbose" => \$verbose);
-      
-my $zimbra_home=getLocalConfigValue("zimbra_home");
-$zimbra_home = "/opt/zimbra" if ($zimbra_home eq "");
-my $zimbra_log_directory="${zimbra_home}/log";
+
+my $zimbra_log_directory="/opt/zimbra/log";
 
 my @logfiles = qw(mailbox.log audit.log sync.log synctrace.log wbxml.log milter.log convertd.log);
 

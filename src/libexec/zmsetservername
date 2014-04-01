@@ -44,7 +44,6 @@ GetOptions("help" => \$help,
 &usage if ($help or !$newServerName);
 
 $c{zmlocalconfig}="/opt/zimbra/bin/zmlocalconfig";
-$c{zimbra_home} = getLocalConfig("zimbra_home");
 $c{zmprov}="/opt/zimbra/bin/zmprov -l -m --";
 $c{zmcertmgr}="/opt/zimbra/bin/zmcertmgr";
 
@@ -104,7 +103,7 @@ if ($delete && $c{zimbra_log_host} eq "") {
 if (!$usersonly) {
   print "Renaming $c{zimbra_server_hostname} to $newServerName\n";
   print "Shutting down zimbra...";
-  my $rc = runCommand("$c{zimbra_home}/bin/zmcontrol stop");
+  my $rc = runCommand("/opt/zimbra/bin/zmcontrol stop");
   print (($rc==0) ? "done.\n" : "failed.\n");
 
 
@@ -135,34 +134,34 @@ if (!$usersonly) {
     $c{ldap_host} = getLocalConfig("ldap_host");
     $c{ldap_port} = getLocalConfig("ldap_port");
     print "Reinitializing the mta config...";
-    $rc = runCommand("$c{zimbra_home}/libexec/zmmtainit $c{ldap_host} $c{ldap_port}");
+    $rc = runCommand("/opt/zimbra/libexec/zmmtainit $c{ldap_host} $c{ldap_port}");
     print (($rc==0) ? "done.\n" : "failed.\n");
   }
 
   # Reinitialize swatchrc
   if (index($c{zimbraServiceEnabled}, "snmp") != -1) {
     print "Reinitializing the snmp config...";
-    $rc = runCommand("$c{zimbra_home}/libexec/zmsnmpinit");
+    $rc = runCommand("/opt/zimbra/libexec/zmsnmpinit");
     print (($rc==0) ? "done.\n" : "failed.\n");
   }
 
   #remap or delete logger data for the host
   if (index($c{zimbraServiceEnabled}, "logger") != -1) {
     if ($delete) {
-      runCommand("$c{zimbra_home}/bin/zmloggerhostmap -d $oldServerName $oldServerName");
+      runCommand("/opt/zimbra/bin/zmloggerhostmap -d $oldServerName $oldServerName");
     } else {
-      runCommand("$c{zimbra_home}/bin/zmloggerhostmap $oldServerName $newServerName");
+      runCommand("/opt/zimbra/bin/zmloggerhostmap $oldServerName $newServerName");
     }
   } else {
     if ($delete) {
-      runCommand("$c{zimbra_home}/libexec/zmrc $c{zimbra_log_host} HOST:$c{zimbra_log_host} zmloggerhostmap -d $oldServerName $oldServerName");
+      runCommand("/opt/zimbra/libexec/zmrc $c{zimbra_log_host} HOST:$c{zimbra_log_host} zmloggerhostmap -d $oldServerName $oldServerName");
     } else {
-      runCommand("$c{zimbra_home}/libexec/zmrc $c{zimbra_log_host} HOST:$c{zimbra_log_host} zmloggerhostmap $oldServerName $newServerName");
+      runCommand("/opt/zimbra/libexec/zmrc $c{zimbra_log_host} HOST:$c{zimbra_log_host} zmloggerhostmap $oldServerName $newServerName");
     }
   }
 
   # Regenerate Self-signed certs
-  if (!-f "$c{zimbra_home}/ssl/zimbra/commercial/commercial.crt") {
+  if (!-f "/opt/zimbra/ssl/zimbra/commercial/commercial.crt") {
     if(lc($c{ldap_is_master}) eq "true") {
       runCommand("sudo $c{zmcertmgr} createca -new");
     }
@@ -215,7 +214,7 @@ sub modifyServerName($) {
     if ($c{ldap_starttls_supported}) {
       $result = $ldap->start_tls(
         verify => 'none',
-        capath => "$c{zimbra_home}/conf/ca",
+        capath => "/opt/zimbra/conf/ca",
         ) or die "start_tls: $@";
       $result->code && die "TLS: " . $result->error . "\n";
     }
@@ -482,7 +481,7 @@ sub modifyAccountData($) {
     if ($c{ldap_starttls_supported}) {
       $result = $ldap->start_tls(
         verify => 'none',
-        capath => "$c{zimbra_home}/conf/ca",
+        capath => "/opt/zimbra/conf/ca",
         ) or die "start_tls: $@";
       $result->code && die "TLS: " . $result->error . "\n";
     }
@@ -542,7 +541,7 @@ sub modifyListData($) {
     if ($c{ldap_starttls_supported}) {
       $result = $ldap->start_tls(
         verify => 'none',
-        capath => "$c{zimbra_home}/conf/ca",
+        capath => "/opt/zimbra/conf/ca",
         ) or die "start_tls: $@";
       $result->code && die "TLS: " . $result->error . "\n";
     }
@@ -733,7 +732,7 @@ sub runCommand {
 
 sub isLdapRunning {
   if (index($c{ldap_url}, "/".$c{zimbra_server_hostname}) != -1) {
-    my $isrunning = 0xffff & system("$c{zimbra_home}/bin/ldap status > /dev/null 2>&1");
+    my $isrunning = 0xffff & system("/opt/zimbra/bin/ldap status > /dev/null 2>&1");
     return ($isrunning)?0:1;
   } 
 }
@@ -744,7 +743,7 @@ sub startLdap {
     print "already running.\n";
     return;
   }
-  $rc = runCommand("$c{zimbra_home}/bin/ldap start");
+  $rc = runCommand("/opt/zimbra/bin/ldap start");
   if ($rc==0) {
     print "done.\n";
   } else {

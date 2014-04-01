@@ -31,9 +31,8 @@ use vars qw($logger_directory $log_file);
 # Exit if software-only node.
 exit(0) unless (-f '/opt/zimbra/conf/localconfig.xml');
 
-my $zimbra_home = "/opt/zimbra";
-my $pid_file = "${zimbra_home}/log/zmlogprocess.pid";
-my $state_file = "${zimbra_home}/log/zmlogprocess.state";
+my $pid_file = "/opt/zimbra/log/zmlogprocess.pid";
+my $state_file = "/opt/zimbra/log/zmlogprocess.state";
 $logger_directory = getLocalConfig("logger_data_directory");
 $log_file = '/var/log/zimbra.log';
 
@@ -54,7 +53,7 @@ sub gethostmap() {
 }
 
 sub listMTA() {
-    open(MTALIST, "${zimbra_home}/bin/zmprov gas mta |") || die $!;
+    open(MTALIST, "/opt/zimbra/bin/zmprov gas mta |") || die $!;
     my @mtas = <MTALIST>;
     chomp(@mtas);
     close(MTALIST);
@@ -124,7 +123,7 @@ sub getLocalConfig {
     return $ENV{$key};
   }
   open CONF, 
-    "${zimbra_home}/bin/zmlocalconfig -q -x -s -m shell |" 
+    "/opt/zimbra/bin/zmlocalconfig -q -x -s -m shell |" 
     or die "Can't open local config: $!";
   my @conf = <CONF>;
   close CONF;

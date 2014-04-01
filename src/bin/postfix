@@ -24,14 +24,9 @@ if [ ! -L /opt/zimbra/postfix ]; then
 fi
 
 zmsetvars \
-	zimbra_home \
 	postfix_mail_owner \
 	postfix_setgid_group \
-	zimbra_server_hostname 
-
-if [ "x${zimbra_home}" = "x" ]; then
-  zimbra_home=/opt/zimbra
-fi
+	zimbra_server_hostname
 
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
@@ -44,9 +39,9 @@ rewriteconfig() {
 }
 
 if [ "x$1" = "xstatus" -o "x$1" = "xstart" ]; then
-  if [ -L ${zimbra_home}/postfix ]; then
-    if [ ! -f ${zimbra_home}/postfix/conf/main.cf ]; then
-      touch ${zimbra_home}/postfix/conf/main.cf
+  if [ -L /opt/zimbra/postfix ]; then
+    if [ ! -f /opt/zimbra/postfix/conf/main.cf ]; then
+      touch /opt/zimbra/postfix/conf/main.cf
       /opt/zimbra/postfix/sbin/postconf -e mail_owner=${postfix_mail_owner} setgid_group=${postfix_setgid_group}
     fi
   fi

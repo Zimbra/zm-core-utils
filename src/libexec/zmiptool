@@ -57,14 +57,9 @@ my $ldapurl = getLocalConfig("ldap_url");
 my $zdn = getLocalConfig("zimbra_ldap_userdn");
 my $zps = getLocalConfig("zimbra_ldap_password");
 my $ldap_starttls_supported = getLocalConfig("ldap_starttls_supported");
-my $zimbra_home = getLocalConfig("zimbra_home");
 my $host = getLocalConfig("zimbra_server_hostname");
 
-if ($zimbra_home eq "") {
-  $zimbra_home = "/opt/zimbra";
-}
-
-my $zmlocalconfig="${zimbra_home}/bin/zmlocalconfig";
+my $zmlocalconfig="/opt/zimbra/bin/zmlocalconfig";
 
 my @replicas=split(/ /, $ldapurl);
 my $replica_ref=\@replicas;
@@ -75,7 +70,7 @@ if ($ldapurl !~ /^ldaps/i) {
   if ($ldap_starttls_supported) {
     $mesg = $ldap->start_tls(
          verify => 'none',
-         capath => "${zimbra_home}/conf/ca",
+         capath => "/opt/zimbra/conf/ca",
          ) or die "start_tls: $@";
     $mesg->code && die "TLS: " . $mesg->error . "\n";
   }

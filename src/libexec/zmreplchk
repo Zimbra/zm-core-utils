@@ -25,7 +25,6 @@ my (%c,%loaded,%mstatus,%rstatus);
 $c{zmlocalconfig}="/opt/zimbra/bin/zmlocalconfig";
 
 my $ldap_starttls_supported=getLocalConfig("ldap_starttls_supported");
-my $zimbra_home=getLocalConfig("zimbra_home");
 my $ldap_master=getLocalConfig("ldap_master_url");
 my $ldap_urls=getLocalConfig("ldap_url");
 my ($mesgp, $entry);
@@ -54,7 +53,7 @@ foreach my $master (@masters) {
       if ($ldap_starttls_supported) {
         $mesgp = $ldapp->start_tls(
                    verify => 'none',
-                   capath => "${zimbra_home}/conf/ca",
+                   capath => "/opt/zimbra/conf/ca",
                  ) or die "start_tls: $@";
         if($mesgp->code) {
           $mstatus{$master}[0]=3;
@@ -165,7 +164,7 @@ foreach my $replica (@replicas) {
       if ($ldap_starttls_supported) {
         $mesgr = $ldapr->start_tls(
                    verify => 'none',
-                   capath => "${zimbra_home}/conf/ca",
+                   capath => "/opt/zimbra/conf/ca",
                  ) or die "start_tls: $@";
         if($mesgr->code) {
           $rstatus{$replica}[0]=3;

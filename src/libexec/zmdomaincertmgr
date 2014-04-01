@@ -23,7 +23,6 @@ umask 027
 platform=$(/opt/zimbra/libexec/get_plat_tag.sh 2> /dev/null := UNKNOWN)
 source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars -f \
-  zimbra_home \
   zimbra_log_directory \
   zimbra_server_hostname \
   zimbra_tmp_directory \
@@ -43,26 +42,25 @@ export JAVA_HOME=${zimbra_java_home}
 
 java_version=$(${zimbra_java_home}/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
 if [ x"$java_version" = "x1.6.0" ]; then
-  java_options="-XX:ErrorFile=${zimbra_home}/log"
+  java_options="-XX:ErrorFile=/opt/zimbra/log"
 else
   java_options=""
 fi
 
-zimbra_home=${zimbra_home:=/opt/zimbra}
-zimbra_conf_directory=${zimbra_home}/conf
+zimbra_conf_directory=/opt/zimbra/conf
 exp_thres_days=${zimbra_zmcertmgr_expiration_threshold:=30}
 exp_thres_secs=$(($exp_thres_days*24*60*60))
 
 zimbra_domain_cert_directory=${zimbra_conf_directory}/domaincerts
 
-if [ -x "${zimbra_home}/openssl/bin/openssl" ]; then
-  openssl=${zimbra_home}/openssl/bin/openssl
+if [ -x "/opt/zimbra/openssl/bin/openssl" ]; then
+  openssl=/opt/zimbra/openssl/bin/openssl
 else
   openssl=openssl
 fi
 
 # this avoid "unable to write 'random state' errors from openssl
-export RANDFILE=${zimbra_home}/ssl/.rnd
+export RANDFILE=/opt/zimbra/ssl/.rnd
 
 #OUTPUT_PREFIX="##### OUTPUT:"
 ERROR_PREFIX="XXXXX ERROR:"
@@ -98,7 +96,7 @@ saveConfigKey() {
   fi
 
   echo -n "** Saving $location config key $key..."
-  su - zimbra -c "${zimbra_home}/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"$content\" 2> /dev/null"
+  su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"$content\" 2> /dev/null"
   if [ $? = 0 ]; then
     echo "done."
   else
@@ -130,7 +128,7 @@ loadConfigKey() {
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -s ${file} ]; then
     echo -n "** Retrieving $location config key $key..."
-    su - zimbra -c "${zimbra_home}/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null" 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
+    su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null" 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
     if [ $? = 0 -a -s "${file}" ]; then
       chown ${zimbra_uid} ${file} 2> /dev/null
       chmod 400 ${file} 2> /dev/null
@@ -148,7 +146,7 @@ deployCerts() {
     rm -rf ${zimbra_domain_cert_directory} > /dev/null 2>&1
   fi
   
-  DOMAINS=$(su - zimbra -c "${zimbra_home}/bin/zmprov -m -l -- garpd | awk '{print \$1}'")
+  DOMAINS=$(su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- garpd | awk '{print \$1}'")
   if [ $? != 0 ]; then
     echo "Unable to retrieve list of domains with SSL certificates";
     exit 1

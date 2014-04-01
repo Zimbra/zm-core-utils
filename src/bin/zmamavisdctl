@@ -27,7 +27,6 @@ export LD_LIBRARY_PATH=/opt/zimbra/openldap/lib:/opt/zimbra/openssl/lib:$LD_LIBR
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
-  zimbra_home \
   zimbra_log_directory
 
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
@@ -145,14 +144,14 @@ case "$1" in
       if [ x$2 = "x" ]; then
         rewriteconfig
       fi
-      if [ ! -f ${zimbra_home}/data/amavisd/.spamassassin/bayes_toks ]; then
+      if [ ! -f /opt/zimbra/data/amavisd/.spamassassin/bayes_toks ]; then
         # Initial bayes seeding.
-        cp -f ${zimbra_home}/amavisd/.spamassassin/init/* \
-          ${zimbra_home}/data/amavisd/.spamassassin/
-        chmod 644 ${zimbra_home}/data/amavisd/.spamassassin/bayes*
+        cp -f /opt/zimbra/amavisd/.spamassassin/init/* \
+          /opt/zimbra/data/amavisd/.spamassassin/
+        chmod 644 /opt/zimbra/data/amavisd/.spamassassin/bayes*
       fi
-      ${zimbra_home}/amavisd/sbin/amavisd -X no_conf_file_writable_check -c \
-        ${zimbra_home}/conf/amavisd.conf &
+      /opt/zimbra/amavisd/sbin/amavisd -X no_conf_file_writable_check -c \
+        /opt/zimbra/conf/amavisd.conf &
       for ((i=0; i < 30; i++)); do
         checkrunning
         if [ $RUNNING = 1 ]; then 

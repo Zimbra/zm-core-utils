@@ -52,9 +52,9 @@ if (!$rule_updates_enabled) {
   exit;
 }
 
-my $zimbra_home = getLocalConfig("zimbra_home");
-my $sa="${zimbra_home}/zimbramon/bin/sa-update -v --updatedir ${zimbra_home}/conf/spamassassin --allowplugins --refreshmirrors >/dev/null 2>&1";
-my $restart="${zimbra_home}/bin/zmamavisdctl restart norewrite >/dev/null 2>&1";
+
+my $sa="/opt/zimbra/zimbramon/bin/sa-update -v --updatedir /opt/zimbra/conf/spamassassin --allowplugins --refreshmirrors >/dev/null 2>&1";
+my $restart="/opt/zimbra/bin/zmamavisdctl restart norewrite >/dev/null 2>&1";
 my $restart_enabled = getLocalConfig("antispam_enable_restarts");
 my $restart_required;
 

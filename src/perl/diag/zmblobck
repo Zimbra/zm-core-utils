@@ -20,7 +20,7 @@
 # It finds all blobs which are present in the database but missing in fs.
 # It does not find blobs in fs and missing from database.
 
-use lib "$ENV{ZIMBRA_HOME}/zimbramon/lib";
+use lib "/opt/zimbra/zimbramon/lib";
 
 use strict;
 use Getopt::Std;

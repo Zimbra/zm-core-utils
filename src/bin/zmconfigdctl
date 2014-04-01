@@ -21,17 +21,16 @@ fi
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
-	zimbra_home \
 	zimbra_log_directory \
 	zmconfigd_listen_port
 
 # These variables are not set if run via cron.  Make sure they are set prior to execution
 if [ x"$JYTHONPATH" = "x" ]; then
-  JAVA_HOME=${zimbra_home}/java
-  PATH=${zimbra_home}/bin:${zimbra_home}/postfix/sbin:${zimbra_home}/openldap/bin:${zimbra_home}/snmp/bin:${zimbra_home}/bdb/bin:${zimbra_home}/openssl/bin:${JAVA_HOME}/bin:/usr/sbin:${PATH}
+  JAVA_HOME=/opt/zimbra/java
+  PATH=/opt/zimbra/bin:/opt/zimbra/postfix/sbin:/opt/zimbra/openldap/bin:/opt/zimbra/snmp/bin:/opt/zimbra/bdb/bin:/opt/zimbra/openssl/bin:${JAVA_HOME}/bin:/usr/sbin:${PATH}
   export PATH
 
-  JYTHONPATH="${zimbra_home}/zimbramon/pylibs"
+  JYTHONPATH="/opt/zimbra/zimbramon/pylibs"
   export JYTHONPATH
 fi
  
@@ -109,7 +108,7 @@ startzmconfigd()
 		kill -9 ${pid}
 	fi
 	rm -rf ${pidfile}
-	${zimbra_home}/libexec/zmconfigd >> ${zimbra_log_directory}/zmconfigd.log 2>&1 &
+	/opt/zimbra/libexec/zmconfigd >> ${zimbra_log_directory}/zmconfigd.log 2>&1 &
 	# Bug 51682 wait for the pid file to be created, then wait 30 seconds for rewrites
 	for ((i = 0; i < 30; i++)) do
 		if [ -f ${pidfile} ]; then

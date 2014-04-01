@@ -37,7 +37,6 @@ our %options=();
 our %loaded=();
 our %saved=();
 
-my $zimbra_home=getLocalConfig("zimbra_home");
 my $zimbra_user=getLocalConfig("zimbra_user");
 my $zimbra_tmp_directory=getLocalConfig("zimbra_tmp_directory");
 my $ldap_master_url=getLocalConfig("ldap_master_url");
@@ -128,7 +127,7 @@ $ldifout->done ( );
 
 # Start ldap
 
-my $rc=qx(${zimbra_home}/bin/ldap start);
+my $rc=qx(/opt/zimbra/bin/ldap start);
 
 if ( $rc eq 0 ) {
 	exit 1;
@@ -142,7 +141,7 @@ if ($ldap_master_url !~ /^ldaps/i) {
   if ($ldap_starttls_supported) {
     $mesg = $ldap->start_tls(
          verify => 'none',
-         capath => "$zimbra_home/conf/ca",
+         capath => "/opt/zimbra/conf/ca",
          ) or die "start_tls: $@";
     $mesg->code && die "TLS: " . $mesg->error . "\n";
   }

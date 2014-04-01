@@ -15,21 +15,20 @@
 # 
 
 use strict;
-my $zimbra_home = "/opt/zimbra";
 
 use lib "/opt/zimbra/zimbramon/lib";
 use  Zimbra::Util::Common;
 use Zimbra::Mon::Logger;
 
 # Exit if software-only node.
-exit(0) unless (-f "${zimbra_home}/conf/localconfig.xml");
+exit(0) unless (-f "/opt/zimbra/conf/localconfig.xml");
 
 $SIG{ALRM} = \&catchAlarm;
 
-my $platform=qx(${zimbra_home}/libexec/get_plat_tag.sh);
+my $platform=qx(/opt/zimbra/libexec/get_plat_tag.sh);
 chomp $platform;
 
-my $pidFile="${zimbra_home}/log/zmstatuslog.pid";
+my $pidFile="/opt/zimbra/log/zmstatuslog.pid";
 
 my $TIMEOUT=60;
 my $MNTCMD;
@@ -56,7 +55,7 @@ exit 0;
 sub logStatus {
 	my @status = ();
   alarm($TIMEOUT);
-	open STATUS, "${zimbra_home}/bin/zmcontrol status |" or die "Can't get status: $!";
+	open STATUS, "/opt/zimbra/bin/zmcontrol status |" or die "Can't get status: $!";
 	@status = <STATUS>;
 	close STATUS;
 	foreach my $s (@status) {
