@@ -558,6 +558,10 @@ if [ -L /opt/zimbra/jetty ]; then
     find /opt/zimbra/jetty/lib -type d -exec chown ${root_user}:${root_group} {} \; -exec chmod 755 {} \;
   fi
 
+  if [ -d /opt/zimbra/jetty/common/lib ]; then
+    find /opt/zimbra/jetty/common/lib -type f -name '*.jar' -exec chown ${root_user}:${root_group} {} \; -exec chmod 444 {} \;
+  fi
+
   if [ -d /opt/zimbra/jetty/common ]; then
     find /opt/zimbra/jetty/common -type d -exec chown ${root_user}:${root_group} {} \; -exec chmod 755 {} \;
   fi  
