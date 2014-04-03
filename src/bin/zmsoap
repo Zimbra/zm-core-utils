@@ -15,4 +15,4 @@
 # 
 source /opt/zimbra/bin/zmshutil || exit 1
 
-exec `dirname $0`/bin/zmjava com.zimbra.soap.SoapCommandUtil "$@"
+exec `dirname $0`/zmjava com.zimbra.soap.SoapCommandUtil "$@"
