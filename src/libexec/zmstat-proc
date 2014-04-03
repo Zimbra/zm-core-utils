@@ -188,7 +188,7 @@ sub getMailboxProcess() {
 # Use this if mysqld is a single multi-threaded process. (dynamically linked build)
 sub getMysqlProcess() {
     if (!$isMac) {
-        my $zimbraHome = getZimbraHome();
+        my $zimbraHome = "/opt/zimbra";
         my $ps = qx(cat $zimbraHome/db/mysql.pid);
         chomp($ps) if (defined($ps));
         my @ret = ({'pid' => $ps});
