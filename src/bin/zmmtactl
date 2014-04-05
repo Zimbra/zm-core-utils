@@ -78,9 +78,9 @@ case "$1" in
 		fi
 		for i in $START_SCRIPTS; do
 			if [ x$2 = "x" ]; then
-				/opt/zimbra/bin/$i $1
+				/opt/zimbra/bin/$i reload
 			else
-				/opt/zimbra/bin/$i $1 $2
+				/opt/zimbra/bin/$i reload $2
 			fi
 		done
 	;;
