@@ -69,7 +69,7 @@ case "$1" in
 
     ${zimbra_home}/libexec/swatch --config-file=${configfile} \
       --use-cpan-file-tail \
-      --script-dir=${zimbra_tmp_directory} -t /var/log/zimbra.log > $logfile 2>&1 &
+      --script-dir=${zimbra_tmp_directory} --tail-file /var/log/zimbra.log > $logfile 2>&1 &
     pid=$!
     if [ "x$pid" != 'x' ]; then
       if [ -f $logfile ]; then

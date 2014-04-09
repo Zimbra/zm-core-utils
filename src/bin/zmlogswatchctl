@@ -82,7 +82,7 @@ case "$1" in
     ${zimbra_home}/libexec/logswatch --config-file=${configfile} \
       --use-cpan-file-tail --pid-file=${pidfile} --daemon \
       --script-dir=${zimbra_tmp_directory} \
-      -t /var/log/zimbra-stats.log > $logfile 2>&1
+      --tail-file /var/log/zimbra-stats.log > $logfile 2>&1
     for ((i=0; i < 30; i++)); do
       checkrunning
       if [ $running = 1 ]; then
