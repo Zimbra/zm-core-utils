@@ -29,6 +29,14 @@ if [ x"$1" = "x-h" ]; then
   echo "zmmytop [-h] [-r]"
   echo "-h: Display this message"
   echo "-r: Connect as root user (Default: connect as Zimbra user)"
+  echo "--[no]color : Use color Default: use color if available"
+  echo "--delay <seconds>: How long between display refreshes. Default: 5"
+  echo "--batch : In batch mode, mytop runs only once, does not clear the screen, and places no limit on the number of lines it will print."
+  echo "--[no]header : Display header"
+  echo "--[no]idle : Specify if you want idle (sleeping) threads to appear in the list."
+  echo "--[no]resolve : If you have skip-resolve set on MySQL (to keep it from doing a reverse"
+  echo "                DNS lookup on each inbound connection), mytop can replace IP addresses with hostnames"
+  echo "                Default: noresolve"
   exit 0
 fi
 
@@ -37,8 +45,9 @@ zmsetvars
 
 if [ -x "/opt/zimbra/mariadb/bin/mytop" ]; then
   if [ x"$1" = "x-r" ]; then
-    /opt/zimbra/mariadb/bin/mytop -u root -S $mysql_socket -p $mysql_root_password
+    shift
+    /opt/zimbra/mariadb/bin/mytop -u root -S $mysql_socket -p $mysql_root_password $@
   else
-    /opt/zimbra/mariadb/bin/mytop -u $zimbra_mysql_user -S $mysql_socket -p $zimbra_mysql_password
+    /opt/zimbra/mariadb/bin/mytop -u $zimbra_mysql_user -S $mysql_socket -p $zimbra_mysql_password $@
   fi
 fi

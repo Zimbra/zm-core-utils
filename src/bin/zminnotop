@@ -29,6 +29,15 @@ if [ x"$1" = "x-h" ]; then
   echo "zminnotop [-h] [-r]"
   echo "-h: Display this message"
   echo "-r: Connect as root user (Default: connect as Zimbra user)"
+  echo "--[no]color   -C   Use terminal coloring (default)"
+  echo "--count            Number of updates before exiting"
+  echo "--delay       -d   Delay between updates in seconds"
+  echo "--[no]inc     -i   Measure incremental differences"
+  echo "--mode        -m   Operating mode to start in"
+  echo "--nonint      -n   Non-interactive, output tab-separated fields"
+  echo "--spark            Length of status sparkline (default 10)"
+  echo "--timestamp   -t   Print timestamp in -n mode (1: per iter; 2: per line)"
+  echo "--version          Output version information and exit"
   exit 0
 fi
 
@@ -37,8 +46,9 @@ zmsetvars
 
 if [ -x "/opt/zimbra/libexec/innotop" ]; then
   if [ x"$1" = "x-r" ]; then
-    /opt/zimbra/libexec/innotop --socket $mysql_socket --user root --password $mysql_root_password
+    shift
+    /opt/zimbra/libexec/innotop --socket $mysql_socket --user root --password $mysql_root_password $@
   else
-    /opt/zimbra/libexec/innotop --socket $mysql_socket --user $zimbra_mysql_user --password $zimbra_mysql_password
+    /opt/zimbra/libexec/innotop --socket $mysql_socket --user $zimbra_mysql_user --password $zimbra_mysql_password $@
   fi
 fi
