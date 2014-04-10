@@ -91,6 +91,24 @@ sub checkDbs() {
     return undef;
   }
   my @output = <CMD>;
+  for (my $i=0; $i <= $#output; ++$i) {
+    local $_ = $output[$i];
+    if (/mysql.general_log/) {
+      my $nextLine = $output[$i+1];
+      if ($nextLine =~ /Error    : You can't use locks with log tables./) {
+        splice(@output, $i, 2);
+      }
+    }
+  }
+  for (my $i=0; $i <= $#output; ++$i) {
+    local $_ = $output[$i];
+    if (/mysql.slow_log/) {
+      my $nextLine = $output[$i+1];
+      if ($nextLine =~ /Error    : You can't use locks with log tables./) {
+        splice(@output, $i, 2);
+      }
+    }
+  }
   if (scalar @output != 0) {
     addToReport("Database errors found.\n");
     addToReport("$cmd --password=XXXXXXXX\n");
