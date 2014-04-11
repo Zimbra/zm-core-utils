@@ -81,6 +81,7 @@ read_buffer_size = 1048576
 # (Num mailbox groups * Num tables in each group) + padding
 table_open_cache = 1200
 
+innodb_data_file_path          = ibdata1:10M:autoextend
 innodb_buffer_pool_size        = ${bufferPoolSize}
 innodb_log_file_size           = 524288000
 innodb_log_buffer_size         = 8388608
