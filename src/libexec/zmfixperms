@@ -588,7 +588,7 @@ fi
 
 if [ -d /opt/zimbra/ssl ]; then
   printMsg "Fixing ownership and permissions on /opt/zimbra/ssl"
-  find /opt/zimbra/ssl -type f -exec chown ${root_user}:${root_group} {} \;
+  find /opt/zimbra/ssl -type f -exec chown ${zimbra_user}:${zimbra_group} {} \;
   find /opt/zimbra/ssl -type f -exec chmod 640 {} \;
 fi
 

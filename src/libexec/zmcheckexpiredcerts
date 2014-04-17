@@ -35,7 +35,7 @@ unless ( GetOptions("verbose" => \$verbose,
 usage() if $help;
 
 my $report = [];
-my $cmd = "sudo /opt/zimbra/bin/zmcertmgr checkcrtexpiration -days $days";
+my $cmd = "/opt/zimbra/bin/zmcertmgr checkcrtexpiration -days $days";
 unless (open(CERTMGR, "$cmd|")) {
   logError("Unabled to execute zmcertmgr: $!");
   exit -1;
