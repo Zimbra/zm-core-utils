@@ -40,7 +40,7 @@ else
   postfix_suid_group=postdrop
 fi
 
-if [ "X$PLAT" = "XUBUNTU10_64" -o "X$PLAT" = "XUBUNTU12_64" ]; then
+if [ "X$PLAT" = "XUBUNTU10_64" -o "X$PLAT" = "XUBUNTU12_64" -o "X$PLAT" = "XUBUNTU14_64" ]; then
   syslog_user=syslog
   syslog_group=adm
 else
