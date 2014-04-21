@@ -22,24 +22,9 @@ umask 027
 
 platform=$(/opt/zimbra/libexec/get_plat_tag.sh 2> /dev/null := UNKNOWN)
 source `dirname $0`/zmshutil || exit 1
-zmsetvars -f \
-  zimbra_log_directory \
-  zimbra_server_hostname \
-  zimbra_tmp_directory \
-  zimbra_uid \
-  zimbra_gid \
-  zimbra_zmcertmgr_expiration_threshold \
-  ldap_is_master \
-  ldap_host \
-  mailboxd_directory \
-  mailboxd_server \
-  mailboxd_keystore \
-  mailboxd_keystore_password \
-  mailboxd_truststore_password \
-  ssl_default_digest
+zmsetvars -f
 
 export JAVA_HOME=/opt/zimbra/java
-
 
 if [ ! -x /opt/zimbra/java/bin/java ]; then
   echo "ERROR: Zimbra java is missing"
@@ -140,6 +125,7 @@ initSSLDirs() {
     mkdir -p ${zimbra_ssl_directory}
   fi
   chmod -R 740 ${zimbra_ssl_directory}
+  chown ${zimbra_uid}:${zimbra_gid} /opt/zimbra/ssl
 
   if [ ! -f "$RANDFILE" ]; then
     touch $RANDFILE
