@@ -14,8 +14,8 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-if [ x`whoami` != "xzimbra" ]; then
-  echo "$0 must be run as user zimbra"
+if [ x`whoami` != "xroot" ]; then
+  echo "$0 must be run as user root"
   exit 1
 fi
 umask 027
@@ -198,7 +198,7 @@ getHostInfo() {
 
 isLdapRunning() {
 
-  /opt/zimbra/bin/ldap status > /dev/null 2>&1
+  su - zimbra -c " /opt/zimbra/bin/ldap status > /dev/null 2>&1"
   LDAP_IS_RUNNING=$?
   
 }
@@ -225,7 +225,7 @@ saveConfigKey() {
   #fi
 
   echo -n "** Saving $location config key $key..."
-  /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"$content\" 2> /dev/null
+  su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"$content\" 2> /dev/null"
   if [ $? = 0 ]; then
     echo "done."
   else
@@ -254,7 +254,7 @@ loadConfigKey() {
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -s ${file} ]; then
     echo -n "** Retrieving $location config key $key..."
-    /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
+    su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null"
     if [ $? = 0 -a -s "${file}" ]; then
       echo "done."
     else
@@ -571,10 +571,6 @@ deployCA() {
   if [ x"$ldap_is_master" = "xtrue" -a x"$SKIP_LDAP" != "x1" ]; then
     saveConfigKey "zimbraCertAuthorityCertSelfSigned" ${zimbra_ca_crt} "global"
     saveConfigKey "zimbraCertAuthorityKeySelfSigned" ${zimbra_ca_key} "global"
-    #cert=`cat ${zimbra_ca_crt}` 
-    #key=`cat ${zimbra_ca_key}`
-    #zmprov -m -l -- mcf zimbraCertAuthorityCertSelfSigned \"$cert\" 2> /dev/null
-    #zmprov -m -l -- mcf zimbraCertAuthorityKeySelfSigned \"$key\" 2> /dev/null
   fi
 
 
@@ -1035,7 +1031,7 @@ createCert() {
 
   if [ x"${ALLSERVERS}" = "x-allserver" ]; then
     # merge these with cli specified. -bp
-    subject_alt_names=`/opt/zimbra/bin/zmprov -m -l gas | xargs`
+    subject_alt_names=`su - zimbra -c "/opt/zimbra/bin/zmprov -m -l gas | xargs"`
     createCSR self -new -keysize ${KEYSIZE} -digest ${DIGEST}
     shift
   elif [ ! -s "${server_csr}" -o x"${IS_NEW_CRT}" = "x-new" ]; then
