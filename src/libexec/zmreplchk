@@ -27,6 +27,7 @@ $c{zmlocalconfig}="/opt/zimbra/bin/zmlocalconfig";
 my $ldap_starttls_supported=getLocalConfig("ldap_starttls_supported");
 my $ldap_master=getLocalConfig("ldap_master_url");
 my $ldap_urls=getLocalConfig("ldap_url");
+my $ldap_pass=getLocalConfig("ldap_root_password");
 my ($mesgp, $entry);
 
 my @masters = split / /, $ldap_master;
@@ -67,9 +68,18 @@ foreach my $master (@masters) {
     $mstatus{$master}[1]="Server down";
     next;
   }
-  $mesgp=$ldapp->bind;
+  $mesgp=$ldapp->bind("cn=config", password => $ldap_pass);
   $mesgp->code && die "Unable to bind to master\n";
-  
+ 
+  $mesgp = $ldapp->search(
+             base    =>  'cn=config',
+             scope   =>  'sub',
+             filter  =>  '(olcServerID=*)',
+             attrs   =>  ['olcServerID']
+           );
+  $entry = $mesgp->entry(0);
+  my $serverid=$entry->get_value('olcServerID'); 
+
   $mesgp = $ldapp->search(
              base    =>  '',
              scope   =>  'base',
@@ -98,6 +108,7 @@ foreach my $master (@masters) {
   }
   $pcsn.=$csns[$csnsize];
   $mstatus{$master}[2]=$pcsn;
+  $mstatus{$master}[3]=$serverid;
   $ldapp->unbind;
 }
 
@@ -144,6 +155,7 @@ if (scalar(@masters) > 1) {
   foreach my $master (@masters) {
     chomp($master);
     print "Master: $master";
+    print " ServerID: ".$mstatus{$master}[3];
     print " Code: ".$mstatus{$master}[0];
     print " Status: ".$mstatus{$master}[1];
     if(defined($mstatus{$master}[2])) {
