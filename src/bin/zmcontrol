@@ -67,7 +67,8 @@ my %startorder = (
     "service"	=> 170,
     "zimbra"	=> 180,
     "zimbraAdmin"	=> 190,
-	"vmware-ha"	=> 200,  # this should remain last
+    "zimlet"    => 200,
+    "vmware-ha"	=> 250,  # this should remain last
 );
 
 my %stoporder = ( 
@@ -90,8 +91,9 @@ my %stoporder = (
     "service"	=> 160,
     "zimbra"	=> 170,
     "zimbraAdmin"	=> 180,
-	"zmconfigd"	=> 190,
-	"vmware-ha"	=> 200,
+    "zimlet"    => 190,
+	"zmconfigd"	=> 200,
+	"vmware-ha"	=> 250,
 );
 
 my %allservices = ( 
@@ -106,6 +108,7 @@ my %allservices = (
     "service" => "/opt/zimbra/bin/zmstorectl",
     "zimbra" => "/opt/zimbra/bin/zmstorectl",
     "zimbraAdmin" => "/opt/zimbra/bin/zmstorectl",
+    "zimlet" => "/opt/zimbra/bin/zmstorectl",
 	"logger" => "/opt/zimbra/bin/zmloggerctl", 
 	"snmp" => "/opt/zimbra/bin/zmswatchctl", 
 	"ldap" => "/opt/zimbra/bin/ldap",
