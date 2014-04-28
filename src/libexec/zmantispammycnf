@@ -61,6 +61,8 @@ external-locking
 slow_query_log = 1
 slow_query_log_file = ${zimbra_log_directory}/myslow.log
 
+general_log_file = ${zimbra_log_directory}/mysql-antispam.log
+
 long_query_time  = 1
 log_queries_not_using_indexes
 
