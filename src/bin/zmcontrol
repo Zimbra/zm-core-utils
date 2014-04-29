@@ -64,11 +64,11 @@ my %startorder = (
 	"spell" 	=> 140,
 	"mta" 		=> 150,
 	"stats"		=> 160,
-    "service"	=> 170,
-    "zimbra"	=> 180,
-    "zimbraAdmin"	=> 190,
-    "zimlet"    => 200,
-    "vmware-ha"	=> 250,  # this should remain last
+	"service"	=> 170,
+	"zimbra"	=> 180,
+	"zimbraAdmin"	=> 190,
+	"zimlet"	=> 200,
+	"vmware-ha"	=> 250,  # this should remain last
 );
 
 my %stoporder = ( 
@@ -88,10 +88,10 @@ my %stoporder = (
 	"spell" 	=> 130,
 	"mta" 		=> 140,
 	"stats"		=> 150,
-    "service"	=> 160,
-    "zimbra"	=> 170,
-    "zimbraAdmin"	=> 180,
-    "zimlet"    => 190,
+	"service"	=> 160,
+	"zimbra"	=> 170,
+	"zimbraAdmin"	=> 180,
+	"zimlet"	=> 190,
 	"zmconfigd"	=> 200,
 	"vmware-ha"	=> 250,
 );
