@@ -37,6 +37,7 @@ my $nginxCsv = 'nginx.csv';
 my $mysqlCsv = 'mysql.csv';
 my $soapCsv = 'soap.csv';
 my $ldapCsv = 'ldap.csv';
+my $sqlstatsCsv = 'sql.csv';
 
 my @DEVICE_LIST;        # list of device names (e.g. "sda", "sdb")
 my %DEVICE_PARTITIONS;  # $DEVICE_PARTITIONS{device} = arrayref of partitions
@@ -102,7 +103,7 @@ sub getDiskInfo() {
         # see bug 32973
         my %devices_tmp;
         for (@DEVICE_LIST) {
-        	$devices_tmp{$_} = 1;
+            $devices_tmp{$_} = 1;
         }
         @DEVICE_LIST = keys %devices_tmp;
     }
@@ -121,9 +122,9 @@ sub getDiskInfo() {
                 my %partitions_seen;
                 foreach my $dev (@DEVICE_LIST) {
                     if ($partition =~ /^$dev/) {
-                    	# make sure to avoid duplicates
+                        # make sure to avoid duplicates
                         # see bug 32973
-                    	next if (exists $partitions_seen{$partition});
+                        next if (exists $partitions_seen{$partition});
 
                         $MOUNTS{$partition} = $mountpoint;
                         my $partitionList = $DEVICE_PARTITIONS{$dev};
@@ -1053,6 +1054,51 @@ print <<_HERE_;
 _HERE_
 }
 
+sub sqlstatsConfig() {
+    print <<_HERE_;
+  <!-- SQL Performance Stats -->
+  <chart title="Host $ZIMBRA_HOSTNAME: SQL: Invocation Count: Summary (Top 10 max)"
+         category="sqlstats"
+         height="400"
+         topPlots="10"
+         topPlotsType="max"
+         infile="$sqlstatsCsv"
+         outfile="${ZIMBRA_HOSTNAME}_sql_call_count.png"
+         yAxis="calls/min">
+    <groupplot data="exec_count" groupBy="command" aggregateFunction="max"/>
+  </chart>
+  
+  <chart title="Host $ZIMBRA_HOSTNAME: SQL: Average Call Duration: Summary (Top 10 avg)"
+         category="sqlstats"
+         height="400"
+         topPlots="10"
+         topPlotsType="avg"
+         infile="$sqlstatsCsv"
+         outfile="${ZIMBRA_HOSTNAME}_sql_avg_duration.png"
+         yAxis="ms avg">
+    <groupplot data="exec_ms_avg" groupBy="command"/>
+  </chart>
+  <chart title="Host $ZIMBRA_HOSTNAME: SQL: Invocation Count: %s"
+         category="sqlstats"
+         outDocument="sqlstats.html"
+         infile="$sqlstatsCsv"
+         outfile="${ZIMBRA_HOSTNAME}_sql_call_count_%s.png"
+         yAxis="calls/min">
+    <groupplot data="exec_count" groupBy="command" aggregateFunction="max"/>
+  </chart>
+  
+  <chart title="Host $ZIMBRA_HOSTNAME: SQL: Average Call Duration: %s"
+         category="sqlstats"
+         outDocument="sqlstats.html"
+         infile="$sqlstatsCsv"
+         outfile="${ZIMBRA_HOSTNAME}_sql_avg_duration_%s.png"
+         yAxis="ms avg">
+    <groupplot data="exec_ms_avg" groupBy="command"/>
+  </chart>
+  
+
+_HERE_
+}
 
 #
 # main
@@ -1080,5 +1126,6 @@ if ($HAS_MAILBOX) {
     nginxConfig();
     ldapConfig();
     mobileSyncConfig();
+    sqlstatsConfig();
 }
 print "</charts>\n";
