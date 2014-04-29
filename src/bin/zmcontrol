@@ -55,6 +55,7 @@ my %startorder = (
 	"mailbox" 	=> 30,
 	"memcached"	=> 40,
 	"proxy"		=> 50,
+	"amavis"	=> 55,
 	"antispam" 	=> 60,
 	"antivirus"	=> 70,
 	"opendkim"	=> 75,
@@ -76,6 +77,7 @@ my %stoporder = (
 	"proxy"		=> 50,
 	"antispam" 	=> 60,
 	"antivirus"	=> 70,
+	"amavis"	=> 73,
 	"opendkim"	=> 75,
 	"archiving"	=> 80,
 	"cbpolicyd"	=> 85,
@@ -88,6 +90,7 @@ my %stoporder = (
 );
 
 my %allservices = ( 
+	"amavis" => "/opt/zimbra/bin/zmamavisdctl",
 	"antivirus" => "/opt/zimbra/bin/zmantivirusctl", 
 	"antispam" => "/opt/zimbra/bin/zmantispamctl", 
 	"archiving" => "/opt/zimbra/bin/zmarchivectl",
