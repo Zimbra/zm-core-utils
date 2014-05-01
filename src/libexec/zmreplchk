@@ -81,7 +81,7 @@ foreach my $master (@masters) {
   my $serverid=0;
   $entry = $mesgp->entry(0);
   if ($entry) {
-    my $serverid=$entry->get_value('olcServerID'); 
+    $serverid=$entry->get_value('olcServerID'); 
   }
 
   $mesgp = $ldapp->search(
