@@ -77,8 +77,12 @@ foreach my $master (@masters) {
              filter  =>  '(olcServerID=*)',
              attrs   =>  ['olcServerID']
            );
+
+  my $serverid=0;
   $entry = $mesgp->entry(0);
-  my $serverid=$entry->get_value('olcServerID'); 
+  if ($entry) {
+    my $serverid=$entry->get_value('olcServerID'); 
+  }
 
   $mesgp = $ldapp->search(
              base    =>  '',
