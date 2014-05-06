@@ -367,6 +367,13 @@ sub run() {
     } else {
       logmsg "'dmesg' is not installed, skipping check.\n";
     }
+    
+    if ( has_cmd('dmidecode') ) {
+      logmsg "Saving output of dmidecode\n";
+      qx(dmidecode > dmidecode.out 2>&1);
+    } else {
+      logmsg "'dmidecode' is not installed, skipping check.\n";
+    }
 
     if ($HAVE_NETSTAT) {
       logmsg "Saving netstat statistics\n";
