@@ -599,7 +599,9 @@ deployCA() {
   fi
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.pem 
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.key
-  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/commercial_ca.pem
+  if [ -s "${zimbra_conf_directory}/ca/commercial_ca.pem" ]; then
+    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/commercial_ca.pem
+  fi
   chmod 640 ${zimbra_conf_directory}/ca/ca.pem ${zimbra_conf_directory}/ca/ca.key
 }
 
