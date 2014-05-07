@@ -25,12 +25,13 @@ fi
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
+  zimbra_home \
   zimbra_log_directory
 
 PID=""
 PIDFILE=${zimbra_log_directory}/opendkim.pid
-odk=/opt/zimbra/opendkim/sbin/opendkim
-config=/opt/zimbra/conf/opendkim.conf
+odk=${zimbra_home}/opendkim/sbin/opendkim
+config=${zimbra_home}/conf/opendkim.conf
 
 rewriteconfig() {
     /opt/zimbra/libexec/configrewrite opendkim > /dev/null 2>&1
@@ -76,7 +77,7 @@ start()
           getpid
           echo "Started opendkim: pid $PID"
         else
-          echo "zmopendkimctl already running: pid $PID"
+          echo "opendkim already running: pid $PID"
           exit 0
         fi
 }
@@ -85,7 +86,7 @@ stop()
 {
         checkrunning
         if [ $RUNNING = 0 ]; then
-          echo "zmopendkimctl not running"
+          echo "opendkim not running"
           exit 0
         else
           echo -n "Stopping opendkim..."
@@ -112,7 +113,7 @@ stop()
 status()
 {
         checkrunning
-        echo -n "zmopendkimctl is "
+        echo -n "opendkim is "
         if [ $RUNNING = 0 ]; then
                 echo "not running."
                 exit 1

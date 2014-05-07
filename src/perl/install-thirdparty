@@ -37,16 +37,12 @@ my %BINARIES = (
     "openssl" => "1.0.1c",
     "rsync" => "3.0.9",
     "tcmalloc" => "2.0",
-    "jetty" => "distribution-9.1.4.v20140401",
+    "jetty" => "distribution-7.6.12.v20130726"
 );
 my $P4_CMD = "p4";
 
 if (! -d $CACHE_DIR) {
     mkdir($CACHE_DIR) || die "Could not create directory: $CACHE_DIR";
-}
-
-if (! -d $LIB_DIR) {
-    mkdir($LIB_DIR) || die "Could not create directory: $LIB_DIR";
 }
 
 # Remove old binaries to make sure there's no cruft.

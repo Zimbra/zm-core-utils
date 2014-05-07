@@ -21,6 +21,7 @@ zmstatInit();
 
 my $isLinux = isLinux();
 my $isMac = isMac();
+my $ZIMBRA_HOME = getZimbraHome();
 
 my $mtaqstatCsv = 'mtaqueue.csv';
 my $cpustatCsv = 'cpu.csv';
@@ -37,7 +38,6 @@ my $nginxCsv = 'nginx.csv';
 my $mysqlCsv = 'mysql.csv';
 my $soapCsv = 'soap.csv';
 my $ldapCsv = 'ldap.csv';
-my $sqlstatsCsv = 'sql.csv';
 
 my @DEVICE_LIST;        # list of device names (e.g. "sda", "sdb")
 my %DEVICE_PARTITIONS;  # $DEVICE_PARTITIONS{device} = arrayref of partitions
@@ -69,7 +69,7 @@ sub getDiskInfo() {
     # Get device list.
 
     if ($isMac) {
-        my $devs = qx(iostat -d | head -1);
+        my $devs = `iostat -d | head -1`;
         chomp($devs);
         $devs =~ s/^\s+//;
         $devs =~ s/\s+$//;
@@ -103,7 +103,7 @@ sub getDiskInfo() {
         # see bug 32973
         my %devices_tmp;
         for (@DEVICE_LIST) {
-            $devices_tmp{$_} = 1;
+        	$devices_tmp{$_} = 1;
         }
         @DEVICE_LIST = keys %devices_tmp;
     }
@@ -122,9 +122,9 @@ sub getDiskInfo() {
                 my %partitions_seen;
                 foreach my $dev (@DEVICE_LIST) {
                     if ($partition =~ /^$dev/) {
-                        # make sure to avoid duplicates
+                    	# make sure to avoid duplicates
                         # see bug 32973
-                        next if (exists $partitions_seen{$partition});
+                    	next if (exists $partitions_seen{$partition});
 
                         $MOUNTS{$partition} = $mountpoint;
                         my $partitionList = $DEVICE_PARTITIONS{$dev};
@@ -155,7 +155,7 @@ sub getHostAndProcsInfo() {
     $ZIMBRA_HOSTNAME = getZimbraServerHostname();
 
     my $svc;
-    my @enabledServices = qx(zmprov -l gs $ZIMBRA_HOSTNAME | grep zimbraServiceEnabled);
+    my @enabledServices = `zmprov -l gs $ZIMBRA_HOSTNAME | grep zimbraServiceEnabled`;
     foreach $svc (@enabledServices) {
         if ($svc =~ /mailbox/) {
             push(@ENABLED_PROCS, 'mailbox');
@@ -245,7 +245,7 @@ sub cpuPstatConfig() {
 
 _HERE_
 
-    my $numCPUs = qx(egrep '^cpu[0-9]+' /proc/stat 2> /dev/null | wc -l);
+    my $numCPUs = `egrep '^cpu[0-9]+' /proc/stat 2> /dev/null | wc -l`;
     chomp($numCPUs);
     if ($numCPUs > 1) {
         my @categories = ('user', 'nice', 'sys', 'idle', 'iowait', 'irq', 'softirq');
@@ -1033,72 +1033,7 @@ sub ldapConfig() {
 _HERE_
 }
 
-sub mobileSyncConfig() {
-print <<_HERE_;
-  <!-- mobile sync stats -->
-  <chart title="Host $ZIMBRA_HOSTNAME: MobileSync: SyncState cache Hit Rate"
-         category="mobile"
-         infile="$mailboxdCsv"
-         outfile="${ZIMBRA_HOSTNAME}_mobile-syncstate-cache.png"
-         yAxis="rate">
-    <plot data="mobile_syncstate_cache_hit_rate" legend="SyncState cache hit rate"/>
-  </chart>
 
-  <chart title="Host $ZIMBRA_HOSTNAME: MobileSync: Ping cache Hit Rate"
-         category="mobile"
-         infile="$mailboxdCsv"
-         outfile="${ZIMBRA_HOSTNAME}_mobile-ping-cache.png"
-         yAxis="rate">
-    <plot data="mobile_ping_cache_hit_rate" legend="Ping cache hit rate"/>
-  </chart>
-_HERE_
-}
-
-sub sqlstatsConfig() {
-    print <<_HERE_;
-  <!-- SQL Performance Stats -->
-  <chart title="Host $ZIMBRA_HOSTNAME: SQL: Invocation Count: Summary (Top 10 max)"
-         category="sqlstats"
-         height="400"
-         topPlots="10"
-         topPlotsType="max"
-         infile="$sqlstatsCsv"
-         outfile="${ZIMBRA_HOSTNAME}_sql_call_count.png"
-         yAxis="calls/min">
-    <groupplot data="exec_count" groupBy="command" aggregateFunction="max"/>
-  </chart>
-  
-  <chart title="Host $ZIMBRA_HOSTNAME: SQL: Average Call Duration: Summary (Top 10 avg)"
-         category="sqlstats"
-         height="400"
-         topPlots="10"
-         topPlotsType="avg"
-         infile="$sqlstatsCsv"
-         outfile="${ZIMBRA_HOSTNAME}_sql_avg_duration.png"
-         yAxis="ms avg">
-    <groupplot data="exec_ms_avg" groupBy="command"/>
-  </chart>
-  <chart title="Host $ZIMBRA_HOSTNAME: SQL: Invocation Count: %s"
-         category="sqlstats"
-         outDocument="sqlstats.html"
-         infile="$sqlstatsCsv"
-         outfile="${ZIMBRA_HOSTNAME}_sql_call_count_%s.png"
-         yAxis="calls/min">
-    <groupplot data="exec_count" groupBy="command" aggregateFunction="max"/>
-  </chart>
-  
-  <chart title="Host $ZIMBRA_HOSTNAME: SQL: Average Call Duration: %s"
-         category="sqlstats"
-         outDocument="sqlstats.html"
-         infile="$sqlstatsCsv"
-         outfile="${ZIMBRA_HOSTNAME}_sql_avg_duration_%s.png"
-         yAxis="ms avg">
-    <groupplot data="exec_ms_avg" groupBy="command"/>
-  </chart>
-  
-
-_HERE_
-}
 
 #
 # main
@@ -1125,7 +1060,5 @@ if ($HAS_MAILBOX) {
     convertdConfig() if !$isMac;
     nginxConfig();
     ldapConfig();
-    mobileSyncConfig();
-    sqlstatsConfig();
 }
 print "</charts>\n";

@@ -146,7 +146,7 @@ state.State.mState = myState
 myConfig = conf.Config()
 conf.Config.mConfig = myConfig;
 myState.getLocalConfig(myConfig)
-PropertyConfigurator.configure("/opt/zimbra/conf/zmconfigd.log4j.properties")
+PropertyConfigurator.configure(myState.localconfig["zimbra_home"]+"/conf/zmconfigd.log4j.properties")
 Log.initLogging(myConfig)
 Ldap.initLdap(myConfig)
 

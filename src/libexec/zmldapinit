@@ -37,6 +37,7 @@ our %options=();
 our %loaded=();
 our %saved=();
 
+my $zimbra_home=getLocalConfig("zimbra_home");
 my $zimbra_user=getLocalConfig("zimbra_user");
 my $zimbra_tmp_directory=getLocalConfig("zimbra_tmp_directory");
 my $ldap_master_url=getLocalConfig("ldap_master_url");
@@ -97,8 +98,8 @@ if ( -s $outfile ) {
   if ($rc != 0) {
     print "Warning: failed to write $infile\n";
   }
-  qx(chown $zimbra_user:$zimbra_user $infile);
-  qx(chmod 600 $infile);
+  `chown $zimbra_user:$zimbra_user $infile`;
+  `chmod 600 $infile`;
 } else {
   print "Warning: Failed to update root password.\n";
 }
@@ -127,7 +128,7 @@ $ldifout->done ( );
 
 # Start ldap
 
-my $rc=qx(/opt/zimbra/bin/ldap start);
+my $rc=`${zimbra_home}/bin/ldap start`;
 
 if ( $rc eq 0 ) {
 	exit 1;
@@ -141,7 +142,7 @@ if ($ldap_master_url !~ /^ldaps/i) {
   if ($ldap_starttls_supported) {
     $mesg = $ldap->start_tls(
          verify => 'none',
-         capath => "/opt/zimbra/conf/ca",
+         capath => "$zimbra_home/conf/ca",
          ) or die "start_tls: $@";
     $mesg->code && die "TLS: " . $mesg->error . "\n";
   }
@@ -248,12 +249,12 @@ sub setLocalConfig {
     return;
   }
   $main::saved{lc}{$key} = $val;
-  qx(/opt/zimbra/bin/zmlocalconfig -f -e ${key}=\'${val}\' 2> /dev/null);
+  `/opt/zimbra/bin/zmlocalconfig -f -e ${key}=\'${val}\' 2> /dev/null`;
 }
 
 sub setLocalConfigRandom {
   my $key = shift;
-  qx(/opt/zimbra/bin/zmlocalconfig -f -e -r ${key} 2> /dev/null);
+  `/opt/zimbra/bin/zmlocalconfig -f -e -r ${key} 2> /dev/null`;
 }
 
 sub getLocalConfig {
@@ -262,7 +263,7 @@ sub getLocalConfig {
   return $main::loaded{lc}{$key}
     if (exists $main::loaded{lc}{$key});
 
-  my $val = qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null);
+  my $val = `/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null`;
   chomp $val;
   $main::loaded{lc}{$key} = $val;
   return $val;

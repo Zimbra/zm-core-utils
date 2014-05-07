@@ -14,5 +14,6 @@
 # ***** END LICENSE BLOCK *****
 # 
 source /opt/zimbra/bin/zmshutil || exit 1
+zmsetvars -f zimbra_home
 
-exec `dirname $0`/zmjava com.zimbra.soap.SoapCommandUtil "$@"
+exec ${zimbra_home}/bin/zmjava com.zimbra.soap.SoapCommandUtil "$@"

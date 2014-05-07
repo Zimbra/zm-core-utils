@@ -21,10 +21,11 @@ fi
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
+    zimbra_home \
     zimbra_log_directory
 
 servicename=nginx
-configfile=/opt/zimbra/conf/${servicename}.conf
+configfile=${zimbra_home}/conf/${servicename}.conf
 pidfile=${zimbra_log_directory}/${servicename}.pid
 pid=""
 
@@ -69,7 +70,7 @@ case "$1" in
       exit 0
     fi
     if [ "x$2" = "x" ]; then
-      /opt/zimbra/libexec/configrewrite proxy > /dev/null 2>&1
+      ${zimbra_home}/libexec/configrewrite proxy > /dev/null 2>&1
     fi
 
     if [ ! -f ${configfile} ]; then

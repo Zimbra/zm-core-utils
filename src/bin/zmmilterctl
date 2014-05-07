@@ -2,7 +2,7 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2011, 2013 Zimbra Software, LLC.
+# Copyright (C) 2010, 2011, 2012, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -16,21 +16,22 @@
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
+    zimbra_home \
     zimbra_log_directory
 
-libjars=/opt/zimbra/lib/jars
-configfile=/opt/zimbra/conf/localconfig.xml
-log4jfile=/opt/zimbra/conf/milter.log4j.properties
+libjars=${zimbra_home}/lib/jars
+configfile=${zimbra_home}/conf/localconfig.xml
+log4jfile=${zimbra_home}/conf/milter.log4j.properties
 pidfile=${zimbra_log_directory}/milter.pid
 pid=""
-java="/opt/zimbra/bin/zmjava"
+java="${zimbra_home}/bin/zmjava"
 
 case "`uname`" in
 CYGWIN*) PATHSEP=";";;
 *) PATHSEP=":";;
 esac
 
-CP=/opt/zimbra/conf
+CP=${zimbra_home}/conf
 
 java_version=$(${java} -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
 if [ x"$java_version" = "x1.6.0" ]; then
@@ -39,7 +40,7 @@ else
   java_options=""
 fi
 
-runcmd="${java} ${java_options} -Dlog4j.configuration=file:${log4jfile} -Dzimbra.home=\"/opt/zimbra\" -Dzimbra.config=\"${configfile}\" -cp \"$CP\" \
+runcmd="${java} ${java_options} -Dlog4j.configuration=file:${log4jfile} -Dzimbra.home=\"${zimbra_home}\" -Dzimbra.config=\"${configfile}\" -cp \"$CP\" \
    com.zimbra.cs.milter.MilterServer"
 
 getpid()
@@ -84,7 +85,7 @@ case "$1" in
       exit 0
     fi
 
-    nohup sh -c "exec ${runcmd} 2>&1" > /opt/zimbra/log/milter.out 2>&1 &
+    nohup sh -c "exec ${runcmd} 2>&1" > ${zimbra_home}/log/milter.out 2>&1 &
 
     pid=$!
     if [ "x$pid" != 'x' ]; then

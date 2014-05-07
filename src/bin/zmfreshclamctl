@@ -27,6 +27,7 @@ platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
+  zimbra_home \
   zimbra_log_directory
 
 
@@ -86,8 +87,8 @@ case "$1" in
     if [ $frunning = 1 ]; then
       echo "freshclam is already running.";
     else
-      /opt/zimbra/clamav/bin/freshclam \
-        --config-file=/opt/zimbra/conf/freshclam.conf --quiet --daemon --checks=12 \
+      ${zimbra_home}/clamav/bin/freshclam \
+        --config-file=${zimbra_home}/conf/freshclam.conf --quiet --daemon --checks=12 \
           >> ${zimbra_log_directory}/freshclam.log 2>&1 &
       echo "done."
     fi
@@ -99,7 +100,7 @@ case "$1" in
       cpid=`cat /opt/zimbra/log/freshclam.pid`
       kill -9 "$cpid" 2> /dev/null
     fi
-    pskillall -9 /opt/zimbra/clamav/bin/freshclam
+    pskillall -9 ${zimbra_home}/clamav/bin/freshclam
     exit 0
    ;;
 

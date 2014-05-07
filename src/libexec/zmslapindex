@@ -20,7 +20,8 @@ export LD_PRELOAD=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so
 
 umask 027
 source /opt/zimbra/bin/zmshutil || exit 1
-zmsetvars
+zmsetvars \
+	zimbra_home 
 
 if [ ! -x /opt/zimbra/openldap/sbin/slapindex ]; then
 	exit 0
@@ -54,13 +55,13 @@ else
 fi
 
 if [ x$CONFIG = "xyes" ]; then
-	/opt/zimbra/openldap/sbin/slapindex -q -F /opt/zimbra/data/ldap/config -n 0 $KEY
+	${zimbra_home}/openldap/sbin/slapindex -q -F ${zimbra_home}/data/ldap/config -n 0 $KEY
 	RETVAL=$?
 elif [ x$ALOG = "xyes" ]; then
-	/opt/zimbra/openldap/sbin/slapindex -q -F /opt/zimbra/data/ldap/config -b "cn=accesslog" $KEY
+	${zimbra_home}/openldap/sbin/slapindex -q -F ${zimbra_home}/data/ldap/config -b "cn=accesslog" $KEY
 	RETVAL=$?
 else
-	/opt/zimbra/openldap/sbin/slapindex -q -F /opt/zimbra/data/ldap/config -b "" $KEY
+	${zimbra_home}/openldap/sbin/slapindex -q -F ${zimbra_home}/data/ldap/config -b "" $KEY
 	RETVAL=$?
 fi
 

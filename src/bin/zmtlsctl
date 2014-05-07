@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2013 Zimbra Software, LLC.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -23,21 +23,22 @@ fi
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
+  zimbra_home \
   zimbra_server_hostname \
   zimbra_log_directory \
   zimbra_tmp_directory \
   zimbra_java_home \
   mailboxd_directory 
 
-sasl_conf_directory=/opt/zimbra/cyrus-sasl/etc
-if [ x"${mailboxd_directory}" = "/opt/zimbra/tomcat" ]; then
+sasl_conf_directory=${zimbra_home}/cyrus-sasl/etc
+if [ x"${mailboxd_directory}" = "${zimbra_home}/tomcat" ]; then
   mailboxd_server=tomcat
   mailboxd_conf_directory=${mailboxd_directory}/conf
 else
   mailboxd_server=jetty
   mailboxd_conf_directory=${mailboxd_directory}/etc
 fi
-jetty_web_xml=/opt/zimbra/jetty/etc
+jetty_web_xml=${zimbra_home}/jetty/etc
 
 if [ $# -gt 1 ]; then
     echo "Usage: $0 [mixed|both|http|https|redirect|help]"
@@ -64,7 +65,7 @@ esac
 export JAVA_HOME=${zimbra_java_home}
 
 if [ "x${zimbra_tmp_directory}" = "x" ]; then
-  zimbra_tmp_directory=/opt/zimbra/data/tmp
+  zimbra_tmp_directory=$zimbra_home/data/tmp
 fi
 
 if [ ! -d ${zimbra_tmp_directory} ]; then
@@ -78,7 +79,7 @@ fi
 
 rewriteConfigs() {
 	echo -n "Rewriting config files for cyrus-sasl, webxml and mailboxd..."
-	/opt/zimbra/libexec/configrewrite sasl webxml mailbox > /dev/null 2>&1
+	${zimbra_home}/libexec/configrewrite sasl webxml mailbox > /dev/null 2>&1
 	if [ $? = 0 ]; then
 		echo "done."
 	else
@@ -89,7 +90,7 @@ rewriteConfigs() {
 
 updateLdap() {
 	echo -n "Setting ldap config zimbraMailMode $MODE for ${zimbra_server_hostname}..."
-	/opt/zimbra/bin/zmprov -l ms ${zimbra_server_hostname} zimbraMailMode $MODE > /dev/null 2>&1
+	${zimbra_home}/bin/zmprov -l ms ${zimbra_server_hostname} zimbraMailMode $MODE > /dev/null 2>&1
 	if [ $? = 0 ]; then
 		echo "done."
 	else 
