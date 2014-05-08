@@ -396,6 +396,8 @@ sub run() {
     exec_with_timeout("$SU '$ZMLOCALCONFIG -x -s' > zmlocalconfig-x-s.txt 2>&1", $timeout);
     exec_with_timeout("$SU '$ZMLOCALCONFIG -n' > zmlocalconfig-n.txt 2>&1", $timeout);
     exec_with_timeout("$SU '/opt/zimbra/bin/zmvolume -l' > zmvolume.txt 2>&1", $timeout);
+    exec_with_timeout("/usr/bin/crontab -l > crontab-root.txt 2>&1", $timeout);
+    exec_with_timeout("/usr/bin/crontab -u zimbra -l > crontab-zimbra.txt 2>&1", $timeout);
     
     my @conf_files = (
                 "/opt/zimbra/conf/cbpolicyd.conf",
