@@ -303,55 +303,67 @@ sub run() {
     my $mailboxd_pid = get_pid();
     logmsg "No '-a' argument, skipping heap/coredump collection.\n"
             if (!$options{'a'});
-    logmsg "ZCS mailboxd pid: $mailboxd_pid\n";
     logmsg "Saving diagnostic logging output to: $destination\n";
     
     my $JAVA_VERSION = get_java_version();
     logmsg "Java version: $JAVA_VERSION\n";
-    
-    save_jinfo($mailboxd_pid);
-
-    for (my $i = 1; $i <= 10; $i++) {
-        logmsg "Collecting thread stats/stacks: $i of 10\n";
-        my $TS = strftime("%H-%M-%S", localtime());
-    
-        invoke_thread_dump($i, $TS);
-        my $top_cmd = "top -bc -n1 > top.$i.$TS 2>&1";
-        if ($isMac) {
-            $top_cmd = "top -o cpu -l 2 | \
-                        awk 'BEGIN { sample = 0 } \
-                            { \
-                                if ( \$0 ~ /^Processes: / ) { sample++; } \
-                                if ( sample ==2 ) { print \$0 } \
-                            }' > top.$i.$TS 2>&1";
-        }
-        system($top_cmd);
-        system("/bin/ps -auxw > ps.$i.$TS 2>&1");
-        my $netstat = "netstat -anp > netstat.$i.$TS 2>&1";
-        $netstat = "netstat -an > netstat.$i.$TS 2>&1" if ($isMac);
-        system($netstat);
-    
-        my $stats = collect_thread_stats($mailboxd_pid);
-        open(STATS, ">proc-stats.$i.$TS") || warn $i;
-        print STATS $stats;
-        close(STATS);
-    
-        sleep(5);
+    if ($mailboxd_pid)
+    {
+	    logmsg "ZCS mailboxd pid: $mailboxd_pid\n";
+	    save_jinfo($mailboxd_pid);
+	
+	    for (my $i = 1; $i <= 10; $i++) {
+	        logmsg "Collecting thread stats/stacks: $i of 10\n";
+	        my $TS = strftime("%H-%M-%S", localtime());
+	    
+	        invoke_thread_dump($i, $TS);
+	        my $top_cmd = "top -bc -n1 > top.$i.$TS 2>&1";
+	        if ($isMac) {
+	            $top_cmd = "top -o cpu -l 2 | \
+	                        awk 'BEGIN { sample = 0 } \
+	                            { \
+	                                if ( \$0 ~ /^Processes: / ) { sample++; } \
+	                                if ( sample ==2 ) { print \$0 } \
+	                            }' > top.$i.$TS 2>&1";
+	        }
+	        system($top_cmd);
+	        system("/bin/ps -auxw > ps.$i.$TS 2>&1");
+	        my $netstat = "netstat -anp > netstat.$i.$TS 2>&1";
+	        $netstat = "netstat -an > netstat.$i.$TS 2>&1" if ($isMac);
+	        system($netstat);
+	    
+	        my $stats = collect_thread_stats($mailboxd_pid);
+	        open(STATS, ">proc-stats.$i.$TS") || warn $i;
+	        print STATS $stats;
+	        close(STATS);
+	    
+	        sleep(5);
+	    }
+	    
+	    if ($HAVE_PSTACK) {
+	        for (my $i = 1; $i <= 3; $i++) {
+	            logmsg "Collecting process stack: $i of 3\n";
+	            my $TS = strftime("%H-%M-%S", localtime());
+	            exec_with_timeout("pstack $mailboxd_pid > pstack.$i.$TS 2>&1", $timeout);
+	            sleep(5);
+	        }
+	    } else {
+	        logmsg "'pstack' is not installed, will not collect process stacks\n";
+	    }
+	    
+	    if ($options{'j'}) {
+	        system("/opt/zimbra/libexec/zmjavawatch > zmjavawatch.log 2>&1");
+	    }
+		    my $dumped = save_heap_info($JAVA_VERSION, $destination,
+		        $mailboxd_pid, $timeout) if ($options{'a'});
+		
+		    save_jvm_core($JAVA_VERSION, $mailboxd_pid) if ($options{'c'} || (!$dumped && $options{'a'}));
+		
+			logmsg "Heap dump processing complete. It is now safe to restart mailboxd.\n";
     }
-    
-    if ($HAVE_PSTACK) {
-        for (my $i = 1; $i <= 3; $i++) {
-            logmsg "Collecting process stack: $i of 3\n";
-            my $TS = strftime("%H-%M-%S", localtime());
-            exec_with_timeout("pstack $mailboxd_pid > pstack.$i.$TS 2>&1", $timeout);
-            sleep(5);
-        }
-    } else {
-        logmsg "'pstack' is not installed, will not collect process stacks\n";
-    }
-    
-    if ($options{'j'}) {
-        system("/opt/zimbra/libexec/zmjavawatch > zmjavawatch.log 2>&1");
+    else
+    {
+      logmsg "Not a mailboxd node or mailboxd not running. Not performing threaddump and pstack collection activities.\n";
     }
     
     if ($HAVE_LSOF) {
@@ -382,12 +394,6 @@ sub run() {
       logmsg "'netstat' is not installed, skipping check.\n";
     }
 
-    my $dumped = save_heap_info($JAVA_VERSION, $destination,
-        $mailboxd_pid, $timeout) if ($options{'a'});
-
-    save_jvm_core($JAVA_VERSION, $mailboxd_pid) if ($options{'c'} || (!$dumped && $options{'a'}));
-
-	logmsg "Heap dump processing complete. It is now safe to restart mailboxd.\n";
     logmsg "Saving output of zmdumpenv\n";
     exec_with_timeout("$SU '$ZMDUMPENV' > zmdumpenv.txt 2>&1", $timeout);
     logmsg "Saving server configuration\n";
