@@ -29,7 +29,6 @@ my $source_config_dir = "/opt/zimbra/openldap/etc/openldap";
 my $config_dir = "/opt/zimbra/conf";
 my $ldap_config_dir="/opt/zimbra/data/ldap/config/cn\=config";
 
-my $zimbra_home=getLocalConfig("zimbra_home");
 my $zimbra_user=getLocalConfig("zimbra_user");
 my $zimbra_ldap_userdn = getLocalConfig("zimbra_ldap_userdn");
 my $zimbra_ldap_password = getLocalConfig("zimbra_ldap_password");
@@ -43,12 +42,11 @@ if (lc($ldap_is_master) ne "true" ) {
   exit 0;
 }
 
-$zimbra_home = "/opt/zimbra" if ($zimbra_home eq "");
 if (!-d $zimbra_tmp_directory) {
   File::Path::mkpath("$zimbra_tmp_directory");
 }
 
-my $rc=`${zimbra_home}/bin/ldap start`;
+my $rc=qx(/opt/zimbra/bin/ldap start);
 
 my @masters=split(/ /, $ldap_master_url);
 my $master_ref=\@masters;
@@ -60,7 +58,7 @@ if ($ldap_master_url !~ /^ldaps/i) {
   if ($ldap_starttls_supported) {
     $mesg = $ldap->start_tls(
          verify => 'none',
-         capath => "${zimbra_home}/conf/ca",
+         capath => "/opt/zimbra/conf/ca",
          ) or die "start_tls: $@";
     $mesg->code && die "TLS: " . $mesg->error . "\n";
   }
@@ -176,7 +174,7 @@ sub getLocalConfig {
   return $main::loaded{lc}{$key}
     if (exists $main::loaded{lc}{$key});
 
-  my $val = `/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null`;
+  my $val = qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null);
   chomp $val;
   $main::loaded{lc}{$key} = $val;
   return $val;

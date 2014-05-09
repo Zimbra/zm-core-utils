@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2007, 2008, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
+# Copyright (C) 2007, 2008, 2009, 2010, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -15,8 +15,7 @@
 # 
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-    zimbra_home zimbra_user
+zmsetvars zimbra_user
 
 u=`id -un`
 if [ $u != ${zimbra_user} ]; then
@@ -38,7 +37,7 @@ if [ $optConf -eq 1 ]; then
 else
     # If no --conf option, look for /opt/zimbra/conf/zmstat-chart.xml and
     # generated one if necessary.
-    conf=${zimbra_home}/conf/zmstat-chart.xml
+    conf=/opt/zimbra/conf/zmstat-chart.xml
     confTmp=$conf.$$.tmp
     CONF_TIME=0
     CONFGEN_TIME=`stat -c %Z /opt/zimbra/bin/zmstat-chart-config`

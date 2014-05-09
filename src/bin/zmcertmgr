@@ -22,26 +22,9 @@ umask 027
 
 platform=$(/opt/zimbra/libexec/get_plat_tag.sh 2> /dev/null := UNKNOWN)
 source `dirname $0`/zmshutil || exit 1
-zmsetvars -f \
-  zimbra_log_directory \
-  zimbra_server_hostname \
-  zimbra_tmp_directory \
-  zimbra_uid \
-  zimbra_gid \
-  zimbra_zmcertmgr_expiration_threshold \
-  ldap_is_master \
-  ldap_host \
-  mailboxd_directory \
-  mailboxd_server \
-  mailboxd_keystore \
-  mailboxd_keystore_password \
-  mailboxd_truststore_password \
-  postfix_smtpd_tls_cert_file \
-  postfix_smtpd_tls_key_file \
-  ssl_default_digest
-  
-export JAVA_HOME=/opt/zimbra/java
+zmsetvars -f
 
+export JAVA_HOME=/opt/zimbra/java
 
 if [ ! -x /opt/zimbra/java/bin/java ]; then
   echo "ERROR: Zimbra java is missing"
@@ -57,17 +40,16 @@ else
   java_options=""
 fi
 
-zimbra_home=/opt/zimbra
-zimbra_conf_directory=${zimbra_home}/conf
+zimbra_conf_directory=/opt/zimbra/conf
 exp_thres_days=${zimbra_zmcertmgr_expiration_threshold:=30}
 exp_thres_secs=$(($exp_thres_days*24*60*60))
 
-csr_download_directory=${zimbra_home}/mailboxd/webapps/zimbraAdmin/tmp
+csr_download_directory=/opt/zimbra/mailboxd/webapps/zimbraAdmin/tmp
 csr_download_file=${csr_download_directory}/current.csr
 crt_download_file=${csr_download_directory}/current.crt
 ca_chain_download_file=${csr_download_directory}/current_chain.crt
 
-zimbra_ssl_directory=${zimbra_home}/ssl/zimbra
+zimbra_ssl_directory=/opt/zimbra/ssl/zimbra
 zimbra_ca_directory=${zimbra_ssl_directory}/ca
 zimbra_self_cert_directory=${zimbra_ssl_directory}/server
 zimbra_comm_cert_directory=${zimbra_ssl_directory}/commercial
@@ -119,8 +101,8 @@ checkDigest() {
        x"$DIGEST" != "xsha224" -a x"$DIGEST" != "xsha256" -a \
        x"$DIGEST" != "xsha384" -a x"$DIGEST" != "xsha512" ]; then
          echo "WARNING: Unknown digest method: $DIGEST"
-         echo "Defaulting digest method to sha1"
-         DIGEST="sha1"
+         echo "Defaulting digest method to sha256"
+         DIGEST="sha256"
   fi
 }
 
@@ -143,6 +125,7 @@ initSSLDirs() {
     mkdir -p ${zimbra_ssl_directory}
   fi
   chmod -R 740 ${zimbra_ssl_directory}
+  chown -R ${zimbra_uid}:${zimbra_gid} /opt/zimbra/ssl
 
   if [ ! -f "$RANDFILE" ]; then
     touch $RANDFILE
@@ -156,18 +139,21 @@ initSSLDirs() {
     touch ${zimbra_ca_directory}/index.txt
   fi
   chmod -R 740 ${zimbra_ca_directory}
+  chown -R ${zimbra_uid}:${zimbra_gid} ${zimbra_ca_directory}
 
   if [ ! -d "${zimbra_self_cert_directory}" ]; then
     echo "** Creating directory ${zimbra_self_cert_directory}"
     mkdir -p ${zimbra_self_cert_directory}
   fi
   chmod -R 740 ${zimbra_self_cert_directory}
+  chown -R ${zimbra_uid}:${zimbra_gid} ${zimbra_self_cert_directory}
 
   if [ ! -d "${zimbra_comm_cert_directory}" ]; then
     echo "** Creating directory ${zimbra_comm_cert_directory}"
     mkdir -p ${zimbra_comm_cert_directory}
   fi
   chmod -R 740 ${zimbra_comm_cert_directory}
+  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_comm_cert_directory}
 
   # This should only happen on store nodes
   if [ -d /opt/zimbra/mysql/bin ]; then
@@ -201,7 +187,7 @@ getHostInfo() {
 
 isLdapRunning() {
 
-  su - zimbra -c "/opt/zimbra/bin/ldap status > /dev/null 2>&1"
+  su - zimbra -c " /opt/zimbra/bin/ldap status > /dev/null 2>&1"
   LDAP_IS_RUNNING=$?
   
 }
@@ -257,9 +243,10 @@ loadConfigKey() {
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -s ${file} ]; then
     echo -n "** Retrieving $location config key $key..."
-    su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null" 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
+    su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null"
     if [ $? = 0 -a -s "${file}" ]; then
       echo "done."
+      chown ${zimbra_uid}:${zimbra_gid} ${file}
     else
       echo "failed."
     fi
@@ -294,6 +281,7 @@ createCAKey() {
   else 
     echo "done."
   fi
+  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_ca_key}
   rm -f ${tmpfile} 2> /dev/null
   
 }
@@ -323,6 +311,7 @@ createCACert() {
 
   if [ -f "${zimbra_ca_crt}" ]; then
     chmod 644 ${zimbra_ca_crt}
+    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_ca_crt}
   fi
   rm -f ${tmpfile} 2> /dev/null
 }
@@ -384,6 +373,7 @@ createKeystore () {
     exit 1
   else 
     chmod 640 ${zimbra_ssl_directory}/${mailboxd_server}.pkcs12
+    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_ssl_directory}/${mailboxd_server}.pkcs12
   fi
   
   echo -n "** Creating keystore file ${mailboxd_keystore}..."
@@ -505,6 +495,7 @@ createCA() {
     loadConfigKey "zimbraCertAuthorityKeySelfSigned" ${tmpfile} "global" > /dev/null 2>&1
     if [ -s "${tmpfile}" ]; then
       mv -f ${tmpfile} ${zimbra_ca_key}
+      chown ${zimbra_uid}:${zimbra_gid} ${zimbra_ca_key}
       echo "done."
     else
       echo "failed."
@@ -519,6 +510,7 @@ createCA() {
     loadConfigKey "zimbraCertAuthorityCertSelfSigned" ${tmpfile} "global" > /dev/null 2>&1
     if [ -s "${tmpfile}" ]; then
       mv -f ${tmpfile} ${zimbra_ca_crt}
+      chown ${zimbra_uid}:${zimbra_gid} ${zimbra_ca_crt}
       echo "done."
     else
       echo "failed."
@@ -538,6 +530,7 @@ createCA() {
       if [ -z "${commercial_ca_crt}" ]; then
         rm -rf ${commercial_ca_crt}
       fi
+      chown ${zimbra_uid}:${zimbra_gid} ${commercial_ca_crt}
     elif [ -z "${tmpfile}" ]; then
       echo "not present."
     else
@@ -552,13 +545,6 @@ createCA() {
   elif [ ! -s "${zimbra_ca_key}" -o x"$(grep "PRIVATE KEY" $zimbra_ca_key)" = "x" ]; then
     createCAKey
   fi
-
-  #if [ ! -s "${zimbra_ca_crt}" -o x"${IS_NEW_CA}" = "x-new" ]; then
-    #createCACert
-  #elif [ ! -s "${zimbra_ca_crt}" -o x"$(grep "TRUSTED CERT" $zimbra_ca_crt)" = "x" ]; then
-    #createCACert
-  #fi
-
 }
 
 deployCA() {
@@ -574,10 +560,6 @@ deployCA() {
   if [ x"$ldap_is_master" = "xtrue" -a x"$SKIP_LDAP" != "x1" ]; then
     saveConfigKey "zimbraCertAuthorityCertSelfSigned" ${zimbra_ca_crt} "global"
     saveConfigKey "zimbraCertAuthorityKeySelfSigned" ${zimbra_ca_key} "global"
-    #cert=`cat ${zimbra_ca_crt}` 
-    #key=`cat ${zimbra_ca_key}`
-    #su - zimbra -c "zmprov -m -l -- mcf zimbraCertAuthorityCertSelfSigned \"$cert\" 2> /dev/null"
-    #su - zimbra -c "zmprov -m -l -- mcf zimbraCertAuthorityKeySelfSigned \"$key\" 2> /dev/null"
   fi
 
 
@@ -597,6 +579,7 @@ deployCA() {
   fi
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.pem 
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.key
+  chown -R ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca
   chmod 640 ${zimbra_conf_directory}/ca/ca.pem ${zimbra_conf_directory}/ca/ca.key
   echo "done."
 
@@ -616,6 +599,9 @@ deployCA() {
   fi
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.pem 
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.key
+  if [ -s "${zimbra_conf_directory}/ca/commercial_ca.pem" ]; then
+    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/commercial_ca.pem
+  fi
   chmod 640 ${zimbra_conf_directory}/ca/ca.pem ${zimbra_conf_directory}/ca/ca.key
 }
 
@@ -678,6 +664,7 @@ deployCert() {
       fi
       echo "** Copying ${cli_comm_crt} to ${commercial_crt}"
       cp -f ${cli_comm_crt} ${commercial_crt}
+      chown ${zimbra_uid}:${zimbra_gid} ${commercial_crt}
     else
       $0 verifycrt comm ${commercial_key} ${crt_download_file} ${ca_chain_download_file}
       if [ $? != 0 ]; then
@@ -686,6 +673,7 @@ deployCert() {
       fi
       echo "** Copying ${crt_download_file} to ${commercial_crt}"
       cp -f  ${crt_download_file} ${commercial_crt}
+      chown ${zimbra_uid}:${zimbra_gid} ${commercial_crt}
     fi
   
     if [ x"${cli_ca_chain}" != "x" ]; then
@@ -693,16 +681,20 @@ deployCert() {
       cat ${cli_ca_chain} >> ${commercial_crt}
       cp -f ${cli_ca_chain} ${commercial_ca_crt}
       addCACERT ${commercial_ca_crt}
+      chown ${zimbra_uid}:${zimbra_gid} ${commercial_ca_crt}
     elif [ -f "${ca_chain_download_file}" -a x"${cli_comm_crt}" = "x" ]; then
       echo "** Appending ca chain ${ca_chain_download_file} to ${commercial_crt}"
       cat ${ca_chain_download_file} >> ${commercial_crt}
       cp -f ${ca_chain_download_file} ${commercial_ca_crt}
       addCACERT ${commercial_ca_crt}
+      chown ${zimbra_uid}:${zimbra_gid} ${commercial_ca_crt}
     fi
   
     current_crt=${commercial_crt}
     current_key=${commercial_key} 
     chmod 644 ${current_crt} 
+    chown ${zimbra_uid}:${zimbra_gid} ${current_crt}
+    chown ${zimbra_uid}:${zimbra_gid} ${current_key}
   fi
 
   if [ x"${1}" = "x-allserver" ]; then
@@ -734,11 +726,11 @@ deployCert() {
 
   if [ x"$DEPLOY" = "xall" -o x"$DEPLOY" = "xmta" ]; then
     echo -n "** Installing mta certificate and key..."
-    cp -f ${current_crt} ${postfix_smtpd_tls_cert_file}
-    cp -f ${current_key} ${postfix_smtpd_tls_key_file}
-    chown ${zimbra_uid}:${zimbra_gid} ${postfix_smtpd_tls_cert_file}
-    chown ${zimbra_uid}:${zimbra_gid} ${postfix_smtpd_tls_key_file}
-    chmod 640 ${postfix_smtpd_tls_cert_file} ${postfix_smtpd_tls_key_file}
+    cp -f ${current_crt} ${zimbra_conf_directory}/smtpd.crt
+    cp -f ${current_key} ${zimbra_conf_directory}/smtpd.key
+    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/smtpd.crt
+    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/smtpd.key
+    chmod 640 ${zimbra_conf_directory}/smtpd.crt ${zimbra_conf_directory}/smtpd.key
 
     echo "done."
   fi
@@ -952,9 +944,11 @@ createServerCertReq() {
 
   if [ -f "${current_csr}" ]; then
     chmod 644 ${current_csr}
+    chown ${zimbra_uid}:${zimbra_gid} ${current_csr}
   fi
   if [ -f "${current_key}" ]; then
     chmod 640 ${current_key}
+    chown ${zimbra_uid}:${zimbra_gid} ${current_key}
   fi
   saveConfigKey "zimbraSSLPrivateKey" ${current_key} "server"
 }
@@ -1038,7 +1032,7 @@ createCert() {
 
   if [ x"${ALLSERVERS}" = "x-allserver" ]; then
     # merge these with cli specified. -bp
-    subject_alt_names=`su - zimbra -c "/opt/zimbra/bin/zmprov -m -l gas | xargs "`
+    subject_alt_names=`su - zimbra -c "/opt/zimbra/bin/zmprov -m -l gas | xargs"`
     createCSR self -new -keysize ${KEYSIZE} -digest ${DIGEST}
     shift
   elif [ ! -s "${server_csr}" -o x"${IS_NEW_CRT}" = "x-new" ]; then
@@ -1053,6 +1047,7 @@ createCert() {
   if [ -s ${zimbra_ca_directory}/index.txt -o ! -e ${zimbra_ca_directory}/index.txt ]; then
     cp -f /dev/null ${zimbra_ca_directory}/index.txt
     chmod 644 ${zimbra_ca_directory}/index.txt
+    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_ca_directory}/index.txt
   fi
   
   ${openssl} ca -out ${server_crt} -notext \
@@ -1080,6 +1075,7 @@ createCert() {
 
   if [ -f "${server_crt}" ]; then
     chmod 644 ${server_crt}
+    chown ${zimbra_uid}:${zimbra_gid} ${server_crt}
   fi
 
   rm -f ${tmpfile} 2> /dev/null
@@ -1416,7 +1412,7 @@ createCSR() {
     fi
     cp -f ${commercial_csr} ${csr_download_file}
     chmod 444 ${csr_download_file}
-    chown root ${csr_download_file}
+    chown ${zimbra_uid}:${zimbra_gid} ${csr_download_file}
   fi
 }
 
@@ -1554,7 +1550,7 @@ verifycrtchain () {
 
 migrate () {
   initSSLDirs
-  prev_ssl_directory=${zimbra_home}/ssl/ssl
+  prev_ssl_directory=/opt/zimbra/ssl/ssl
   echo "** Migrating ssl certs from ${prev_ssl_directory} to ${zimbra_ssl_directory}"
   prev_ca_directory=${prev_ssl_directory}/ca
   prev_cert_directory=${prev_ssl_directory}/server
@@ -1601,6 +1597,7 @@ migrate () {
     cp -f ${prev_mailboxd_csr} ${commercial_csr}
   fi
   chmod -R 740 ${zimbra_ssl_directory}
+  chown -R ${zimbra_uid}:${zimbra_gid} ${zimbra_ssl_directory}
 
 }
 

@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
+# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2013 Zimbra Software, LLC.
 # 
 # The contents of this file are subject to the Zimbra Public License
 # Version 1.4 ("License"); you may not use this file except in
@@ -26,7 +26,7 @@ else
 fi
 
 if [ -f ".hotspot_compiler" ]; then
-  cd $zimbra_home
+  cd /opt/zimbra
 fi
 case "`uname`" in
 CYGWIN*) PATHSEP=";";;
@@ -43,22 +43,22 @@ done
 
 java_version=$(${zimbra_java_home}/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
 if [ x"$java_version" = "x1.6.0" ]; then
-  java_options="-XX:ErrorFile=${zimbra_home}/log"
+  java_options="-XX:ErrorFile=/opt/zimbra/log"
 else 
   java_options=""
 fi 
 
 if [ x${zimbra_zmjava_java_library_path} = "x" ]; then
-  zimbra_zmjava_java_library_path=${zimbra_home}/lib
+  zimbra_zmjava_java_library_path=/opt/zimbra/lib
 fi  
 
 if [ x${zimbra_zmjava_java_ext_dirs} = "x" ]; then
-  zimbra_zmjava_java_ext_dirs=${JRE_EXT_DIR}${PATHSEP}${zimbra_home}/lib/jars${PATHSEP}${ZIMBRA_EXT_DIR}
+  zimbra_zmjava_java_ext_dirs=${JRE_EXT_DIR}${PATHSEP}/opt/zimbra/lib/jars${PATHSEP}${ZIMBRA_EXT_DIR}
 fi  
 
 exec ${zimbra_java_home}/bin/java ${java_options} \
      -client ${zimbra_zmjava_options} \
-     -Dzimbra.home=${zimbra_home} \
+     -Dzimbra.home=/opt/zimbra \
      -Djava.library.path=${zimbra_zmjava_java_library_path} \
      -Djava.ext.dirs=${zimbra_zmjava_java_ext_dirs} \
      "$@"

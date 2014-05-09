@@ -52,7 +52,6 @@ my $localxml = XMLin("/opt/zimbra/conf/localconfig.xml");
 
 my $ldap_root_password = $localxml->{key}->{ldap_root_password}->{value};
 chomp($ldap_root_password);
-my $zimbra_home = $localxml->{key}->{zimbra_home}->{value};
 my $ldap_replication_password = $localxml->{key}->{ldap_replication_password}->{value};
 my $ldap_starttls_supported = $localxml->{key}->{ldap_starttls_supported}->{value};
 my $zimbra_require_interprocess_security = $localxml->{key}->{zimbra_require_interprocess_security}->{value};
@@ -62,11 +61,7 @@ my $ldap_port = $localxml->{key}->{ldap_port}->{value};
 my $zimbra_ldap_password = $localxml->{key}->{zimbra_ldap_password}->{value};
 my $zimbra_ldap_userdn = $localxml->{key}->{zimbra_ldap_userdn}->{value};
 
-if ($zimbra_home eq "") {
-   $zimbra_home = "/opt/zimbra";
-}
-
-my $zmprov="${zimbra_home}/bin/zmprov";
+my $zmprov="/opt/zimbra/bin/zmprov";
 
 my ($lmr, $junk) = split ' ', $ldap_master_url, 2;
 my $ldap_master_host=$lmr;
@@ -93,7 +88,7 @@ sub verifyLdap {
     if ($ldap_starttls_supported) {
       $mesg = $ldap->start_tls(
         verify => 'none',
-        capath => "$zimbra_home/conf/ca",
+        capath => "/opt/zimbra/conf/ca",
       ) or die "start_tls: $@";
       $mesg->code && die "TLS: " . $mesg->error . "\n";
     }
@@ -107,7 +102,7 @@ sub verifyLdap {
 sub verifyAccesslog {
   # Verify that accesslog DB doesn't already exist.
 
-  my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fopenldap%2fvar%2frun%2fldapi/') or die "$@";
+  my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fdata%2fldap%2fstate%2frun%2fldapi/') or die "$@";
   my $mesg;
   $mesg = $ldap->bind("cn=config", password=>"$ldap_root_password");
 
@@ -127,7 +122,7 @@ sub verifyAccesslog {
 }
 
 sub verifySyncProv {
-  my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fopenldap%2fvar%2frun%2fldapi/') or die "$@";
+  my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fdata%2fldap%2fstate%2frun%2fldapi/') or die "$@";
   my $mesg;
 
   $mesg = $ldap->bind("cn=config", password=>"$ldap_root_password");
@@ -149,9 +144,9 @@ sub verifySyncProv {
 
 sub enableSyncProv {
   print "Enabling sync provider on master...";
-  File::Path::mkpath("${zimbra_home}/data/ldap/accesslog/db");
+  File::Path::mkpath("/opt/zimbra/data/ldap/accesslog/db");
 
-  my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fopenldap%2fvar%2frun%2fldapi/') or die "$@";
+  my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fdata%2fldap%2fstate%2frun%2fldapi/') or die "$@";
   my $mesg = $ldap->bind("cn=config", password=>"$ldap_root_password");
   $mesg->code && die "Bind: ". $mesg->error . "\n";
 
@@ -161,7 +156,7 @@ sub enableSyncProv {
     attr => [
       objectClass=>["olcDatabaseConfig","olcMdbConfig"],
       olcDatabase=>"{2}mdb",
-      olcDbDirectory=>"${zimbra_home}/data/ldap/accesslog/db",
+      olcDbDirectory=>"/opt/zimbra/data/ldap/accesslog/db",
       olcSuffix=>"cn=accesslog",
       olcAccess=>'{0}to dn.subtree="cn=accesslog"  by dn.exact="uid=zimbra,cn=admins,cn=zimbra" read  by dn.exact="cn=config" read  by dn.exact="uid=zmreplica,cn=admins,cn=zimbra" read',
       olcLastMod=>"TRUE",
@@ -225,7 +220,7 @@ sub createLdapConfig {
     $ldaps=1;
   }
 
-  my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fopenldap%2fvar%2frun%2fldapi/') or die "$@";
+  my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fdata%2fldap%2fstate%2frun%2fldapi/') or die "$@";
   my $mesg = $ldap->bind("cn=config", password=>"$ldap_root_password");
   $mesg->code && die "Bind: ". $mesg->error . "\n";
 
@@ -298,7 +293,7 @@ sub enableLdapService {
   }
 
   if (!$found) {
-    system("${zimbra_home}/bin/zmprov -m -l ms ${zimbra_server_hostname} +zimbraServiceEnabled ldap");
+    system("/opt/zimbra/bin/zmprov -m -l ms ${zimbra_server_hostname} +zimbraServiceEnabled ldap");
   }
 
   print "succeeded\n"; 
@@ -306,23 +301,23 @@ sub enableLdapService {
 
 sub updateLdapHost {
 	print "Setting ldap_url on ${zimbra_server_hostname}...";
-	`${zimbra_home}/bin/zmlocalconfig -f -e ldap_url="${proto}://${zimbra_server_hostname}:${ldap_port} ${lmr}"`;
+	qx(/opt/zimbra/bin/zmlocalconfig -f -e ldap_url="${proto}://${zimbra_server_hostname}:${ldap_port} ${lmr}");
 	print "done\n";
 }
 
 sub resetLdapUrl {
 	print "Resetting ldap_url on ${zimbra_server_hostname}...";
-	`${zimbra_home}/bin/zmlocalconfig -f -e ldap_url="${lmr}"`;
+	qx(/opt/zimbra/bin/zmlocalconfig -f -e ldap_url="${lmr}");
 	print "done\n";
 }
 
 sub startLdap {
   print "Starting LDAP on ${zimbra_server_hostname}...";
-  my $cmd = "$zimbra_home/bin/ldap status";
+  my $cmd = "/opt/zimbra/bin/ldap status";
   my $rc = system($cmd);
   $rc >>= 8;
   if ($rc != 0) {
-    $cmd = "$zimbra_home/bin/ldap start";
+    $cmd = "/opt/zimbra/bin/ldap start";
     $rc = system($cmd);
     $rc >>= 8;
     if ($rc == 1) {

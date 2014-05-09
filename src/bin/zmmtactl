@@ -15,15 +15,19 @@
 # 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars \
-	zimbra_home \
   postfix_mail_owner \
   postfix_setgid_group \
-	zimbra_server_hostname 
+	zimbra_server_hostname
 
-BASE=${zimbra_home:=/opt/zimbra}
+BASE=/opt/zimbra
 
-if [ -f "${zimbra_home}/conf/mta_milter_options" ]; then
-  source ${zimbra_home}/conf/mta_milter_options
+if [ ! -L /opt/zimbra/postfix ]; then
+  echo "Error: postfix not installed"
+  exit 1
+fi
+
+if [ -f "/opt/zimbra/conf/mta_milter_options" ]; then
+  source /opt/zimbra/conf/mta_milter_options
 fi
 zimbraMilterServerEnabled=${zimbraMilterServerEnabled:=FALSE}
 
@@ -37,10 +41,10 @@ fi
 
 rewriteconfig() {
   echo -n "Rewriting configuration files..."
-  if [ -L ${zimbra_home}/postfix ]; then
-    if [ ! -f ${zimbra_home}/postfix/conf/main.cf ]; then
-      touch ${zimbra_home}/postfix/conf/main.cf
-      ${zimbra_home}/bin/postconf -e mail_owner=${postfix_mail_owner} setgid_group=${postfix_setgid_group}
+  if [ -L /opt/zimbra/postfix ]; then
+    if [ ! -f /opt/zimbra/postfix/conf/main.cf ]; then
+      touch /opt/zimbra/postfix/conf/main.cf
+      /opt/zimbra/bin/postconf -e mail_owner=${postfix_mail_owner} setgid_group=${postfix_setgid_group}
     fi
   fi
   /opt/zimbra/libexec/configrewrite antispam antivirus opendkim mta sasl  > /dev/null 2>&1
