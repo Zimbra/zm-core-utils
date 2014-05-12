@@ -27,14 +27,13 @@ autoTrainSystem() {
   timestampit "Starting spamassassin training."
   /opt/zimbra/libexec/sa-learn \
     --dbpath ${db_path} -L --no-sync \
-    --siteconfigpath /opt/zimbra/data/spamassassin/localrules --spam ${spamdir}
+    --spam ${spamdir}
 
   /opt/zimbra/libexec/sa-learn \
     --dbpath ${db_path} -L --no-sync \
-    --siteconfigpath /opt/zimbra/data/spamassassin/localrules --ham ${hamdir}
+    --ham ${hamdir}
 
   /opt/zimbra/libexec/sa-learn \
-    --siteconfigpath /opt/zimbra/data/spamassassin/localrules \
     --dbpath ${db_path} --sync
   timestampit "Finished spamassassin training."
 
@@ -70,10 +69,9 @@ trainAccountFolder() {
 
   /opt/zimbra/libexec/sa-learn \
     --dbpath ${db_path} -L --no-sync \
-    --siteconfigpath /opt/zimbra/data/spamassassin/localrules --${MODE} ${tempdir}
+    --${MODE} ${tempdir}
 
   /opt/zimbra/libexec/sa-learn \
-    --siteconfigpath /opt/zimbra/data/spamassassin/localrules \
     --dbpath ${db_path} --sync
   timestampit  "Finished spamassassin $MODE training for $USER using folder $FOLDER"
 
