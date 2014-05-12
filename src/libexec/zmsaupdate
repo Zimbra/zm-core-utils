@@ -17,7 +17,7 @@ use strict;
 use lib '/opt/zimbra/zimbramon/lib';
 use Getopt::Long;
 
-if ( ! -d "/opt/zimbra/conf/spamassassin" ) {
+if ( ! -d "/opt/zimbra/data/spamassassin/localrules" ) {
   print "ERROR: SpamAssassin does not appear to be installed - exiting\n";
   exit(1);
 }

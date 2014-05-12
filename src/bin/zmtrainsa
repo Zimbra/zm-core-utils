@@ -25,16 +25,16 @@ autoTrainSystem() {
   timestampit "Finished extracting spam/ham from system accounts."
 
   timestampit "Starting spamassassin training."
-  /opt/zimbra/libexec/sa-learn -p /opt/zimbra/conf/sa/salocal.cf \
+  /opt/zimbra/libexec/sa-learn \
     --dbpath ${db_path} -L --no-sync \
-    --siteconfigpath /opt/zimbra/conf/spamassassin --spam ${spamdir}
+    --siteconfigpath /opt/zimbra/data/spamassassin/localrules --spam ${spamdir}
 
-  /opt/zimbra/libexec/sa-learn -p /opt/zimbra/conf/sa/salocal.cf \
+  /opt/zimbra/libexec/sa-learn \
     --dbpath ${db_path} -L --no-sync \
-    --siteconfigpath /opt/zimbra/conf/spamassassin --ham ${hamdir}
+    --siteconfigpath /opt/zimbra/data/spamassassin/localrules --ham ${hamdir}
 
-  /opt/zimbra/libexec/sa-learn -p /opt/zimbra/conf/sa/salocal.cf \
-    --siteconfigpath /opt/zimbra/conf/spamassassin \
+  /opt/zimbra/libexec/sa-learn \
+    --siteconfigpath /opt/zimbra/data/spamassassin/localrules \
     --dbpath ${db_path} --sync
   timestampit "Finished spamassassin training."
 
@@ -68,12 +68,12 @@ trainAccountFolder() {
   timestampit  "Starting spamassassin $MODE training for $USER using folder $FOLDER"
   /opt/zimbra/libexec/zmspamextract -r -m $USER -o ${tempdir} -q in:${FOLDER}
 
-  /opt/zimbra/libexec/sa-learn -p /opt/zimbra/conf/sa/salocal.cf \
+  /opt/zimbra/libexec/sa-learn \
     --dbpath ${db_path} -L --no-sync \
-    --siteconfigpath /opt/zimbra/conf/spamassassin --${MODE} ${tempdir}
+    --siteconfigpath /opt/zimbra/data/spamassassin/localrules --${MODE} ${tempdir}
 
-  /opt/zimbra/libexec/sa-learn -p /opt/zimbra/conf/sa/salocal.cf \
-    --siteconfigpath /opt/zimbra/conf/spamassassin \
+  /opt/zimbra/libexec/sa-learn \
+    --siteconfigpath /opt/zimbra/data/spamassassin/localrules \
     --dbpath ${db_path} --sync
   timestampit  "Finished spamassassin $MODE training for $USER using folder $FOLDER"
 
