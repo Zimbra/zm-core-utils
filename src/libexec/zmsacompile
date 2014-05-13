@@ -1,0 +1,27 @@
+#!/bin/bash
+
+if [ ! -d /opt/zimbra/amavisd/sbin ]; then
+  echo "Error: Must be run on an MTA"
+  exit 1
+fi
+
+u=`id -un`
+if [ $u != "zimbra" ]; then
+    echo "Error: must be run as the zimbra user"
+    exit 1
+fi
+
+re2c=`which re2c`
+if [ x"$re2c" = "x" ]; then
+  echo "Error: re2c is required to compile rules"
+  exit 1
+fi
+
+make=`which make`
+if [ x"$make" = "x" ]; then
+  echo "Error: make is required to compile rules"
+  exit 1
+fi
+
+/opt/zimbra/zimbramon/bin/sa-compile >/dev/null 2>&1
+

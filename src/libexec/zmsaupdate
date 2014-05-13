@@ -55,11 +55,18 @@ if (!$rule_updates_enabled) {
 
 my $sa="/opt/zimbra/zimbramon/bin/sa-update -v --allowplugins --refreshmirrors >/dev/null 2>&1";
 my $restart="/opt/zimbra/bin/zmamavisdctl restart norewrite >/dev/null 2>&1";
+my $compile="/opt/zimbra/libexec/zmsacompile >/dev/null 2>&1";
+
 my $restart_enabled = getLocalConfig("antispam_enable_restarts");
 my $restart_required;
 
+my $compile_rules=getLocalConfig("antispam_enable_rule_compilation");
+
 if (lc($restart_enabled) =~ /true/) { $restart_enabled = 1; }
 if (lc($restart_enabled) =~ /false/) { $restart_enabled = 0; }
+
+if (lc($compile_rules) =~ /true/) { $compile_rules = 1; }
+if (lc($compile_rules) =~ /false/) { $compile_rules = 0; }
 
 qx($sa);
 my $rc = $?>>8;
@@ -73,6 +80,10 @@ if ($rc == 1) {
 
 if ($restart_required == 0) {
     exit;
+}
+
+if ($compile_rules) {
+  qx($compile);
 }
 
 if ($restart_enabled) {
