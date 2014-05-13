@@ -720,10 +720,6 @@ if [ -L /opt/zimbra/postfix ]; then
     chmod -f g+s /opt/zimbra/postfix/sbin/postqueue
     chmod -f g+s /opt/zimbra/postfix/sbin/postdrop
   fi
-  if [ ! -d /opt/zimbra/conf/sa ]; then
-    mkdir -p /opt/zimbra/conf/sa
-    chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/conf/sa
-  fi
   if [ -f /opt/zimbra/bin/zmbackup ]; then
     mkdir -p /opt/zimbra/data/postfix-journal
     chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/postfix-journal
