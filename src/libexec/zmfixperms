@@ -781,6 +781,12 @@ if [ -f /opt/zimbra/libexec/ZmSetup.app/Contents/MacOS/ZmSetup ]; then
   chmod 544 /opt/zimbra/libexec/ZmSetup.app/Contents/MacOS/ZmSetup
 fi
 
+if [[ "x$PLAT" == "xRHEL7_64" && ! -d /opt/zimbra/.cache ]]; then
+  mkdir -p /opt/zimbra/.cache
+  chown zimbra:zimbra /opt/zimbra/.cache
+  chmod 775 /opt/zimbra/.cache
+fi
+
 
 exit 0
 
