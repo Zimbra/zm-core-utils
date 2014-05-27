@@ -175,13 +175,17 @@ if(defined($partUsage) && $debug) {
 }
 
 if ($ldap_db_maxsize > $totalspace) {
-  setLocalConfig("ldap_db_maxsize", $totalspace);
-  $ldap_db_maxsize=$totalspace;
+  if ($totalspace > 10485760 )  {
+    setLocalConfig("ldap_db_maxsize", $totalspace);
+    $ldap_db_maxsize=$totalspace;
+  }
 }
 
 if ($ldap_accesslog_maxsize > $totalspace) {
-  setLocalConfig("ldap_accesslog_maxsize", $totalspace);
-  $ldap_accesslog_maxsize=$totalspace;
+  if ($totalspace > 10485760 )  {
+    setLocalConfig("ldap_accesslog_maxsize", $totalspace);
+    $ldap_accesslog_maxsize=$totalspace;
+  }
 }
 
 my $mdb_warning_size = int($ldap_monitor_warning * $ldap_db_maxsize);
@@ -291,7 +295,9 @@ if ($mdb_alarm) {
     }
 	my $subject="LDAP PRIMARY DATABASE GROWTH ALERT\n";
     my $msg="Growing primary MDB database size from $ldap_db_maxsize to $growth.\n"; 
-    setLocalConfig("ldap_db_maxsize", "$growth");
+    if ($growth > 0) {
+      setLocalConfig("ldap_db_maxsize", "$growth");
+    }
     push (@$report,$msg);
 	sendEmailReport($subject, $report);
   } elsif ($mdb_alarm == 2) {
@@ -316,7 +322,9 @@ if ($alog_alarm) {
     }
 	my $subject="LDAP ACCESSLOG DATABASE GROWTH ALERT\n";
     my $msg="Growing accesslog MDB database size from $ldap_accesslog_maxsize to $growth.\n";
-    setLocalConfig("ldap_db_maxsize", "$growth");
+    if ($growth > 0) {
+      setLocalConfig("ldap_db_maxsize", "$growth");
+    }
     push (@$report,$msg);
     sendEmailReport($subject, $report);
   } elsif ($alog_alarm == 2) {
