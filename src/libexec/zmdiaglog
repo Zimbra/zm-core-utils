@@ -469,8 +469,6 @@ sub run() {
                 "/opt/zimbra/log/zmconfigd.log",
                 "/opt/zimbra/log/zmmailboxd.out",
                 "/var/log/zimbra.log",
-                "/etc/fstab",
-                "/proc/mounts",
                 glob("/opt/zimbra/db/data/*.err"),
                 glob("/opt/zimbra/log/hs_err_pid*"),
                 glob("/opt/zimbra/log/my*.log"),
@@ -479,6 +477,14 @@ sub run() {
                 "/opt/zimbra/log/mysql-mailboxd.log"
                 );
     cp $_, "$destination/logs" for @log_files;
+
+    logmsg "Copying file system info and mounts\n";
+    my @static_info = (
+		"/etc/fstab",
+		"/proc/mounts",
+		);
+
+    cp $_, "$destination" for @static_info;
     
     logmsg "Copying today's ZCS statistics\n";
     cp $_, "$destination/stats" for glob("/opt/zimbra/zmstat/*.csv");
