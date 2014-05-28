@@ -426,6 +426,7 @@ sub run() {
     exec_with_timeout("du -sh /opt/zimbra/redolog > du-redolog.txt 2>&1", $timeout);
     exec_with_timeout("df -hT > df-hT.txt 2>&1", $timeout);
     
+    mkdir("$destination/confs");
     my @conf_files = (
                 "/opt/zimbra/conf/cbpolicyd.conf",
                 "/opt/zimbra/conf/localconfig.xml",
@@ -434,14 +435,14 @@ sub run() {
                 "/opt/zimbra/postfix/conf/master.cf",
                 "/opt/zimbra/conf/zmconfigd.cf"
                 );
-    cp $_, $destination for @conf_files;
+    cp $_, "$destination/confs" for @conf_files;
 
     # Copy hidden .install_history file to a visible file
     cp "/opt/zimbra/.install_history", "$destination/install_history";
 
     mkdir("$destination/logs");
     mkdir("$destination/stats");
-    mkdir("$destination/ld.so.conf");
+    mkdir("$destination/confs/ld.so.conf");
     if (! -f $ZMSTAT_CONF) {
         logmsg "Saving ZCS statistics chart config\n";
         open(CONF, "$SU '/opt/zimbra/bin/zmstat-chart-config' |");
@@ -520,7 +521,7 @@ sub run() {
     if (-f "/etc/ld.so.conf") { 
       logmsg "Copying ld.so configuration\n";
       my @ld_files = ("/etc/ld.so.conf", glob("/etc/ld.so.conf.d/*"));
-      cp $_, "$destination/ld.so.conf" for @ld_files;
+      cp $_, "$destination/confs/ld.so.conf" for @ld_files;
     } else {
       logmsg "ld.so.conf not present...skipping copy.\n";
     }
