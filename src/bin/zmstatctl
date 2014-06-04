@@ -256,7 +256,8 @@ if (defined($cmd)) {
         my @pids = getPidFiles();
         if (scalar(@pids) == 0) {
             # zmstat must not be running if there is no pid file
-            exit(0);
+            # Must exit with code 1 in this case
+            exit(1);
         }
         my $numDeadProcs = 0;
         foreach my $pidFile (@pids) {
