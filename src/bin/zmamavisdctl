@@ -30,8 +30,6 @@ zmsetvars \
   zimbra_log_directory
 
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
-pidfile=${zimbra_log_directory}/amavisd.pid
-mcpidfile=${zimbra_log_directory}/amavis-mc.pid
 
 if [ ! -d "/opt/zimbra/data/amavisd/.spamassassin" ]; then
     mkdir -p /opt/zimbra/data/amavisd/.spamassassin
@@ -43,11 +41,7 @@ rewriteconfig() {
 }
 
 checkrunning() {
-  # amavisd (master) should be listed in the $pidfile.
-  if [ -f $pidfile ]; then
-    PID=`cat $pidfile`
-  fi
-  #  If no PID file or PID file is empty, then get PID from scanning the proc table.
+  # Get PID from scanning the proc table.
   if [ "x$PID" = "x" ]; then
     # PID file is NULL.  Get info from proc table.
     PID=`/bin/ps axo user,pid,ppid,command | awk '{ if ((($4 ~ /^amavisd$/) || ($4 ~ /^\/opt\/zimbra\/amavisd\/sbin\/amavisd$/)) && ($5 ~ /^\(master\)$/)) { print $2 } }'`
@@ -77,11 +71,7 @@ checkrunning() {
 }
 
 checkrunning-mc() {
-  # amavisd (master) should be listed in the $pidfile.
-  if [ -f $mcpidfile ]; then
-    MCPID=`cat $mcpidfile`
-  fi
-  #  If no PID file or PID file is empty, then get PID from scanning the proc table.
+  #  Get PID from scanning the proc table.
   if [ "x$MCPID" = "x" ]; then
     # PID file is NULL.  Get info from proc table.
     MCPID=`/bin/ps axo user,pid,ppid,command | awk '{ if ((($6 ~ /amavis-mc$/) || ($6 ~ /\/opt\/zimbra\/amavisd\/sbin\/amavis-mc$/))) { print $2 } }'`
