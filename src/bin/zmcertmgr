@@ -976,6 +976,12 @@ createCert() {
   fi
   #echo "createCert: RSA keysize: $KEYSIZE"
 
+  if [ x"${1}" = "x-digest" ]; then
+    shift
+    DIGEST="${1}"
+    shift
+  fi
+
   if [ x"${1}" = "x-subject" ]; then
     shift
     SUBJECT="$1"
@@ -993,11 +999,6 @@ createCert() {
     shift
   fi
 
-  if [ x"${1}" = "x-digest" ]; then
-    shift
-    DIGEST="${1}"
-    shift
-  fi
 
   initSSLDirs
 
@@ -1608,8 +1609,8 @@ usage () {
   echo "  $0 -help"
   echo "  $0 createca [-new] [-keysize 2048] [-digest digest] [-subject subject]"
   echo "  $0 deployca"
-  echo "  $0 createcsr <self|comm> [-new] [-digest digest] [-keysize 2048] [-subject subject] [-subjectAltNames \"host1,host2\"]"
-  echo "  $0 createcrt [-new] [-days validation days] [-digest digest] [-keysize 2048] [-subject subject] [-subjectAltNames \"host1,host2\"]"
+  echo "  $0 createcsr <self|comm> [-new] [-keysize 2048] [-digest digest] [-subject subject] [-subjectAltNames \"host1,host2\"]"
+  echo "  $0 createcrt [-new] [-days validation days] [-keysize 2048] [-digest digest] [-subject subject] [-subjectAltNames \"host1,host2\"]"
   echo "  $0 deploycrt <self>"
   echo "  $0 deploycrt <comm> [certfile] [ca_chain_file]"
   echo "  $0 savecrt"
