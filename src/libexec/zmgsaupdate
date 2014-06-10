@@ -15,20 +15,18 @@
 # 
 
 source `dirname $0`/../bin/zmshutil || exit 1
-zmsetvars \
-  zimbra_ldap_password \
-  ldap_url
+zmsetvars
 
 LDAP_URL=`echo ${ldap_url} | awk '{ print $1 }'`
 
 GSA_ID_LIST=`/opt/zimbra/bin/ldapsearch -x -H ${LDAP_URL} -w ${zimbra_ldap_password} -D uid=zimbra,cn=admins,cn=zimbra -b '' '(&(objectClass=zimbraDomain)(zimbraGalAccountId=*))' zimbraGalAccountId | awk '{if ($1 ~ /^zimbraGalAccountId:$/) { print $2 } }'`
 
-MY_HOSTNAME=`zmhostname`
+MY_HOSTNAME=$zimbra_server_hostname
 for ID in $GSA_ID_LIST
 do
   GSA_MAIL_HOST=`/opt/zimbra/bin/ldapsearch -x -H ${LDAP_URL} -w ${zimbra_ldap_password} -D uid=zimbra,cn=admins,cn=zimbra -b '' '(&(objectClass=zimbraAccount)(zimbraId='${ID}'))' zimbraMailHost | awk '{if ($1 ~ /^zimbraMailHost:$/) { print $2 } }'`
   if [ "x${GSA_MAIL_HOST}" == "x${MY_HOSTNAME}" ]
   then
-    zmgsautil trickleSync -i ${ID} -n InternalGAL
+    /opt/zimbra/bin/zmgsautil trickleSync -i ${ID} -n InternalGAL
   fi
 done
