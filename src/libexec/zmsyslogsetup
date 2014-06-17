@@ -262,7 +262,7 @@ sub updateSyslog {
       }
       if ($rsyslog == 1 ) {
         s/;mail.none//g;
-        if ($platform =~ /RHEL6/ || $platform =~ /CentOS6/ ) {
+        if ($platform =~ /RHEL6/ || $platform =~ /RHEL7/ ) {
           s/^\*\.info/\*\.info;local0.none;local1.none;mail.none;auth.none/;
         }
         s/^\*\.\*;auth,authpriv.none/\*\.\*;auth,authpriv.none;local0.none;local1.none;mail.none/;
@@ -460,9 +460,17 @@ if ($platform =~ /UBUNTU/ && -f "/etc/rsyslog.conf" ) {
     exit 1;
   }
 }
-if ( $platform =~ /RHEL6/ || $platform =~ /CentOS6/ ) {
+if ( $platform =~ /RHEL6/ ) {
   if ( -e "/etc/init.d/rsyslog" ) {
     qx(/etc/init.d/rsyslog restart> /dev/null 2>&1);
+    exit 0;
+  } else {
+    print "Unable to restart rsyslog.  Please do it manually.\n";
+    exit 1;
+  }
+} elsif ( $platform =~ /RHEL7/ ) {
+  if ( -e "/usr/lib/systemd/system/rsyslog.service" ) {
+    qx(/usr/bin/systemctl restart rsyslog.service >/dev/null 2>&1);
     exit 0;
   } else {
     print "Unable to restart rsyslog.  Please do it manually.\n";
