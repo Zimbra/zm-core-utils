@@ -49,7 +49,9 @@ flushDirtyPages() {
   local i=0
   while [ $i -lt 600 ]; do
     local pages=$(${MYSQL} -e "show engine innodb status\G" | grep '^Modified db pages' | grep -Eo '[0-9]+$')
-    if [ "$pages" = "0" ]; then
+    local total_pages=$(echo $pages | sed 's/ /+/g' | bc)
+
+    if [ "$total_pages" = "0" ]; then
       break
     fi
     #echo -ne "$pages\r"
