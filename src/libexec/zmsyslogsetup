@@ -262,7 +262,7 @@ sub updateSyslog {
       }
       if ($rsyslog == 1 ) {
         s/;mail.none//g;
-        if ($platform =~ /RHEL6/ || $platform =~ /CentOS6/ ) {
+        if ($platform =~ /RHEL6/ || $platform =~ /RHEL7/ ) {
           s/^\*\.info/\*\.info;local0.none;local1.none;mail.none;auth.none/;
         }
         s/^\*\.\*;auth,authpriv.none/\*\.\*;auth,authpriv.none;local0.none;local1.none;mail.none/;
@@ -389,7 +389,7 @@ sub updateRsyslogd {
   if ( !-f "/var/log/zimbra-stats.log") {
     open(my $tlog, ">/var/log/zimbra-stats.log");
   }
-  if ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64") {
+  if ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64" || $platform eq "UBUNTU14_64") {
     my $junk;
     ($junk, $junk, $uid, $junk) = getpwnam("syslog");
     $gid = getgrnam("adm");
@@ -406,7 +406,7 @@ sub updateRsyslogd {
     local @ARGV=("/etc/logrotate.d/zimbra");
     while (<>) {
       s/kill\s+\-HUP\s+.+syslog\*\.pid.+\/dev\/null/\/usr\/sbin\/service rsyslog restart >\/dev\/null/g;
-      if ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64") {
+      if ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64" || $platform eq "UBUNTU14_64") {
         s/USER/syslog/;
         s/GROUP/adm/;
       } else {
@@ -431,7 +431,7 @@ if ( -f "/etc/syslog-ng/syslog-ng.conf" ||
   $edited=1;
 }
 
-if ( (-f "/etc/rsyslog.conf" && -d "/etc/rsyslog.d") && $edited == 0 && ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64")) {
+if ( (-f "/etc/rsyslog.conf" && -d "/etc/rsyslog.d") && $edited == 0 && ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64" || $platform eq "UBUNTU14_64")) {
   &updateRsyslogd;
   $edited=1;
 }
@@ -460,9 +460,17 @@ if ($platform =~ /UBUNTU/ && -f "/etc/rsyslog.conf" ) {
     exit 1;
   }
 }
-if ( $platform =~ /RHEL6/ || $platform =~ /CentOS6/ ) {
+if ( $platform =~ /RHEL6/ ) {
   if ( -e "/etc/init.d/rsyslog" ) {
     `/etc/init.d/rsyslog restart> /dev/null 2>&1`;
+    exit 0;
+  } else {
+    print "Unable to restart rsyslog.  Please do it manually.\n";
+    exit 1;
+  }
+} elsif ( $platform =~ /RHEL7/ ) {
+  if ( -e "/usr/lib/systemd/system/rsyslog.service" ) {
+    qx(/usr/bin/systemctl restart rsyslog.service >/dev/null 2>&1);
     exit 0;
   } else {
     print "Unable to restart rsyslog.  Please do it manually.\n";
