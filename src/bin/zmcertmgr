@@ -158,7 +158,7 @@ initSSLDirs() {
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_comm_cert_directory}
 
   # This should only happen on store nodes
-  if [ -d /opt/zimbra/mysql/bin ]; then
+  if [ -d /opt/zimbra/mailboxd/webapps/zimbraAdmin ]; then
     if [ ! -d "${csr_download_directory}" ]; then
       echo "** Creating directory ${csr_download_directory}"
       mkdir -p ${csr_download_directory}
