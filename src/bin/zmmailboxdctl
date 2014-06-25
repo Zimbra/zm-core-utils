@@ -30,6 +30,7 @@ if [ ! -d ${zimbra_java_home} ]; then
 fi
 
 NC=`which nc 2>/dev/null`; NC=${NC:-`which netcat 2>/dev/null`}
+platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 #
 # Memory for use by JVM.
@@ -109,8 +110,14 @@ case "$1" in
       fi
       status=1
       MPORT=`${zimbra_home}/bin/zmprov -l gs ${zimbra_server_hostname} zimbraMailPort | grep zimbraMailPort: | awk '{print $2}'`
+      if [ x$platform = "xRHEL7_64" ]; then
+        ncOpt="--send-only --recv-only"
+      else
+        ncOpt="-z"
+      fi
+
       for ((i=0; i < 12; i++)); do
-        $NC -z localhost ${MPORT} >/dev/null 2>&1
+        $NC $ncOpt localhost ${MPORT} >/dev/null 2>&1
         if [ $? = 0 ]; then
           status=0
           break
