@@ -466,6 +466,7 @@ sub run() {
                 "/opt/zimbra/log/access_log.$today",
                 "/opt/zimbra/log/audit.log",
                 "/opt/zimbra/log/cbpolicyd.log",
+		"/opt/zimbra/log/gc.log",
                 "/opt/zimbra/log/mailbox.log",
                 "/opt/zimbra/log/sync.log",
                 "/opt/zimbra/log/$t_today.trace.log",
