@@ -180,10 +180,6 @@ sub filterProcs(;$$$) {
 sub getMailboxProcess() {
     my @regex = ('(mailboxd|jetty)/start\.jar');
     my @ret = filterProcs($ZIMBRA_USER, \@regex);
-    if (scalar(@ret) == 0) {
-        @regex = ('(com\.zimbra\.cs\.launcher\.TomcatLauncher|org\.apache\.catalina\.startup\.Bootstrap)');
-        @ret = filterProcs($ZIMBRA_USER, \@regex);
-    }
     return @ret;
 }
 

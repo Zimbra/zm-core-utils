@@ -24,21 +24,11 @@ if [ x`whoami` != "xzimbra" ]; then
 fi
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-  zimbra_server_hostname \
-  zimbra_log_directory \
-  zimbra_tmp_directory \
-  zimbra_java_home \
-  mailboxd_directory 
+zmsetvars
 
 sasl_conf_directory=/opt/zimbra/cyrus-sasl/etc
-if [ x"${mailboxd_directory}" = "/opt/zimbra/tomcat" ]; then
-  mailboxd_server=tomcat
-  mailboxd_conf_directory=${mailboxd_directory}/conf
-else
-  mailboxd_server=jetty
-  mailboxd_conf_directory=${mailboxd_directory}/etc
-fi
+mailboxd_server=jetty
+mailboxd_conf_directory=${mailboxd_directory}/etc
 jetty_web_xml=/opt/zimbra/jetty/etc
 
 if [ $# -gt 1 ]; then

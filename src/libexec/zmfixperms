@@ -646,19 +646,6 @@ if [ -d /opt/zimbra/data/clamav ]; then
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/clamav
 fi
 
-if [ -L /opt/zimbra/tomcat ]; then
-  printMsg "Fixing ownership and permissions on /opt/zimbra/tomcat"
-  chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/apache-tomcat-* 2> /dev/null
-  chown  ${root_user}:${root_group} /opt/zimbra/apache-tomcat-* 2> /dev/null
-  if [ -d /opt/zimbra/tomcat/bin ]; then
-    chown -R ${root_user}:${root_group} /opt/zimbra/tomcat/bin
-    if [ ! -d /opt/zimbra/tomcat/conf ]; then
-      mkdir -p /opt/zimbra/tomcat/conf
-      chown ${zimbra_user}:${zimbra_group} /opt/zimbra/tomcat/conf
-    fi
-  fi
-fi
-
 if [ -d /opt/zimbra/zmstat ]; then
   printMsg "Fixing ownership and permissions on /opt/zimbra/zmstat"
   for i in /opt/zimbra/zmstat/????-??-??; do
