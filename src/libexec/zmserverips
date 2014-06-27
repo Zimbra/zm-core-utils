@@ -24,6 +24,8 @@ my @interfaces = ();
 open INTS, "/sbin/ip addr | grep inet |";
 foreach (<INTS>) {
   chomp;
+  my $mask;
+  my $ip;
   if ($_ =~ /scope link/) {
     next;
   }
@@ -31,14 +33,17 @@ foreach (<INTS>) {
     s/.*inet6 //;
     s/ brd.*//;
 	s/ scope.*//;
+	($ip, $mask) = split /\//, $_, 2;
+	s/\/.*//;
   } else {
     s/.*inet //;
     s/ brd.*//;
 	s/ scope.*//;
+    $ip = new NetAddr::IP "$_";
+    $mask = $ip->mask();
+	s/\/.*//;
   }
   next if /^$/;
-  my $ip = new NetAddr::IP "$_";
-  my $mask = $ip->mask();
   push @interfaces, "addr:".$_." Mask:".$mask;
 }
 close INTS;
