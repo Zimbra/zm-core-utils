@@ -18,26 +18,28 @@
 
 use strict;
 use Getopt::Long;
+use NetAddr::IP;
 
 my @interfaces = ();
-open INTS, "/sbin/ifconfig | grep ' addr' |";
+open INTS, "/sbin/ip addr | grep inet |";
 foreach (<INTS>) {
   chomp;
+  if ($_ =~ /scope link/) {
+    next;
+  }
   if ($_ =~ /inet6/) {
     s/.*inet6 //;
-    s/addr: //;
-	s/ Scope:.*//;
-	s/\// Mask:/;
+    s/ brd.*//;
+	s/ scope.*//;
   } else {
     s/.*inet //;
-    s/addr://;
-    s/.(bcast|broadcast)[0-9:.\s]*//ig;
-    s/.netmask\s/  Mask:/;
+    s/ brd.*//;
+	s/ scope.*//;
   }
-#  s/\s.*//;
-#  s/[a-zA-Z:]//g;
   next if /^$/;
-  push @interfaces, "addr:".$_;
+  my $ip = new NetAddr::IP "$_";
+  my $mask = $ip->mask();
+  push @interfaces, "addr:".$_." Mask:".$mask;
 }
 close INTS;
 my %seen;
@@ -47,6 +49,3 @@ if (scalar @interfaces) {
     print "$_\n" unless ($seen{$_} > 1);
   }
 }
-
-#/sbin/ifconfig | grep '	inet ' | sed -e 's/.*inet //' -e 's/\s.*//' -e 's/[a-zA-Z:]//g' | uniq 
-#/sbin/ifconfig | sed -e '/^[ 	] *inet /!d' -e 's/.*inet //' -e 's/\s.*//' -e 's/[a-zA-Z:]//g' | uniq 
