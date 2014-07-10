@@ -214,11 +214,11 @@ sub runRemoteCommand {
 }
 
 sub doStatus {
-  $services = getEnabledServices();
-  getServiceStatusList();
-  alarm($timeout);
-  my (undef, $statusfile) = tempfile("zmcontrol.status.XXXXX", DIR=>"$zimbra_tmp_directory",  OPEN=>0);
-  my (undef, $errfile) = tempfile("zmcontrol.error.XXXXX", DIR=>"$zimbra_tmp_directory",  OPEN=>0);
+	$services = getEnabledServices();
+	getServiceStatusList();
+	alarm($timeout);
+	my (undef, $statusfile) = tempfile("zmcontrol.status.XXXXX", DIR=>"$zimbra_tmp_directory",  OPEN=>0);
+	my (undef, $errfile) = tempfile("zmcontrol.error.XXXXX", DIR=>"$zimbra_tmp_directory",  OPEN=>0);
 	if (scalar(keys %$services) == 0) {
 		print "Cannot determine services - exiting\n";
 		return 1;
@@ -229,11 +229,16 @@ sub doStatus {
 		my $rc = 0xffff & system ("$allservices{$_} status > $statusfile 2> $errfile");
 		$rc = $rc >> 8;
 		if ($rc) {
-      # this is an any ugly hack for 11266
-      $status = 1 if ($serviceStatusList{$_});
-        
+			# this is an any ugly hack for 11266
+			$status = 1 if ($serviceStatusList{$_});
 		}
-		my $stat = sprintf "\t%-20s %10s\n",$_,($rc)?"Stopped":"Running";
+		my $stat;
+		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
+			my $bit = "$_ webapp";
+			$stat = sprintf "\t%-20s %10s\n",$bit,($rc)?"Stopped":"Running";
+		} else {
+			$stat = sprintf "\t%-20s %10s\n",$_,($rc)?"Stopped":"Running";
+		}
 		print "$stat";
 		if ($rc) {
 			open (ST, "$statusfile") or next;
@@ -245,7 +250,7 @@ sub doStatus {
 	}
 	unlink($statusfile);
 	unlink($errfile);
-  alarm(0);
+	alarm(0);
 	return $status;
 }
 
@@ -316,7 +321,11 @@ sub doStartup {
 		if ($_ eq "ldap") {next;}
 		checkAvailableServiceSpace($_);
 		Zimbra::Mon::Logger::Log ("info", "Starting $_ via zmcontrol");
-		print "\tStarting $_...";
+		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
+			print "\tStarting $_ webapp...";
+		} else {
+			print "\tStarting $_...";
+		}
 		unless (-x "$allservices{$_}") {
 			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
 			next;
@@ -348,11 +357,15 @@ sub doShutdown {
 		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
 		if ($_ eq "mailbox" && !(-d "/opt/zimbra/db/data") ) { next; }
 		if ($_ eq "convertd" && !(-l "/opt/zimbra/keyview") ) { next; }
-		print "\tStopping $_...";
-    unless (-x "$allservices{$_}") {
-      print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
-      next;
-    }
+		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
+			print "\tStopping $_ webapp...";
+		} else {
+			print "\tStopping $_...";
+		}
+		unless (-x "$allservices{$_}") {
+			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
+			next;
+		}
 		$rrc = 0xffff & system ("$allservices{$_} stop > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
