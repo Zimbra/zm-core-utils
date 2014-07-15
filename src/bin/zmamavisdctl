@@ -38,7 +38,7 @@ if [ ! -d "/opt/zimbra/data/amavisd/.spamassassin" ]; then
 fi
 
 rewriteconfig() {
-  /opt/zimbra/libexec/configrewrite amavis > /dev/null 2>&1
+  /opt/zimbra/libexec/configrewrite amavis antispam > /dev/null 2>&1
   /opt/zimbra/libexec/zmaltermimeconfig > /dev/null 2>&1
 }
 
