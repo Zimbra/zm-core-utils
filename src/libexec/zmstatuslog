@@ -69,6 +69,7 @@ sub logStatus {
 			$hostname = $1;
 			next;
 		}
+		$s =~ s/ webapp//;
 		my ($service, $stat) = split ' ', $s, 2;
 		Zimbra::Mon::Logger::LogStats( "info", "$dt, STATUS: ${hostname}: $service: $stat" );
 	}
