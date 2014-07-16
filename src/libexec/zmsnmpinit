@@ -23,14 +23,9 @@
 # smtp_destination <email address>
 
 source "/opt/zimbra/bin/zmshutil" || exit 1
-zmsetvars \
-	zimbra_server_hostname \
-	snmp_notify \
-	smtp_notify 
+zmsetvars
 
-if [ ${snmp_notify} = "1" ]; then
-	zmsetvars \
-		snmp_trap_host 
+if [ ${snmp_notify} = "1" -o x${snmp_notify} = x"yes" ]; then
 	SOURCEFILE=/opt/zimbra/snmp/share/snmp/snmpd.conf.in
 	FILE=/opt/zimbra/conf/snmpd.conf
 	echo creating $FILE
@@ -39,13 +34,8 @@ fi
 
 # Many backslashes to make sure '@' gets quoted in final perl
 
-if [ ${smtp_notify} = "1" ]; then
-	zmsetvars \
-		smtp_source \
-		smtp_destination
-
+if [ ${smtp_notify} = "1" -o x${smtp_notify} = x"yes" ]; then
 	smtp_source=`echo ${smtp_source} | sed -e 's/@/\\\\\\\@/'`
-
 	smtp_destination=`echo ${smtp_destination} | sed -e 's/@/\\\\\\\@/'`
 fi
 
@@ -58,4 +48,5 @@ cat ${SWFILE}.in | \
 	-e "s/@@ADMINEMAIL@@/${smtp_source}/g" \
 	-e "s/@@PHCEMAIL@@/${smtp_destination}/g" \
 	-e "s/@@HOSTNAME@@/${zimbra_server_hostname}/g" \
+	-e "s/@@TRAPHOST@@/${snmp_trap_host}/g" \
 	> ${SWFILE}
