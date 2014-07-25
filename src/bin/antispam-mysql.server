@@ -17,16 +17,7 @@
 # 
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-  antispam_mysql_directory \
-  antispam_mysql_pidfile \
-  antispam_mysql_mycnf \
-  antispam_mysql_errlogfile \
-  antispam_mysql_enabled \
-  antispam_mysql_data_directory \
-  zimbra_user \
-  zimbra_tmp_directory \
-  mysql_directory
+zmsetvars
 
 if [ x`whoami` != "x${zimbra_user}" ]; then
   echo Error: must be run as zimbra user

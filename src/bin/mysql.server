@@ -17,14 +17,7 @@
 # 
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-  mysql_directory \
-  mysql_pidfile \
-  mysql_mycnf \
-  mysql_errlogfile \
-  zimbra_mysql_shutdown_timeout \
-  zimbra_user \
-  zimbra_tmp_directory 
+zmsetvars
 
 if [ x`whoami` != "x${zimbra_user}" ]; then
   echo Error: must be run as zimbra user

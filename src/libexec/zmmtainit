@@ -19,7 +19,7 @@
 # This script sets up ldap query filters used by postfix.
 #
 
-source `dirname $0`/../bin/zmshutil || exit 1
+source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars
 
 case "$#" in

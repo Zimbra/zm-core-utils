@@ -22,12 +22,7 @@ PIDFILE="/opt/zimbra/data/ldap/state/run/slapd.pid"
 mkdir -p "/opt/zimbra/data/ldap/state/run/"
 
 source /opt/zimbra/bin/zmshutil || exit 1
-zmsetvars \
-  ldap_is_master \
-  ldap_url \
-  ldap_bind_url \
-  ldap_master_url \
-  ldap_common_require_tls
+zmsetvars
 
 if [ x$ldap_is_master = "xfalse" ]; then
   if [ "x$ldap_url" = "x$ldap_master_url" -a "x$1" != "xstop" ]; then

@@ -17,7 +17,7 @@
 # 
 
 source /opt/zimbra/bin/zmshutil || exit 1
-zmsetvars zmconfigd_listen_port
+zmsetvars
 
 NC=`which nc 2>/dev/null`; NC=${NC:-`which netcat 2>/dev/null`}
 

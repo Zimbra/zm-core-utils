@@ -17,13 +17,7 @@
 # 
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-    zimbra_server_hostname \
-    antispam_mysql_directory \
-    antispam_mysql_host \
-    antispam_mysql_port \
-    antispam_mysql_socket \
-    antispam_mysql_root_password
+zmsetvars
 
 if [ "x127.0.0.1" != x"${antispam_mysql_host}" -a x"${zimbra_server_hostname}" != x"${antispam_mysql_host}" -a "xlocalhost" != x"${antispam_mysql_host}" ]; then
     echo "antispam-mysqladmin must be run on local machine where database resides"

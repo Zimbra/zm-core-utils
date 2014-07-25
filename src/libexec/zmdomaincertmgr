@@ -24,22 +24,8 @@ umask 027
 
 platform=$(/opt/zimbra/libexec/get_plat_tag.sh 2> /dev/null := UNKNOWN)
 source /opt/zimbra/bin/zmshutil || exit 1
-zmsetvars -f \
-  zimbra_log_directory \
-  zimbra_server_hostname \
-  zimbra_tmp_directory \
-  zimbra_java_home \
-  zimbra_uid \
-  zimbra_gid \
-  zimbra_zmcertmgr_expiration_threshold \
-  ldap_is_master \
-  ldap_host \
-  mailboxd_directory \
-  mailboxd_server \
-  mailboxd_keystore \
-  mailboxd_keystore_password \
-  mailboxd_truststore_password
-  
+zmsetvars -f
+
 export JAVA_HOME=${zimbra_java_home}
 
 java_version=$(${zimbra_java_home}/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')

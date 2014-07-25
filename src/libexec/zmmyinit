@@ -27,7 +27,7 @@ usage() {
   echo "  --mysql_memory_percent defaults to 30 percent if not specified."
 }
 
-source `dirname $0`/../bin/zmshutil || exit 1
+source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars -f
 
 #
@@ -171,7 +171,7 @@ fi
 # use 'zmmypasswd --root' here because of bootstrapping problems - at
 # this stage we know that the root password is empty.
 #
-zmsetvars -f mysql_root_password zimbra_mysql_password
+zmsetvars -f
 echo '*' Changing mysql root user password
 cat <<EOF | /opt/zimbra/bin/mysql -u root --password=
     SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${mysql_root_password}');

@@ -25,10 +25,7 @@ if [ ! -L /opt/zimbra/postfix ]; then
   exit 1
 fi
 
-zmsetvars \
-	postfix_mail_owner \
-	postfix_setgid_group \
-	zimbra_server_hostname
+zmsetvars
 
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 

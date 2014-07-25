@@ -20,9 +20,7 @@
 BIN_ROOT=`dirname $0`
 
 source ${BIN_ROOT}/zmshutil || exit 1
-zmsetvars \
-  mailboxd_directory \
-  skins_directory
+zmsetvars
 
 usage() {
     echo "Usage: "`basename $0`" <path/to/skin/dir/or/zipfile>" >&2

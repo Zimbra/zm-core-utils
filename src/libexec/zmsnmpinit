@@ -22,7 +22,7 @@
 # smtp_source <email address>
 # smtp_destination <email address>
 
-source "/opt/zimbra/bin/zmshutil" || exit 1
+source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars
 
 if [ ${snmp_notify} = "1" -o x${snmp_notify} = x"yes" ]; then

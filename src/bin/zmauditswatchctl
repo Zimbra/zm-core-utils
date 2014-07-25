@@ -22,15 +22,7 @@ if [ x`whoami` != xzimbra ]; then
 fi
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-    zimbra_log_directory \
-    zimbra_tmp_directory \
-    zimbra_swatch_acct_threshold \
-    zimbra_swatch_ip_threshold \
-    zimbra_swatch_ipacct_threshold \
-    zimbra_swatch_total_threshold \
-    zimbra_swatch_threshold_seconds \
-    zimbra_swatch_notice_user 
+zmsetvars
 
 configfile=/opt/zimbra/conf/auditswatchrc
 pidfile=${zimbra_log_directory}/auditswatch.pid

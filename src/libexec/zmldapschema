@@ -16,9 +16,9 @@
 # ***** END LICENSE BLOCK *****
 #
 
-source `dirname $0`/../bin/zmshutil || exit 1
+source /opt/zimbra/bin/zmshutil || exit 1
 
-zmsetvars -f zimbra_user
+zmsetvars -f
 
 u=`id -un`
 if [ $u != ${zimbra_user} ]; then

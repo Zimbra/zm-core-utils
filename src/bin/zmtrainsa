@@ -115,12 +115,7 @@ if [ ! -h "/opt/zimbra/amavisd" ]; then
 fi
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-  zimbra_server_hostname \
-  antispam_mysql_enabled \
-  zimbra_spam_externalIsSpamAccount \
-  zimbra_spam_externalIsNotSpamAccount \
-  zmtrainsa_cleanup_host 
+zmsetvars
 
 amavis_dspam_enabled=`/opt/zimbra/bin/zmprov -l gs ${zimbra_server_hostname} zimbraAmavisDSPAMEnabled | grep zimbraAmavisDSPAMEnabled: | awk '{print $2}'`
 amavis_dspam_enabled=$(echo $amavis_dspam_enabled | tr A-Z a-z)

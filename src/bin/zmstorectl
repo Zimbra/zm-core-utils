@@ -17,9 +17,7 @@
 # 
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-  mailboxd_directory \
-  zimbra_mysql_password
+zmsetvars
 
 MYSQL="/opt/zimbra/bin/mysql -u zimbra --password=${zimbra_mysql_password}"
 

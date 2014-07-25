@@ -23,9 +23,8 @@ if [ x`whoami` != "xzimbra" ]; then
 fi
 
 umask 027
-source `dirname $0`/../bin/zmshutil || exit 1
-zmsetvars \
-        logger_data_directory
+source /opt/zimbra/bin/zmshutil || exit 1
+zmsetvars
 
 # Get the root directory for the logger db data and construct directory name to move old data to
 logger_data_dir_base="`dirname ${logger_data_directory}`"

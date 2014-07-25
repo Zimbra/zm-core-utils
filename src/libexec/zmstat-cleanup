@@ -16,28 +16,7 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-zmsetvars() {
-    if [ "x$1" = "x-f" ]; then
-        shift;
-    else
-        if [ x${zmsetvars} = "xtrue" ]; then
-            return
-        fi
-    fi
-    
-    zmlocalconfig="/opt/zimbra/bin/zmlocalconfig"
-    if [ ! -x "${zmlocalconfig}" ]; then 
-        echo Error: can not find zmlocalconfig program
-        exit 1
-    fi
-    
-    if ! eval `${zmlocalconfig} -q -m export`; then
-        echo Error: executing: ${zmlocalconfig} -q -m export
-        exit 1
-    fi
-    
-    export zmsetvars='true'
-}
+source /opt/zimbra/bin/zmshutil || exit 1
 
 usage() {
     echo "Usage: $0 [-k <keep count>] [-h] [-l] [-p]"

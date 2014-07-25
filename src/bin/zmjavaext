@@ -17,7 +17,7 @@
 # 
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars zimbra_java_home
+zmsetvars
 
 if [ -d ${zimbra_java_home}/jre ]; then
     JRE_EXT_DIR=${zimbra_java_home}/jre/lib/ext
