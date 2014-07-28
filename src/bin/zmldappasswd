@@ -83,7 +83,7 @@ if ($#ARGV == -1) {
 my $password = $ARGV[0];
 
 # Get the SHA password.
-my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-1');
+my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-512');
 $ctx->add("$password");
 my $ssha_password = $ctx->generate;
 
