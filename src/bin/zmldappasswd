@@ -29,6 +29,7 @@ use Getopt::Std;
 use Net::LDAP;
 use Net::LDAP::LDIF;
 use Net::LDAP::Entry;
+use Net::LDAP::Extension::SetPassword;
 use Crypt::SaltedHash;
 use MIME::Base64;
 
@@ -129,10 +130,7 @@ if ( $options{r}) {
   if ($mesg->code) {
     $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
     if (!$options{c}) {
-      $mesg = $ldap->modify(
-        'uid=zmreplica,cn=admins,cn=zimbra',
-        replace => [ userPassword => $password]
-      );
+      $mesg = $ldap->set_password(user=>"uid=zmreplica,cn=admins,cn=zimbra",newpasswd=>$password);
     }
   }
   if (!$options{c}) {
@@ -202,10 +200,7 @@ if ( $options{r}) {
   my $mesg = $ldap->bind('uid=zmpostfix,cn=appaccts,cn=zimbra', password=>"$password");
   if ($mesg->code) {
     $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    $mesg = $ldap->modify(
-      'uid=zmpostfix,cn=appaccts,cn=zimbra',
-      replace => [ userPassword => $password ],
-    );
+    $mesg = $ldap->set_password(user=>"uid=zmpostfix,cn=appaccts,cn=zimbra",newpasswd=>$password);
   }
   my $infile = "/opt/zimbra/conf/zimbra.ldif";
   my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
@@ -249,10 +244,7 @@ if ( $options{r}) {
   my $mesg = $ldap->bind('uid=zmamavis,cn=appaccts,cn=zimbra', password=>"$password");
   if ($mesg->code) {
     $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    $mesg = $ldap->modify(
-      'uid=zmamavis,cn=appaccts,cn=zimbra',
-      replace  => [ userPassword => $password ],
-    );
+    $mesg = $ldap->set_password(user=>"uid=zmamavis,cn=appaccts,cn=zimbra",newpasswd=>$password);
   }
   my $infile = "/opt/zimbra/conf/zimbra.ldif";
   my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
@@ -296,10 +288,7 @@ if ( $options{r}) {
   my $mesg = $ldap->bind( 'uid=zmnginx,cn=appaccts,cn=zimbra', password=>"$password");
   if ($mesg->code) {
     $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    $mesg = $ldap->modify(
-      'uid=zmnginx,cn=appaccts,cn=zimbra',
-      replace  => [ userPassword => $password ],
-    );
+    $mesg = $ldap->set_password(user=>"uid=zmnginx,cn=appaccts,cn=zimbra",newpasswd=>$password);
   }
   my $infile = "/opt/zimbra/conf/zimbra.ldif";
   my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
@@ -343,10 +332,7 @@ if ( $options{r}) {
   my $mesg = $ldap->bind('uid=zmbes-searcher,cn=appaccts,cn=zimbra', password=>"$password");
   if ($mesg->code) {
     $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    $mesg = $ldap->modify(
-      'uid=zmbes-searcher,cn=appaccts,cn=zimbra',
-      replace  => [ userPassword => $password ],
-    );
+    $mesg = $ldap->set_password(user=>"uid=zmbes-searcher,cn=appaccts,cn=zimbra",newpasswd=>$password);
   }
   my $infile = "/opt/zimbra/conf/zimbra.ldif";
   my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
@@ -391,10 +377,7 @@ if ( $options{r}) {
   my $mesg = $ldap->bind("$zimbra_ldap_userdn", password=>"$password");
   if ($mesg->code) {
     $mesg = $ldap->bind("cn=config", password=>"$cur_rootdn_passwd");
-    $mesg = $ldap->modify(
-      "$zimbra_ldap_userdn",
-      replace => [ userPassword => $password ],
-    );
+    $mesg = $ldap->set_password(user=>"$zimbra_ldap_userdn",newpasswd=>$password);
   }
   my $infile = "/opt/zimbra/conf/zimbra.ldif";
   my $outfile = "$zimbra_tmp_directory/zimbra.ldif.$$";
