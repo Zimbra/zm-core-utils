@@ -45,11 +45,11 @@ if (!-d $zimbra_tmp_directory) {
 }
 
 # Get the SHA password.
-my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-1');
+my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-512');
 $ctx->add("$ldap_root_password");
 my $root_ssha_password = $ctx->generate;
 
-$ctx = Crypt::SaltedHash->new(algorithm => 'SHA-1');
+$ctx = Crypt::SaltedHash->new(algorithm => 'SHA-512');
 $ctx->add("$zimbra_ldap_password");
 my $zimbra_ssha_password = $ctx->generate;
 
