@@ -68,11 +68,11 @@ my $ldap_root_password=getLocalConfig("ldap_root_password");
 my $zimbra_server_hostname=getLocalConfig("zimbra_server_hostname");
 
 # Get the SHA password.
-my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-512');
+my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-512', salt_len => '8');
 $ctx->add("$ldap_root_password");
 my $root_ssha_password = $ctx->generate;
 
-$ctx = Crypt::SaltedHash->new(algorithm => 'SHA-512');
+$ctx = Crypt::SaltedHash->new(algorithm => 'SHA-512', salt_len => '8');
 $ctx->add("$zimbra_ldap_password");
 my $zimbra_ssha_password = $ctx->generate;
 
