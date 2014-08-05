@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2008, 2009, 2010, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2008, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -22,9 +20,18 @@ if [ x`whoami` != xzimbra ]; then
 fi
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars
+zmsetvars \
+    zimbra_home \
+    zimbra_log_directory \
+    zimbra_tmp_directory \
+    zimbra_swatch_acct_threshold \
+    zimbra_swatch_ip_threshold \
+    zimbra_swatch_ipacct_threshold \
+    zimbra_swatch_total_threshold \
+    zimbra_swatch_threshold_seconds \
+    zimbra_swatch_notice_user 
 
-configfile=/opt/zimbra/conf/auditswatchrc
+configfile=${zimbra_home}/conf/auditswatchrc
 pidfile=${zimbra_log_directory}/auditswatch.pid
 logfile=${zimbra_log_directory}/zmauditswatch.out
 pid=""
@@ -104,7 +111,7 @@ case "$1" in
       mkdir -p ${zimbra_tmp_directory} > /dev/null 2>&1
     fi
        
-    /opt/zimbra/libexec/auditswatch --config-file=${configfile} \
+    ${zimbra_home}/libexec/auditswatch --config-file=${configfile} \
       --use-cpan-file-tail \
       --script-dir=${zimbra_tmp_directory} \
       --tail-file /opt/zimbra/log/audit.log > $logfile 2>&1 &

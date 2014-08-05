@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2009, 2010, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -22,25 +20,15 @@
 # smtp_source <email address>
 # smtp_destination <email address>
 
-source /opt/zimbra/bin/zmshutil || exit 1
+source "/opt/zimbra/bin/zmshutil" || exit 1
 zmsetvars
 
-if [ ${snmp_notify} = "1" -o x${snmp_notify} = x"yes" ]; then
+if [ ${snmp_notify} = "1" ]; then
 	SOURCEFILE=/opt/zimbra/snmp/share/snmp/snmpd.conf.in
 	FILE=/opt/zimbra/conf/snmpd.conf
 	echo creating $FILE
 	cat ${SOURCEFILE} | sed -e "s/@@SNMPHOST@@/${snmp_trap_host}/g" > ${FILE}
 fi
-
-# This next block is completely wrong.  The values are single quoted, so do not need the slash
-# In fact, the slash generates broken email headers
-
-# Many backslashes to make sure '@' gets quoted in final perl
-#
-#if [ ${smtp_notify} = "1" -o x${smtp_notify} = x"yes" ]; then
-#	smtp_source=`echo ${smtp_source} | sed -e 's/@/\\\\\\\@/'`
-#	smtp_destination=`echo ${smtp_destination} | sed -e 's/@/\\\\\\\@/'`
-#fi
 
 SWFILE=/opt/zimbra/conf/swatchrc
 
@@ -51,5 +39,4 @@ cat ${SWFILE}.in | \
 	-e "s/@@ADMINEMAIL@@/${smtp_source}/g" \
 	-e "s/@@PHCEMAIL@@/${smtp_destination}/g" \
 	-e "s/@@HOSTNAME@@/${zimbra_server_hostname}/g" \
-	-e "s/@@TRAPHOST@@/${snmp_trap_host}/g" \
 	> ${SWFILE}

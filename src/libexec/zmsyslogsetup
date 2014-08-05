@@ -2,17 +2,15 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2011, 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2010, 2011, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 use strict;
 use lib '/opt/zimbra/zimbramon/lib';
@@ -32,7 +30,7 @@ if ( $id ne "root" ) {
   exit 1;
 }
 
-my $platform=qx(/opt/zimbra/libexec/get_plat_tag.sh);
+my $platform=`/opt/zimbra/libexec/get_plat_tag.sh`;
 chomp($platform);
 
 my $zimbra_tmp_directory=getLocalConfig("zimbra_tmp_directory");
@@ -54,7 +52,7 @@ if ( $platform =~ /MACOSX/ ) {
 
 my $junk;
 my $TYPE;
-my $LOGHOST=qx(su - zimbra -c '/opt/zimbra/bin/zmprov -m -l gacf zimbraLogHostname');
+my $LOGHOST=`su - zimbra -c '/opt/zimbra/bin/zmprov -m -l gacf zimbraLogHostname'`;
 
 if ( $LOGHOST eq "" ) {
   $TYPE="local";
@@ -163,10 +161,10 @@ sub updateSyslogNG {
     print TMPFH "destination zimbra_auth { file(\"/var/log/zimbra.log\" owner(\"zimbra\")); }; # zimbra\n";
   } else {
     my $remoteIp=inet_ntoa(scalar(gethostbyname($LOGHOST)));
-    print TMPFH "destination zimbra_mail { udp(\"$remoteIp\" port(514) ); file(\"/var/log/zimbra.log\" owner(\"zimbra\")); }; # zimbra\n";
-    print TMPFH "destination zimbra_local1 { udp(\"$remoteIp\" port(514) ); file(\"/var/log/zimbra-stats.log\" owner(\"zimbra\")); }; # zimbra\n";
-    print TMPFH "destination zimbra_local0 { udp(\"$remoteIp\" port(514) ); file(\"/var/log/zimbra.log\" owner(\"zimbra\")); }; # zimbra\n";
-    print TMPFH "destination zimbra_auth { udp(\"$remoteIp\" port(514) ); file(\"/var/log/zimbra.log\" owner(\"zimbra\")); }; # zimbra\n";
+    print TMPFH "destination zimbra_mail { udp(\"$remoteIp\" port(514) ); }; # zimbra\n";
+    print TMPFH "destination zimbra_local1 { udp(\"$remoteIp\" port(514) ); }; # zimbra\n";
+    print TMPFH "destination zimbra_local0 { udp(\"$remoteIp\" port(514) ); }; # zimbra\n";
+    print TMPFH "destination zimbra_auth { udp(\"$remoteIp\" port(514) ); }; # zimbra\n";
   }
   print TMPFH "log { source($zsrc); filter(zimbra_mail); destination(zimbra_mail); }; # zimbra\n";
   print TMPFH "log { source($zsrc); filter(zimbra_local0); destination(zimbra_local0); }; # zimbra\n";
@@ -449,13 +447,13 @@ if ( !$edited ) {
 }
 
 if ( $platform eq "SLES11_64" ) {
-  qx(/etc/init.d/syslog restart > /dev/null 2>&1);
+  `/etc/init.d/syslog restart > /dev/null 2>&1`;
   exit 0;
 }
 
 if ($platform =~ /UBUNTU/ && -f "/etc/rsyslog.conf" ) {
   if ( -e "/usr/sbin/service" ) {
-    qx(/usr/sbin/service rsyslog restart);
+    `/usr/sbin/service rsyslog restart`;
     exit 0;
   } else {
     print "Unable to restart syslog.  Please do it manually.\n";
@@ -464,7 +462,7 @@ if ($platform =~ /UBUNTU/ && -f "/etc/rsyslog.conf" ) {
 }
 if ( $platform =~ /RHEL6/ ) {
   if ( -e "/etc/init.d/rsyslog" ) {
-    qx(/etc/init.d/rsyslog restart> /dev/null 2>&1);
+    `/etc/init.d/rsyslog restart> /dev/null 2>&1`;
     exit 0;
   } else {
     print "Unable to restart rsyslog.  Please do it manually.\n";
@@ -479,8 +477,8 @@ if ( $platform =~ /RHEL6/ ) {
     exit 1;
   }
 } else {
-  my $syslog_PID=qx(cat /var/run/*syslog*.pid);
-  qx(kill -HUP $syslog_PID);
+  my $syslog_PID=`cat /var/run/*syslog*.pid`;
+  `kill -HUP $syslog_PID`;
 }
 
 sub getLocalConfig {
@@ -489,7 +487,7 @@ sub getLocalConfig {
   return $main::loaded{lc}{$key}
     if (exists $main::loaded{lc}{$key});
 
-  my $val = qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null);
+  my $val = `/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null`;
   chomp $val;
   $main::loaded{lc}{$key} = $val;
   return $val;

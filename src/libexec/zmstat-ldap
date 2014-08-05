@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2011, 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2011, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -93,13 +91,13 @@ sub sighup {
 }
 
 sub getZimbraLdapPassword() {
-    my $pass = qx(zmlocalconfig -m nokey -s zimbra_ldap_password);
+    my $pass = `zmlocalconfig -m nokey -s zimbra_ldap_password`;
     chomp $pass;
     return $pass;
 }
 
 sub getZimbraUserDN() {
-    my $userdn = qx(zmlocalconfig -m nokey -s zimbra_ldap_userdn);
+    my $userdn = `zmlocalconfig -m nokey -s zimbra_ldap_userdn`;
     chomp $userdn;
     return $userdn;
 }
@@ -147,7 +145,7 @@ waitUntilNiceRoundSecond($interval);
 while (1) {
     my @out;
 
-    my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fdata%2fldap%2fstate%2frun%2fldapi/');
+    my $ldap = Net::LDAP->new('ldapi://%2fopt%2fzimbra%2fopenldap%2fvar%2frun%2fldapi/');
     unless (defined $ldap) {
         $SEEN_ERROR or logError("Could not connect to LDAP server: $hostname");
 	sleep($interval);

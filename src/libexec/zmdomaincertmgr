@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2010, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -24,31 +22,49 @@ umask 027
 
 platform=$(/opt/zimbra/libexec/get_plat_tag.sh 2> /dev/null := UNKNOWN)
 source /opt/zimbra/bin/zmshutil || exit 1
-zmsetvars -f
-
+zmsetvars -f \
+  zimbra_home \
+  zimbra_log_directory \
+  zimbra_server_hostname \
+  zimbra_tmp_directory \
+  zimbra_java_home \
+  zimbra_uid \
+  zimbra_gid \
+  zimbra_zmcertmgr_expiration_threshold \
+  ldap_is_master \
+  ldap_host \
+  mailboxd_directory \
+  mailboxd_server \
+  mailboxd_keystore \
+  mailboxd_keystore_password \
+  mailboxd_truststore_password \
+  postfix_smtpd_tls_cert_file \
+  postfix_smtpd_tls_key_file
+  
 export JAVA_HOME=${zimbra_java_home}
 
 java_version=$(${zimbra_java_home}/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
 if [ x"$java_version" = "x1.6.0" ]; then
-  java_options="-XX:ErrorFile=/opt/zimbra/log"
+  java_options="-XX:ErrorFile=${zimbra_home}/log"
 else
   java_options=""
 fi
 
-zimbra_conf_directory=/opt/zimbra/conf
+zimbra_home=${zimbra_home:=/opt/zimbra}
+zimbra_conf_directory=${zimbra_home}/conf
 exp_thres_days=${zimbra_zmcertmgr_expiration_threshold:=30}
 exp_thres_secs=$(($exp_thres_days*24*60*60))
 
 zimbra_domain_cert_directory=${zimbra_conf_directory}/domaincerts
 
-if [ -x "/opt/zimbra/openssl/bin/openssl" ]; then
-  openssl=/opt/zimbra/openssl/bin/openssl
+if [ -x "${zimbra_home}/openssl/bin/openssl" ]; then
+  openssl=${zimbra_home}/openssl/bin/openssl
 else
   openssl=openssl
 fi
 
 # this avoid "unable to write 'random state' errors from openssl
-export RANDFILE=/opt/zimbra/ssl/.rnd
+export RANDFILE=${zimbra_home}/ssl/.rnd
 
 #OUTPUT_PREFIX="##### OUTPUT:"
 ERROR_PREFIX="XXXXX ERROR:"
@@ -84,7 +100,7 @@ saveConfigKey() {
   fi
 
   echo -n "** Saving $location config key $key..."
-  su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"$content\" 2> /dev/null"
+  su - zimbra -c "${zimbra_home}/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"$content\" 2> /dev/null"
   if [ $? = 0 ]; then
     echo "done."
   else
@@ -116,7 +132,7 @@ loadConfigKey() {
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -s ${file} ]; then
     echo -n "** Retrieving $location config key $key..."
-    su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null" 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
+    su - zimbra -c "${zimbra_home}/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null" 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
     if [ $? = 0 -a -s "${file}" ]; then
       chown ${zimbra_uid} ${file} 2> /dev/null
       chmod 400 ${file} 2> /dev/null
@@ -134,7 +150,7 @@ deployCerts() {
     rm -rf ${zimbra_domain_cert_directory} > /dev/null 2>&1
   fi
   
-  DOMAINS=$(su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- garpd | awk '{print \$1}'")
+  DOMAINS=$(su - zimbra -c "${zimbra_home}/bin/zmprov -m -l -- garpd | awk '{print \$1}'")
   if [ $? != 0 ]; then
     echo "Unable to retrieve list of domains with SSL certificates";
     exit 1

@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 ulimit -n 32768
@@ -22,7 +20,8 @@ export LD_PRELOAD=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so
 
 umask 027
 source /opt/zimbra/bin/zmshutil || exit 1
-zmsetvars
+zmsetvars \
+	zimbra_home 
 
 if [ ! -x /opt/zimbra/openldap/sbin/slapadd ]; then
 	exit 0
@@ -93,26 +92,26 @@ fi
 
 if [ x$CONFIG = "xyes" ]; then
 	if [ x$comp = "x0" ]; then
-		/opt/zimbra/openldap/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -n 0 -l $SRC
+		${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -n 0 -l $SRC
 		RETVAL=$?
 	else
-		$computil $SRC | /opt/zimbra/openldap/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -n 0
+		$computil $SRC | ${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -n 0
 		RETVAL=$?
 	fi
 elif [ x$ALOG = "xyes" ]; then
 	if [ x$comp = "x0" ]; then
-		/opt/zimbra/openldap/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -b "cn=accesslog" -l $SRC
+		${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -b "cn=accesslog" -l $SRC
 		RETVAL=$?
 	else
-		$computil $SRC | /opt/zimbra/openldap/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -b "cn=accesslog"
+		$computil $SRC | ${zimbra_home}/openldap/sbin/slapadd -q -F ${zimbra_home}/data/ldap/config -b "cn=accesslog"
 		RETVAL=$?
 	fi
 else
 	if [ x$comp = "x0" ]; then
-		/opt/zimbra/openldap/sbin/slapadd -w -q -F /opt/zimbra/data/ldap/config -b "" -l $SRC
+		${zimbra_home}/openldap/sbin/slapadd -w -q -F ${zimbra_home}/data/ldap/config -b "" -l $SRC
 		RETVAL=$?
 	else
-		$computil $SRC | /opt/zimbra/openldap/sbin/slapadd -w -q -F /opt/zimbra/data/ldap/config -b ""
+		$computil $SRC | ${zimbra_home}/openldap/sbin/slapadd -w -q -F ${zimbra_home}/data/ldap/config -b ""
 		RETVAL=$?
 	fi
 fi

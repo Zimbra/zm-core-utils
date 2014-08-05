@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -23,13 +21,15 @@ fi
 
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars
+zmsetvars \
+    zimbra_home \
+    zimbra_log_directory
 
 pid=""
-pidfile="/opt/zimbra/data/sasl2/state/saslauthd.pid"
+pidfile="${zimbra_home}/data/sasl2/state/saslauthd.pid"
 
 rewriteconfig() {
-  /opt/zimbra/libexec/configrewrite sasl > /dev/null 2>&1
+  ${zimbra_home}/libexec/configrewrite sasl > /dev/null 2>&1
 }
 
 getpid()
@@ -66,11 +66,11 @@ case "$1" in
       echo "already running."
       exit 0
     fi
-    mkdir -p /opt/zimbra/data/sasl2/state
+    mkdir -p ${zimbra_home}/data/sasl2/state
     if [ x$2 = "x" ]; then
       rewriteconfig
     fi
-    /opt/zimbra/cyrus-sasl/sbin/saslauthd -r -a zimbra 
+    ${zimbra_home}/cyrus-sasl/sbin/saslauthd -r -a zimbra 
     for ((i = 0; i < 30; i++)) do
       checkrunning
       if [ $running = 1 ]; then

@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2011, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2011, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -24,7 +22,11 @@ fi
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars
+zmsetvars \
+  zimbra_home \
+  zimbra_log_directory \
+  vmware_heartbeat_interval
+
 
 pidfile=${zimbra_log_directory}/vmware-heartbeat.pid
 vmware_heartbeat_interval=${vmware_heartbeat_interval:=15}
@@ -74,7 +76,7 @@ case "$1" in
     if [ $running = 1 ]; then
       echo "vmware-ha is already running.";
     else
-      /opt/zimbra/libexec/vmware-heartbeat start
+      ${zimbra_home}/libexec/vmware-heartbeat start
       for ((i = 0; i < 12; i++)); do
         checkrunning
         if [ $running = 1 ]; then
@@ -94,7 +96,7 @@ case "$1" in
       cpid=`cat ${zimbra_log_directory}/vmware-ha.pid`
       kill -9 "$cpid" 2> /dev/null
     fi
-    pskillall -9 /opt/zimbra/libexec/vmware-heartbeat
+    pskillall -9 ${zimbra_home}/libexec/vmware-heartbeat
     exit 0
    ;;
 
@@ -104,7 +106,7 @@ case "$1" in
     if [ $running = 0 ]; then
       echo  "vmware-ha is not running.";
     else
-      /opt/zimbra/libexec/vmware-heartbeat stop
+      ${zimbra_home}/libexec/vmware-heartbeat stop
       checkrunning
       if [ x"$cpid" != "x" ]; then
         kill -TERM "$cpid" 2> /dev/null

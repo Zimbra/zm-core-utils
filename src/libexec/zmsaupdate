@@ -2,24 +2,22 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 #
 use strict;
 use lib '/opt/zimbra/zimbramon/lib';
 use Getopt::Long;
 
-if ( ! -d "/opt/zimbra/data/spamassassin/localrules" ) {
+if ( ! -d "/opt/zimbra/conf/spamassassin" ) {
   print "ERROR: SpamAssassin does not appear to be installed - exiting\n";
   exit(1);
 }
@@ -54,21 +52,14 @@ if (!$rule_updates_enabled) {
   exit;
 }
 
-
-my $sa="/opt/zimbra/zimbramon/bin/sa-update -v --allowplugins --refreshmirrors >/dev/null 2>&1";
-my $restart="/opt/zimbra/bin/zmamavisdctl restart norewrite >/dev/null 2>&1";
-my $compile="/opt/zimbra/libexec/zmsacompile >/dev/null 2>&1";
-
+my $zimbra_home = getLocalConfig("zimbra_home");
+my $sa="${zimbra_home}/zimbramon/bin/sa-update -v --updatedir ${zimbra_home}/conf/spamassassin --allowplugins --refreshmirrors >/dev/null 2>&1";
+my $restart="${zimbra_home}/bin/zmamavisdctl restart norewrite >/dev/null 2>&1";
 my $restart_enabled = getLocalConfig("antispam_enable_restarts");
 my $restart_required;
 
-my $compile_rules=getLocalConfig("antispam_enable_rule_compilation");
-
 if (lc($restart_enabled) =~ /true/) { $restart_enabled = 1; }
 if (lc($restart_enabled) =~ /false/) { $restart_enabled = 0; }
-
-if (lc($compile_rules) =~ /true/) { $compile_rules = 1; }
-if (lc($compile_rules) =~ /false/) { $compile_rules = 0; }
 
 qx($sa);
 my $rc = $?>>8;
@@ -82,10 +73,6 @@ if ($rc == 1) {
 
 if ($restart_required == 0) {
     exit;
-}
-
-if ($compile_rules) {
-  qx($compile);
 }
 
 if ($restart_enabled) {
