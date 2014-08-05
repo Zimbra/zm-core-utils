@@ -80,7 +80,7 @@ my $zimbra_ssha_password = $ctx->generate;
 #
 my $infile="$ldap_config_dir/olcDatabase\=\{0\}config.ldif";
 my $outfile="$zimbra_tmp_directory/olcDatabase\=\{0\}config.ldif.$$";
-my $mime_root_passwd=MIME::Base64::encode($root_ssha_password);
+my $mime_root_passwd=MIME::Base64::encode($root_ssha_password,"");
 chomp ($mime_root_passwd);
 open(IN,"<$infile");
 open(OUT,">$outfile");
