@@ -48,7 +48,7 @@ flushDirtyPages() {
   # wait for 600 seconds or until there are no more dirty pages
   local i=0
   while [ $i -lt 600 ]; do
-    local pages=$(${MYSQL} -e "show engine innodb status\G" | awk '/^Modified db pages/ && /[0-9]+$/ {s+=$NF} END {print s}'
+    local pages=$(${MYSQL} -e "show engine innodb status\G" | awk '/^Modified db pages/ && /[0-9]+$/ {s+=$NF} END {print s}')
 
     if [ "$pages" = "0" ]; then
       break
