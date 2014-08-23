@@ -20,10 +20,9 @@ if [ x`whoami` != xzimbra ]; then
 fi
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars \
-	zimbra_home \
-	zimbra_log_directory \
-	zmconfigd_listen_port
+zmsetvars
+
+system=$(/opt/zimbra/libexec/get_plat_tag.sh)
 
 # These variables are not set if run via cron.  Make sure they are set prior to execution
 if [ x"$JYTHONPATH" = "x" ]; then
@@ -66,7 +65,11 @@ checkrunning()
   if [ "x$pid" = "x" ]; then
 	running=0
   else
-	status=`echo STATUS | $NC -w 15 -i 1 localhost ${zmconfigd_listen_port} 2>/dev/null`
+	if [ x"$system" = "xUBUNTU10_64" ]; then
+		status=`echo STATUS | $NC -w 15 -i 1 localhost ${zmconfigd_listen_port} 2>/dev/null`
+	else
+		status=`echo STATUS | $NC -w 15 localhost ${zmconfigd_listen_port} 2>/dev/null`
+	fi
 	if [ $? = 0 -a "x$status" = "xSUCCESS ACTIVE" ]; then
 		running=1
 	else
