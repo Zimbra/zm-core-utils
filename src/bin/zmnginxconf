@@ -79,7 +79,7 @@ sub printconf
             if (!defined $wdir) {
                 print $prefix . "# working directory not defined while including $i at $filename:$line" . "\n";
             } else {
-                printconf ("$wdir/$i", $indent+1);
+                printconf ("$i", $indent+1);
             }
         } else {
             if (($l =~ /^\s*#/) && (defined $options{nocomments})) {
