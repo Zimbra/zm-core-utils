@@ -138,7 +138,6 @@
     notifempty
     copytruncate
     create 0644 zimbra zimbra
-    endscript
     compress
 }   
 
