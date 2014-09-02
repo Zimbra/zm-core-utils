@@ -2,22 +2,20 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2006, 2007, 2008, 2009, 2010, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2006, 2007, 2008, 2009, 2010, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars
+zmsetvars zimbra_home zimbra_java_home
 
 if [ -d ${zimbra_java_home}/jre ]; then
     JRE_EXT_DIR=${zimbra_java_home}/jre/lib/ext
@@ -27,7 +25,7 @@ fi
 zmassert -d ${JRE_EXT_DIR}
 
 if [ -f ".hotspot_compiler" ]; then
-  cd /opt/zimbra
+  cd $zimbra_home
 fi
 
 case "`uname`" in
@@ -35,21 +33,21 @@ CYGWIN*) PATHSEP=";";;
 *) PATHSEP=":";;
 esac
 
-jardirs=${JRE_EXT_DIR}${PATHSEP}/opt/zimbra/lib/jars
-if [ -e /opt/zimbra/lib/ext-common ]; then
-    jardirs=${jardirs}${PATHSEP}/opt/zimbra/lib/ext-common
+jardirs=${JRE_EXT_DIR}${PATHSEP}${zimbra_home}/lib/jars
+if [ -e ${zimbra_home}/lib/ext-common ]; then
+    jardirs=${jardirs}${PATHSEP}${zimbra_home}/lib/ext-common
 fi
 
 java_version=$(${zimbra_java_home}/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
 if [ x"$java_version" = "x1.6.0" ]; then
-  java_options="-XX:ErrorFile=/opt/zimbra/log"
+  java_options="-XX:ErrorFile=${zimbra_home}/log"
 else
   java_options=""
 fi
 
 exec ${zimbra_java_home}/bin/java ${java_options} \
      -client -Xmx256m \
-     -Dzimbra.home=/opt/zimbra \
-     -Djava.library.path=/opt/zimbra/lib \
+     -Dzimbra.home=${zimbra_home} \
+     -Djava.library.path=${zimbra_home}/lib \
      -Djava.ext.dirs=${jardirs} \
      "$@"

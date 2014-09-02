@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -31,6 +29,7 @@ my $source_config_dir = "/opt/zimbra/openldap/etc/openldap";
 my $config_dir = "/opt/zimbra/conf";
 my $ldap_config_dir="/opt/zimbra/data/ldap/config/cn\=config";
 
+my $zimbra_home=getLocalConfig("zimbra_home");
 my $zimbra_user=getLocalConfig("zimbra_user");
 my $zimbra_ldap_userdn = getLocalConfig("zimbra_ldap_userdn");
 my $zimbra_ldap_password = getLocalConfig("zimbra_ldap_password");
@@ -44,11 +43,12 @@ if (lc($ldap_is_master) ne "true" ) {
   exit 0;
 }
 
+$zimbra_home = "/opt/zimbra" if ($zimbra_home eq "");
 if (!-d $zimbra_tmp_directory) {
   File::Path::mkpath("$zimbra_tmp_directory");
 }
 
-my $rc=qx(/opt/zimbra/bin/ldap start);
+my $rc=`${zimbra_home}/bin/ldap start`;
 
 my @masters=split(/ /, $ldap_master_url);
 my $master_ref=\@masters;
@@ -60,7 +60,7 @@ if ($ldap_master_url !~ /^ldaps/i) {
   if ($ldap_starttls_supported) {
     $mesg = $ldap->start_tls(
          verify => 'none',
-         capath => "/opt/zimbra/conf/ca",
+         capath => "${zimbra_home}/conf/ca",
          ) or die "start_tls: $@";
     $mesg->code && die "TLS: " . $mesg->error . "\n";
   }
@@ -176,7 +176,7 @@ sub getLocalConfig {
   return $main::loaded{lc}{$key}
     if (exists $main::loaded{lc}{$key});
 
-  my $val = qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null);
+  my $val = `/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null`;
   chomp $val;
   $main::loaded{lc}{$key} = $val;
   return $val;

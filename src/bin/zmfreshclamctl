@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2011, 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2011, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -28,7 +26,10 @@ fi
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars
+zmsetvars \
+  zimbra_home \
+  zimbra_log_directory
+
 
 fpidfile=${zimbra_log_directory}/freshclam.pid
 
@@ -86,8 +87,8 @@ case "$1" in
     if [ $frunning = 1 ]; then
       echo "freshclam is already running.";
     else
-      /opt/zimbra/clamav/bin/freshclam \
-        --config-file=/opt/zimbra/conf/freshclam.conf --quiet --daemon --checks=12 \
+      ${zimbra_home}/clamav/bin/freshclam \
+        --config-file=${zimbra_home}/conf/freshclam.conf --quiet --daemon --checks=12 \
           >> ${zimbra_log_directory}/freshclam.log 2>&1 &
       echo "done."
     fi
@@ -99,7 +100,7 @@ case "$1" in
       cpid=`cat /opt/zimbra/log/freshclam.pid`
       kill -9 "$cpid" 2> /dev/null
     fi
-    pskillall -9 /opt/zimbra/clamav/bin/freshclam
+    pskillall -9 ${zimbra_home}/clamav/bin/freshclam
     exit 0
    ;;
 

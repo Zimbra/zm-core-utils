@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -31,6 +29,7 @@ my $source_config_dir = "/opt/zimbra/openldap/etc/openldap";
 my $config_dir = "/opt/zimbra/conf";
 my $ldap_config_dir="/opt/zimbra/data/ldap/config/cn\=config";
 
+my $zimbra_home=getLocalConfig("zimbra_home");
 my $zimbra_user=getLocalConfig("zimbra_user");
 my $zimbra_ldap_userdn = getLocalConfig("zimbra_ldap_userdn");
 my $zimbra_ldap_password = getLocalConfig("zimbra_ldap_password");
@@ -40,16 +39,17 @@ my $ldap_is_master = getLocalConfig("ldap_is_master");
 my $ldap_starttls_supported = getLocalConfig("ldap_starttls_supported");
 my $zimbra_tmp_directory = getLocalConfig("zimbra_tmp_directory");
 
+$zimbra_home = "/opt/zimbra" if ($zimbra_home eq "");
 if (!-d $zimbra_tmp_directory) {
   File::Path::mkpath("$zimbra_tmp_directory");
 }
 
 # Get the SHA password.
-my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-512', salt_len => '8');
+my $ctx = Crypt::SaltedHash->new(algorithm => 'SHA-1');
 $ctx->add("$ldap_root_password");
 my $root_ssha_password = $ctx->generate;
 
-$ctx = Crypt::SaltedHash->new(algorithm => 'SHA-512', salt_len => '8');
+$ctx = Crypt::SaltedHash->new(algorithm => 'SHA-1');
 $ctx->add("$zimbra_ldap_password");
 my $zimbra_ssha_password = $ctx->generate;
 
@@ -76,8 +76,8 @@ if ( -s $outfile ) {
   if ($rc != 0) {
     print "Warning: failed to write $infile\n";
   }
-  qx(chown $zimbra_user:$zimbra_user $infile); 
-  qx(chmod 600 $infile);
+  `chown $zimbra_user:$zimbra_user $infile`; 
+  `chmod 600 $infile`;
 } else {
   print "Warning: Failed to update root password.\n";
 }
@@ -114,7 +114,7 @@ sub getLocalConfig {
   return $main::loaded{lc}{$key}
     if (exists $main::loaded{lc}{$key});
 
-  my $val = qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null);
+  my $val = `/opt/zimbra/bin/zmlocalconfig -x -s -m nokey ${key} 2> /dev/null`;
   chomp $val;
   $main::loaded{lc}{$key} = $val;
   return $val;

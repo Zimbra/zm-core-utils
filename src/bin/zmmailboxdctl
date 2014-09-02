@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -33,6 +31,7 @@ fi
 
 NC=`which nc 2>/dev/null`; NC=${NC:-`which netcat 2>/dev/null`}
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
+
 #
 # Memory for use by JVM.
 #
@@ -74,11 +73,21 @@ case "$1" in
         exit 0
       fi
 
-      mkdir -p ${mailboxd_directory}/work/service/jsp
-      mkdir -p ${mailboxd_directory}/work/zimbra/jsp
-      mkdir -p ${mailboxd_directory}/work/zimbraAdmin/jsp
-      if [ ! -d ${mailboxd_directory}/webapps/zimlet/WEB-INF ]; then
-        mkdir -p ${mailboxd_directory}/webapps/zimlet/WEB-INF
+      if [ "x${mailboxd_server}" = "xtomcat" ]; then
+        # Create the work directories so they're owned by zimbra
+        mkdir -p ${mailboxd_directory}/work/Catalina/localhost/_/org/apache/jsp/public_
+        mkdir -p ${mailboxd_directory}/work/Catalina/localhost/zimbra/org/apache/jsp/public_
+        mkdir -p ${mailboxd_directory}/work/Catalina/localhost/service/org/apache/jsp/public_
+        mkdir -p ${mailboxd_directory}/work/Catalina/localhost/zimbraAdmin/org/apache/jsp/public_
+        mkdir -p ${mailboxd_directory}/work/Catalina/localhost/manager
+        mkdir -p ${mailboxd_directory}/work/Catalina/localhost/host-manager
+      else
+        mkdir -p ${mailboxd_directory}/work/service/jsp
+        mkdir -p ${mailboxd_directory}/work/zimbra/jsp
+        mkdir -p ${mailboxd_directory}/work/zimbraAdmin/jsp
+        if [ ! -d ${mailboxd_directory}/webapps/zimlet/WEB-INF ]; then
+          mkdir -p ${mailboxd_directory}/webapps/zimlet/WEB-INF
+        fi
       fi
 
       mailboxd_thread_stack_size=${mailboxd_thread_stack_size:=256k}
@@ -92,7 +101,7 @@ case "$1" in
       fi
       echo -n "Starting mailboxd..."
       sudo /opt/zimbra/libexec/zmmailboxdmgr start \
-        -ea -Dfile.encoding=UTF-8 ${mailboxd_java_options} ${spnegoJavaOptions} -Xms${javaXms}m \
+        -Dfile.encoding=UTF-8 ${mailboxd_java_options} ${spnegoJavaOptions} -Xms${javaXms}m \
         -Xmx${javaXmx}m -Xmn${javaXmn}m < /dev/null > /dev/null 2>&1
       status=$?
       if [ $status != 0 ]; then
@@ -100,12 +109,13 @@ case "$1" in
         exit $status
       fi
       status=1
-      MPORT=`/opt/zimbra/bin/zmprov -l gs ${zimbra_server_hostname} zimbraMailPort | grep zimbraMailPort: | awk '{print $2}'`
+      MPORT=`${zimbra_home}/bin/zmprov -l gs ${zimbra_server_hostname} zimbraMailPort | grep zimbraMailPort: | awk '{print $2}'`
       if [ x$platform = "xRHEL7_64" ]; then
         ncOpt="--send-only --recv-only"
       else
         ncOpt="-z"
       fi
+
       for ((i=0; i < 12; i++)); do
         $NC $ncOpt localhost ${MPORT} >/dev/null 2>&1
         if [ $? = 0 ]; then
@@ -129,7 +139,7 @@ case "$1" in
         echo "mailboxd is not running."
         exit 0
       fi
-      /opt/zimbra/bin/zmthrdump -i -o /opt/zimbra/log/stacktrace.$$.$(date +%Y%m%d%H%M%S) 2> /dev/null
+      ${zimbra_home}/bin/zmthrdump -i -o ${zimbra_home}/log/stacktrace.$$.$(date +%Y%m%d%H%M%S) 2> /dev/null
       sudo /opt/zimbra/libexec/zmmailboxdmgr stop 
       if [ $? = 0 ]; then
         echo "done."

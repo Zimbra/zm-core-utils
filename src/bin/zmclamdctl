@@ -2,17 +2,15 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 # 
 
@@ -28,7 +26,10 @@ fi
 platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 source `dirname $0`/zmshutil || exit 1
-zmsetvars
+zmsetvars \
+  zimbra_home \
+  zimbra_log_directory
+
 
 pidfile=${zimbra_log_directory}/clamd.pid
 
@@ -81,12 +82,12 @@ pskillall() {
 case "$1" in
   'start')
 
-    if [ ! -f /opt/zimbra/data/clamav/db/daily.cvd ]; then
+    if [ ! -f ${zimbra_home}/data/clamav/db/daily.cvd ]; then
       # Start with the files we ship.
-      cp -f /opt/zimbra/clamav/db/daily.cvd.init \
-        /opt/zimbra/data/clamav/db/daily.cvd
-      cp -f /opt/zimbra/clamav/db/main.cvd.init \
-        /opt/zimbra/data/clamav/db/main.cvd
+      cp -f ${zimbra_home}/clamav/db/daily.cvd.init \
+        ${zimbra_home}/data/clamav/db/daily.cvd
+      cp -f ${zimbra_home}/clamav/db/main.cvd.init \
+        ${zimbra_home}/data/clamav/db/main.cvd
     fi
     if [ x$2 = "x" ]; then
       rewriteconfig
@@ -97,8 +98,8 @@ case "$1" in
     if [ $running = 1 ]; then
       echo "clamd is already running.";
     else
-      /opt/zimbra/clamav/sbin/clamd \
-        --config-file=/opt/zimbra/conf/clamd.conf \
+      ${zimbra_home}/clamav/sbin/clamd \
+        --config-file=${zimbra_home}/conf/clamd.conf \
           >> ${zimbra_log_directory}/clamd.log 2>&1 &
   
       for ((i = 0; i < 12; i++)); do
@@ -120,7 +121,7 @@ case "$1" in
       cpid=`cat /opt/zimbra/log/clamd.pid`
       kill -9 "$cpid" 2> /dev/null
     fi
-    pskillall -9 /opt/zimbra/clamav/sbin/clamd
+    pskillall -9 ${zimbra_home}/clamav/sbin/clamd
     exit 0
    ;;
 

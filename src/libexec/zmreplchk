@@ -2,17 +2,15 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2010, 2012, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2010, 2012, 2013 Zimbra Software, LLC.
 # 
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software Foundation,
-# version 2 of the License.
+# The contents of this file are subject to the Zimbra Public License
+# Version 1.4 ("License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+# http://www.zimbra.com/license.
 # 
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# Software distributed under the License is distributed on an "AS IS"
+# basis, WITHOUT WARRANTY OF ANY KIND, either express or implied.
 # ***** END LICENSE BLOCK *****
 #
 # Must be run on a system where the ldap_url key is set to contain all of the
@@ -27,9 +25,9 @@ my (%c,%loaded,%mstatus,%rstatus);
 $c{zmlocalconfig}="/opt/zimbra/bin/zmlocalconfig";
 
 my $ldap_starttls_supported=getLocalConfig("ldap_starttls_supported");
+my $zimbra_home=getLocalConfig("zimbra_home");
 my $ldap_master=getLocalConfig("ldap_master_url");
 my $ldap_urls=getLocalConfig("ldap_url");
-my $ldap_pass=getLocalConfig("ldap_root_password");
 my ($mesgp, $entry);
 
 my @masters = split / /, $ldap_master;
@@ -56,7 +54,7 @@ foreach my $master (@masters) {
       if ($ldap_starttls_supported) {
         $mesgp = $ldapp->start_tls(
                    verify => 'none',
-                   capath => "/opt/zimbra/conf/ca",
+                   capath => "${zimbra_home}/conf/ca",
                  ) or die "start_tls: $@";
         if($mesgp->code) {
           $mstatus{$master}[0]=3;
@@ -70,22 +68,9 @@ foreach my $master (@masters) {
     $mstatus{$master}[1]="Server down";
     next;
   }
-  $mesgp=$ldapp->bind("cn=config", password => $ldap_pass);
+  $mesgp=$ldapp->bind;
   $mesgp->code && die "Unable to bind to master\n";
- 
-  $mesgp = $ldapp->search(
-             base    =>  'cn=config',
-             scope   =>  'sub',
-             filter  =>  '(olcServerID=*)',
-             attrs   =>  ['olcServerID']
-           );
-
-  my $serverid=0;
-  $entry = $mesgp->entry(0);
-  if ($entry) {
-    $serverid=$entry->get_value('olcServerID'); 
-  }
-
+  
   $mesgp = $ldapp->search(
              base    =>  '',
              scope   =>  'base',
@@ -114,7 +99,6 @@ foreach my $master (@masters) {
   }
   $pcsn.=$csns[$csnsize];
   $mstatus{$master}[2]=$pcsn;
-  $mstatus{$master}[3]=$serverid;
   $ldapp->unbind;
 }
 
@@ -161,7 +145,6 @@ if (scalar(@masters) > 1) {
   foreach my $master (@masters) {
     chomp($master);
     print "Master: $master";
-    print " ServerID: ".$mstatus{$master}[3];
     print " Code: ".$mstatus{$master}[0];
     print " Status: ".$mstatus{$master}[1];
     if(defined($mstatus{$master}[2])) {
@@ -182,7 +165,7 @@ foreach my $replica (@replicas) {
       if ($ldap_starttls_supported) {
         $mesgr = $ldapr->start_tls(
                    verify => 'none',
-                   capath => "/opt/zimbra/conf/ca",
+                   capath => "${zimbra_home}/conf/ca",
                  ) or die "start_tls: $@";
         if($mesgr->code) {
           $rstatus{$replica}[0]=3;
@@ -259,7 +242,7 @@ sub getLocalConfig {
 
   return $loaded{lc}{$key}
     if (exists $loaded{lc}{$key} && !$force);
-  my $val=qx($c{zmlocalconfig} -x -s -m nokey ${key} 2> /dev/null);
+  my $val=`$c{zmlocalconfig} -x -s -m nokey ${key} 2> /dev/null`;
   chomp($val);
   $loaded{lc}{$key} = $val;
   return $val;
