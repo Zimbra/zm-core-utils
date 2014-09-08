@@ -278,7 +278,7 @@ sub modifyServerName($) {
     foreach my $entry ($result->all_entries) {
       print "Updating zimbraMtaAuthHost for ", $entry->dn(), "...";
       addLdapGlobalConfig("zimbraMtaAuthHost", "$server");
-      removeGlobalConfig("zimbraMtaAuthHost","$c{zimbra_server_hostname}");
+      removeLdapGlobalConfig("zimbraMtaAuthHost","$c{zimbra_server_hostname}");
     }
     print("Updating zimbraConvertdURL attribute\n") if ($verbose > 1);
     $result = $ldap->search(base => $zimbra_base,
