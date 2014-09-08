@@ -120,8 +120,7 @@ startzmconfigd()
 		fi
 		sleep 1
 	done
-	sleep 30
-	for ((i = 0; i < 30; i++)) do
+	for ((i = 0; i < ${zmconfigd_startup_pause}; i++)) do
 	  checkrunning
 	  if [ $running = 1 ]; then
 		echo "done."
