@@ -37,22 +37,12 @@ fi
 pid=""
 pidfile="${zimbra_log_directory}/zmconfigd.pid"
 
-ctlpid=""
-ctlpidfile="${zimbra_log_directory}/zmconfigdctl.pid"
-
 NC=`which nc 2>/dev/null`; NC=${NC:-`which netcat 2>/dev/null`}
 
 getpid()
 {
   if [ -f ${pidfile} ]; then
 	pid=$(cat ${pidfile})
-  fi
-}
-
-getctlpid()
-{
-  if [ -f ${ctlpidfile} ]; then
-	ctlpid=$(cat ${ctlpidfile})
   fi
 }
 
@@ -74,22 +64,6 @@ checkrunning()
   fi
 } 
 
-checkctlrunning()
-{
-  getctlpid
-  if [ "x$ctlpid" = "x" ]; then
-	ctlrunning=0
-  else
-	kill -0 $ctlpid 2> /dev/null
-	if [ $? != 0 ]; then
-	  ctlpid=""
-	  ctlrunning=0
-	else
-		ctlrunning=1
-	fi 
-  fi
-} 
-
 startzmconfigd()
 {
 	err=0
@@ -108,16 +82,14 @@ startzmconfigd()
 		kill -9 ${pid}
 	fi
 	rm -rf ${pidfile}
-	/opt/zimbra/libexec/zmconfigd >> ${zimbra_log_directory}/zmconfigd.log 2>&1 &
-	# Bug 51682 wait for the pid file to be created, then wait 30 seconds for rewrites
+	/opt/zimbra/libexec/zmconfigd >/dev/null 2>&1 &
 	for ((i = 0; i < 30; i++)) do
 		if [ -f ${pidfile} ]; then
 			break
 		fi
 		sleep 1
 	done
-	sleep 30
-	for ((i = 0; i < 30; i++)) do
+	for ((i = 0; i < ${zmconfigd_startup_pause}; i++)) do
 	  checkrunning
 	  if [ $running = 1 ]; then
 		echo "done."
@@ -135,63 +107,13 @@ startzmconfigd()
 	return
 }
 
-daemon()
-{
-	echo "Starting zmconfigdctl...success"
-	exec 1>&-
-	exec 2>&-
-	while :; do
-		cd /
-		sleep 60
-		startzmconfigd >> /opt/zimbra/log/zmconfigd.log 2>&1
-	done
-	exit 0
-}
-
-startdaemon()
-{
-	startzmconfigd
-	daemon &
-	echo $! > ${ctlpidfile}
-}
-
-stopdaemon()
-{
-	checkctlrunning
-	if [ x$ctlpid != "x" ]; then
-		echo -n "Stopping zmconfigdctl..."
-		kill -15 $ctlpid 2> /dev/null
-		sleep 1
-		kill -0 $ctlpid 2> /dev/null
-		if [ $? != 0 ]; then
-			ctlpid=""
-			ctlrunning=0
-			echo "success"
-		else
-			ctlrunning=1
-			echo "failed"
-		fi
-	else
-		echo "zmconfigdctl is not running"
-	fi
-}
-
-#
-# Main
-#
 case "$1" in
   'start')
-	checkctlrunning
-	if [ $ctlrunning = 0 ]; then
-		startdaemon
-	else
-		startzmconfigd
-		exit ${err}
-	fi
+	startzmconfigd
+	exit ${err}
    ;;
 
   'kill'|'stop')
-  	stopdaemon
 	checkrunning
 	echo -n "Stopping zmconfigd..."
 	if [ $running -lt 1 ]; then
