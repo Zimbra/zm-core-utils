@@ -62,7 +62,7 @@ mkdir ${jspc_build_dir}
 
 compile_jsp() {
   file=shift
-  ${java_cmd} org.apache.jasper.JspC -v -d ${jspc_build_dir} -webapp ${jspc_src_dir} -uriroot ${jspc_src_dir} -compile -classpath ${class_path}
+  ${java_cmd} org.apache.jasper.JspC -v -trimSpaces -d ${jspc_build_dir} -webapp ${jspc_src_dir} -uriroot ${jspc_src_dir} -compile -classpath ${class_path}
   return $?
 }
 
