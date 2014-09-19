@@ -137,7 +137,7 @@ sub save_jinfo($) {
     my $jinfo_cmd;
     my $out_file = "jinfo.out";
 
-    $jinfo_cmd = "$SU '$JINFO $pid'";
+    $jinfo_cmd = "$JINFO $pid";
     logmsg "Saving Java configuration info for process $pid to $out_file\n";
     qx($jinfo_cmd > $out_file 2>&1);
 }
