@@ -39,7 +39,7 @@ my %BINARIES = (
     "openssl" => "1.0.1h",
     "rsync" => "3.0.9",
     "tcmalloc" => "2.2",
-    "jetty" => "distribution-9.1.5.v20140505"
+    "jetty" => "distribution-9.1.5.v20140505",
 );
 my $P4_CMD = "p4";
 
@@ -148,15 +148,10 @@ sub getPlatformDirName() {
 		}
 	    }
         } else {
-         	my $version = `uname -v`;
-	    if($version =~ /precise/) {
-                $dirName = "UBUNTU12_64";
-	    } elsif($version =~ /lucid/) {
-                $dirName = "UBUNTU10_64";
-	    } elsif (`uname -m` =~ /i686/) {
+	    if (`uname -m` =~ /i686/) {
                 $dirName = "UBUNTU8_64";
 	    } else {
-                $dirName = "UBUNTU14_64";
+                $dirName = "UBUNTU10_64";
 	    }
         }
     }
