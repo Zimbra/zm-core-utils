@@ -30,6 +30,7 @@
     notifempty
     create 0644 zimbra zimbra
     compress
+    su zimbra zimbra
 }
 
 /opt/zimbra/log/logger_myslow.log {
@@ -41,6 +42,7 @@
     compress
     size 1000k
     rotate 7
+    su zimbra zimbra
 } 
 
 /opt/zimbra/log/zmconfigd.log {
@@ -53,6 +55,7 @@
       su - zimbra -c "/opt/zimbra/bin/zmconfigdctl restart" > /dev/null 2>&1 || true
     endscript
     rotate 30
+    su zimbra zimbra
 }
 
 /opt/zimbra/log/clamd.log {
@@ -67,6 +70,7 @@
     compress
     size 5000k
     rotate 7
+    su zimbra zimbra
 }
 
 /opt/zimbra/log/freshclam.log {
@@ -81,6 +85,7 @@
     compress
     size 1000k
     rotate 7
+    su zimbra zimbra
 }   
 
 /opt/zimbra/log/zmlogswatch.out {
@@ -94,6 +99,7 @@
     endscript
     rotate 5
     compress
+    su zimbra zimbra
 }
 
 /opt/zimbra/log/zmswatch.out {
@@ -107,6 +113,7 @@
     endscript
     rotate 5
     compress
+    su zimbra zimbra
 }
 
 /opt/zimbra/log/nginx.log /opt/zimbra/log/nginx.access.log {
@@ -120,6 +127,7 @@
     endscript
     rotate 7
     compress
+    su zimbra zimbra
 }
 
 /opt/zimbra/zmstat/zmstat.out {
@@ -139,6 +147,7 @@
     copytruncate
     create 0644 zimbra zimbra
     compress
+    su zimbra zimbra
 }   
 
 /opt/zimbra/log/vmware-heartbeat.log {
@@ -148,6 +157,7 @@
     rotate 7
     notifempty
     compress
+    su zimbra zimbra
 }
 
 /opt/zimbra/log/spamtrain.log {
@@ -157,4 +167,5 @@
     rotate 7
     notifempty
     compress
+    su zimbra zimbra
 }
