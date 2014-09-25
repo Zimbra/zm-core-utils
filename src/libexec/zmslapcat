@@ -69,6 +69,8 @@ elif [ x$ALOG = "xyes" ]; then
 	if [ -d /opt/zimbra/data/ldap/accesslog/db ]; then
 		/opt/zimbra/openldap/sbin/slapcat -F /opt/zimbra/data/ldap/config -b "cn=accesslog" -l ${DEST}/${FILE}
 		RC=$?
+	else
+		exit $RC
 	fi
 else
 	/opt/zimbra/openldap/sbin/slapcat -F /opt/zimbra/data/ldap/config -b "" -l ${DEST}/${FILE}
