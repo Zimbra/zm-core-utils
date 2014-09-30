@@ -24,6 +24,7 @@ use Zimbra::Util::Common;
 use Getopt::Std;
 use IPC::Open3;
 use FileHandle;
+use Net::LDAP;
 
 my $enabledHTTPProxy;
 my $enabledMailProxy;
@@ -626,67 +627,68 @@ sub getLdapServerValue {
   return $val;
 }
 
+sub checkPackage {
+    my $key = shift;    
+    my $package = shift;
+    my $found = 0;
+    my $size = 0;
+    my @list;
+    my $entry;
+    my $mesg;
+    my $ldapurl = getLocalConfig("ldap_url");
+    my $zdn = getLocalConfig("zimbra_ldap_userdn");
+    my $zps = getLocalConfig("zimbra_ldap_password");
+    my $ldap_starttls_supported = getLocalConfig("ldap_starttls_supported");
+
+    my @replicas=split(/ /, $ldapurl);
+    my $replica_ref=\@replicas;
+    my $ldap = Net::LDAP->new( $replica_ref ) or die "Error connecting to LDAP server: $ldapurl";
+
+    if ($ldapurl !~ /^ldaps/i) {
+        if ($ldap_starttls_supported) {
+            $mesg = $ldap->start_tls(verify => 'none', capath => "/opt/zimbra/conf/ca",) or die "start_tls: $@";
+            $mesg->code && die "TLS: " . $mesg->error . "\n";
+        }
+    }
+
+    $mesg = $ldap->bind("$zdn", password=>"$zps");
+    $mesg->code && die "Bind: ". $mesg->error . "\n";
+    
+    $mesg = $ldap->search(
+        base=>"",
+        filter=>"(&(objectClass=zimbraServer)(cn=$hostname))",
+        scope=>"sub",
+        attrs => [$key],
+        );
+
+    $size = $mesg->count;
+    if ($size == 0) {
+        print "Error: No services found in $key on $hostname\n";
+        $ldap->unbind;
+        exit 1;
+    } 
+
+    foreach $entry ($mesg->entries) {
+        @list = $entry->get_value($key);
+        foreach(@list) {
+            if ($packageServiceMap{$_} eq $package) {
+                $found = 1;
+            }
+        }
+    }
+    
+    $ldap->unbind;
+    return $found;
+}
+
 sub isEnabled {
-	my $package=shift;
-	my $found=0;
-	open(ZMPROVE, "$ZMPROV gs $hostname zimbraServiceEnabled|");
-	while (<ZMPROVE>) {
-		chomp;
-		if (/zimbraServiceEnabled:\s(.*)/) {
-			my $service = $1;
-			if ($packageServiceMap{$service} eq $package) {
-				$found = 1;
-			}
-		}
-	}
-	close(ZMPROVE);
-	return $found;
+	my $package = shift;
+	return checkPackage("zimbraServiceEnabled", $package);
 }
 
 sub isInstalled {
-  my $pkg = shift;
-
-  my $pkgQuery;
-
-  my $good = 0;
-  if ($options{r}) {
-	open(ZMPROVI, "$ZMPROV gs $hostname zimbraServiceInstalled|");
-	while (<ZMPROVI>) {
-		chomp;
-		if (/zimbraServiceInstalled:\s(.*)/) {
-			my $service = $1;
-			if ($packageServiceMap{$service} eq $pkg) {
-				$good = 1;
-			}
-		}
-	}
-	close(ZMPROVI);
-        return $good;
-  } else {
-      if ($platform =~ /DEBIAN/ || $platform =~ /UBUNTU/) {
-        $pkgQuery = "dpkg -s $pkg";
-      } elsif ($platform =~ /MACOSX/) {
-        my @l = sort glob ("/Library/Receipts/${pkg}*");
-        if ( $#l < 0 ) { return 0; }
-        $pkgQuery = "test -d $l[$#l]";
-      } elsif ($platform =~ /RPL/) {
-        $pkgQuery = "conary q $pkg";
-      } else {
-        $pkgQuery = "rpm -q $pkg";
-      }
-    
-      my $rc = 0xffff & system ("$pkgQuery > /dev/null 2>&1");
-      $rc >>= 8;
-      if (($platform =~ /DEBIAN/ || $platform =~ /UBUNTU/) && $rc == 0 ) {
-        $good = 1;
-        $pkgQuery = "dpkg -s $pkg | egrep '^Status: ' | grep 'not-installed'";
-        $rc = 0xffff & system ("$pkgQuery > /dev/null 2>&1");
-        $rc >>= 8;
-        return ($rc == $good);
-      } else {
-        return ($rc == $good);
-      }
-  }
+    my $package = shift;
+    return checkPackage("zimbraServiceInstalled", $package);
 }
 
 sub getLocalConfig {
