@@ -629,7 +629,7 @@ sub getLdapServerValue {
 
 sub checkPackage {
     my $key = shift;    
-    my $package = shift;
+    my $pkg = shift;
     my $found = 0;
     my $size = 0;
     my @list;
@@ -671,7 +671,7 @@ sub checkPackage {
     foreach $entry ($mesg->entries) {
         @list = $entry->get_value($key);
         foreach(@list) {
-            if ($packageServiceMap{$_} eq $package) {
+            if ($packageServiceMap{$_} eq $pkg) {
                 $found = 1;
             }
         }
@@ -682,13 +682,42 @@ sub checkPackage {
 }
 
 sub isEnabled {
-	my $package = shift;
-	return checkPackage("zimbraServiceEnabled", $package);
+	my $pkg = shift;
+	return checkPackage("zimbraServiceEnabled", $pkg);
 }
 
 sub isInstalled {
-    my $package = shift;
-    return checkPackage("zimbraServiceInstalled", $package);
+    my $pkg = shift;
+    my $pkgQuery;
+    my $good = 0;
+    
+    if ($options{r}) {      
+        return checkPackage("zimbraServiceInstalled", $pkg);
+    } else {               
+      if ($platform =~ /DEBIAN/ || $platform =~ /UBUNTU/) {
+        $pkgQuery = "dpkg -s $pkg";
+      } elsif ($platform =~ /MACOSX/) {
+        my @l = sort glob ("/Library/Receipts/${pkg}*");
+        if ( $#l < 0 ) { return 0; }
+        $pkgQuery = "test -d $l[$#l]";
+      } elsif ($platform =~ /RPL/) {
+        $pkgQuery = "conary q $pkg";
+      } else {
+        $pkgQuery = "rpm -q $pkg";
+      }
+    
+      my $rc = 0xffff & system ("$pkgQuery > /dev/null 2>&1");
+      $rc >>= 8;
+      if (($platform =~ /DEBIAN/ || $platform =~ /UBUNTU/) && $rc == 0 ) {
+        $good = 1;
+        $pkgQuery = "dpkg -s $pkg | egrep '^Status: ' | grep 'not-installed'";
+        $rc = 0xffff & system ("$pkgQuery > /dev/null 2>&1");
+        $rc >>= 8;
+        return ($rc == $good);
+      } else {
+        return ($rc == $good);
+      }
+    }
 }
 
 sub getLocalConfig {
