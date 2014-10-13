@@ -16,8 +16,8 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-if [ x`whoami` != "xroot" ]; then
-  echo "$0 must be run as user root"
+if [ x`whoami` != "xzimbra" ]; then
+  echo "$0 must be run as user zimbra"
   exit 1
 fi
 umask 027
@@ -55,7 +55,7 @@ ERROR_PREFIX="XXXXX ERROR:"
 
 isLdapRunning() {
 
-  su - zimbra -c "/opt/zimbra/bin/ldap status > /dev/null 2>&1"
+  /opt/zimbra/bin/ldap status > /dev/null 2>&1
   LDAP_IS_RUNNING=$?
   
 }
@@ -78,7 +78,7 @@ saveConfigKey() {
   fi
 
   echo -n "** Saving $location config key $key..."
-  su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"$content\" 2> /dev/null"
+  /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"$content\" 2> /dev/null
   if [ $? = 0 ]; then
     echo "done."
   else
@@ -102,7 +102,7 @@ cleanConfigKey() {
   fi
 
   echo -n "** Clean $location config key $key..."
-  su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"\" 2> /dev/null"
+  /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"\" 2> /dev/null
   if [ $? = 0 ]; then
     echo "done."
   else
@@ -135,7 +135,7 @@ loadConfigKey() {
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -s ${file} ]; then
     echo -n "** Retrieving $location config key $key..."
-    su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null" 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
+    /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
     if [ $? = 0 -a -s "${file}" ]; then
       chown ${zimbra_uid} ${file} 2> /dev/null
       chmod 400 ${file} 2> /dev/null
@@ -152,7 +152,7 @@ deployCerts() {
     rm -rf ${zimbra_domain_cert_directory} > /dev/null 2>&1
   fi
   
-  DOMAINS=$(su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- garpd | awk '{print \$1}'")
+  DOMAINS=$(/opt/zimbra/bin/zmprov -m -l -- garpd | awk '{print \$1}')
   if [ $? != 0 ]; then
     echo "Unable to retrieve list of domains with SSL certificates";
     exit 1
