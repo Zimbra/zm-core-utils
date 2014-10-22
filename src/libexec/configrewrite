@@ -21,7 +21,7 @@ zmsetvars
 
 NC=`which nc 2>/dev/null`; NC=${NC:-`which netcat 2>/dev/null`}
 
-echo REWRITE $@ | $NC -w 120 localhost ${zmconfigd_listen_port} > /dev/null 2>&1
+echo REWRITE $@ | $NC -w ${zimbra_configrewrite_timeout} localhost ${zmconfigd_listen_port} > /dev/null 2>&1
 rc=$?
 
 # If nc fails to connect, run zmconfigd directly
