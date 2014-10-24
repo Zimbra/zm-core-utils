@@ -415,6 +415,9 @@ sub updateRsyslogd {
         s/USER/zimbra/;
         s/GROUP/zimbra/;
       }
+      if ($platform eq "RHEL7_64" || $platform eq "UBUNTU14_64") {
+      	s/#su zimbra zimbra/su zimbra zimbra/;
+      }
       print;
     }
   }
