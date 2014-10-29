@@ -200,6 +200,10 @@ sub updateSyslogNG {
       s/syslogd/syslog-ng/;
       s/USER/zimbra/;
       s/GROUP/zimbra/;
+      if ($platform eq "SLES11_64") {
+        s/#su zimbra zimbra/su zimbra zimbra/;
+      }
+
       print;
     }
   }
