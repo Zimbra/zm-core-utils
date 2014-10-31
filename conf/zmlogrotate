@@ -137,6 +137,7 @@
     rotate 7
     notifempty
     compress
+    #su zimbra zimbra
 }
 
 /opt/zimbra/log/cbpolicyd.log {
