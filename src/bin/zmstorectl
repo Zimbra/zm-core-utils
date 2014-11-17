@@ -48,11 +48,14 @@ flushDirtyPages() {
   # wait for 600 seconds or until there are no more dirty pages
   local i=0
   while [ $i -lt 600 ]; do
-    local pages=$(${MYSQL} -e "show engine innodb status\G" | awk '/^Modified db pages/ && /[0-9]+$/ {s+=$NF} END {print s}')
+    local pages=$(${MYSQL} -e "show engine innodb status\G" | grep '^Modified db pages' | grep -Eo '[0-9]+$')
+    local total_pages=$(echo $pages | sed 's/ / + /g')
+    total_pages=$(( $total_pages ))
 
-    if [ "$pages" = "0" ]; then
+    if [ "$total_pages" = "0" ]; then
       break
     fi
+    #echo -ne "$pages\r"
     i=$((i+1))
     sleep 1
   done
