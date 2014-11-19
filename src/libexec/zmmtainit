@@ -157,9 +157,9 @@ cat<<EOF > ${confdir}/ldap-slm.cf
 server_host = ${ldap_url}
 server_port = ${ldap_port}
 search_base =
-query_filter = (&(|(uid=%s)(zimbraMailDeliveryAddress=%s)(zimbraMailAlias=%s)(zimbraMailCatchAllAddress=%s))(zimbraMailStatus=enabled))
+query_filter = (&(|(uid=%s)(zimbraMailDeliveryAddress=%s)(zimbraMailAlias=%s)(zimbraMailCatchAllAddress=%s)(zimbraAllowFromAddress=%s))(zimbraMailStatus=enabled))
 result_format = %u, %s
-result_attribute = uid,zimbraMailDeliveryAddress,zimbraMailForwardingAddress,zimbraPrefMailForwardingAddress,zimbraMailCatchAllForwardingAddress,zimbraMailAlias
+result_attribute = uid,zimbraMailDeliveryAddress,zimbraMailForwardingAddress,zimbraPrefMailForwardingAddress,zimbraMailCatchAllForwardingAddress,zimbraMailAlias,zimbraAllowFromAddress
 version = 3
 start_tls = ${STARTTLS}
 tls_ca_cert_dir = /opt/zimbra/conf/ca
