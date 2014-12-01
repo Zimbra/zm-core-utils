@@ -23,5 +23,10 @@ if [ x"$make" = "x" ]; then
   exit 1
 fi
 
-/opt/zimbra/zimbramon/bin/sa-compile >/dev/null 2>&1
-
+NICE=`which nice`
+if [ x"$NICE" = "x" ]; then
+  /opt/zimbra/zimbramon/bin/sa-compile >/dev/null 2>&1
+else
+  NICED="$NICE -n 19"
+  $NICED /opt/zimbra/zimbramon/bin/sa-compile >/dev/null 2>&1
+fi
