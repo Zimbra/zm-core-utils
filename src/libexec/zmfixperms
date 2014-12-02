@@ -65,6 +65,7 @@ components="\
   curl \
   cyrus-sasl \
   altermime \
+  dspam \
   heimdal \
   httpd \
   keyview \
@@ -453,6 +454,13 @@ if [ -L /opt/zimbra/cyrus-sasl ]; then
   fi
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/sasl2/state
   chmod 755 /opt/zimbra/data/sasl2/state 
+fi
+
+if [ -L /opt/zimbra/dspam ]; then
+  if [ ! -d "/opt/zimbra/data/dspam" ]; then
+    mkdir -p /opt/zimbra/data/dspam
+  fi
+  chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/dspam
 fi
 
 if [ -L /opt/zimbra/altermime ]; then
