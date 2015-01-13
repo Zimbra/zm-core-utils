@@ -131,13 +131,13 @@ if(lc($ldap_is_master) eq "true") {
       }
       if ($query) {
         print "Master replication agreement: " . ($count+1) . "\n";
-    	print qq(rid: $entryRID URI: $entryURI TLS: $entryTLS\n);
+        print "rid: $entryRID URI: $entryURI TLS: $entryTLS\n";
       }
       $count++;
     }
   } else {
     $ldap->unbind;
-    print qq(Error: No sync replication entries found);
+    print "Error: No sync replication entries found\n";
     exit 0;
   }
   if ($query) {
@@ -145,7 +145,7 @@ if(lc($ldap_is_master) eq "true") {
     exit 0;
   }
   if ($found == 0) {
-    print qq(RID $origRID not found, exiting.\n);
+    print "RID $origRID not found, exiting.\n";
     exit(0);
   }
 
@@ -196,8 +196,8 @@ if(lc($ldap_is_master) eq "true") {
     $err=$mesg->code;
   } elsif ($delete) {
     if ($count == 1) {
-      print qq(Error: It is illegal to delete the last remaining replication agreement.\n);
-      print qq(You must define a new replication agreement prior to deleting the final one.\n);
+      print "Error: It is illegal to delete the last remaining replication agreement.\n";
+      print "You must define a new replication agreement prior to deleting the final one.\n";
       exit 0;
     }
     $mesg = $ldap->modify(
@@ -206,7 +206,7 @@ if(lc($ldap_is_master) eq "true") {
     );
     $err=$mesg->code;
   } else {
-    print qq(ERROR: Should be no way to reach this else block);
+    print "ERROR: Should be no way to reach this else block\n";
     $ldap->unbind;
     exit 1;
   }
