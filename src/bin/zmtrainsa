@@ -39,20 +39,6 @@ autoTrainSystem() {
     ${db_path} --sync
   timestampit "Finished spamassassin training."
 
-  if [ x"$amavis_dspam_enabled" = "xtrue" ]; then
-    timestampit "Starting dspam training"
-    /opt/zimbra/dspam/bin/dspam_train zimbra ${spamdir} ${hamdir}
-    #for f in ${spamdir}/*; do
-      #test -f ${f} && /opt/zimbra/dspam/bin/dspam_corpus --addspam zimbra ${f}
-    #done
-    #for f in ${hamdir}/*; do
-      #test -f ${f} && /opt/zimbra/dspam/bin/dspam_corpus zimbra ${f}
-    #done
-
-    /opt/zimbra/dspam/bin/dspam_clean -p0 $USER
-    timestampit "Finished dspam training"
-  fi
-
   /bin/rm -rf ${spamdir} ${hamdir}
 }
 
@@ -76,19 +62,6 @@ trainAccountFolder() {
   /opt/zimbra/libexec/sa-learn \
     ${db_path} --sync
   timestampit  "Finished spamassassin $MODE training for $USER using folder $FOLDER"
-
-  if [ x"$amavis_dspam_enabled" = "xtrue" ]; then
-    timestampit  "Starting dspam $MODE training for $USER using folder $FOLDER"
-    if [ $MODE == "ham" ]; then
-      MODE="innocent"
-    fi
-
-    /opt/zimbra/dspam/bin/dspam --user zimbra --class=${MODE} --source=corpus --mode=teft \
-      --feature=noise --stdout
-
-    /opt/zimbra/dspam/bin/dspam_clean -p0 $USER
-    timestampit  "Finished dspam $MODE training for $USER using folder $FOLDER"
-  fi
 
   /bin/rm -rf ${tempdir}
 
@@ -117,8 +90,6 @@ fi
 source `dirname $0`/zmshutil || exit 1
 zmsetvars
 
-amavis_dspam_enabled=`/opt/zimbra/bin/zmprov -l gs ${zimbra_server_hostname} zimbraAmavisDSPAMEnabled | grep zimbraAmavisDSPAMEnabled: | awk '{print $2}'`
-amavis_dspam_enabled=$(echo $amavis_dspam_enabled | tr A-Z a-z)
 antispam_mysql_enabled=$(echo $antispam_mysql_enabled | tr A-Z a-z)
 zmtrainsa_cleanup_host=$(echo $zmtrainsa_cleanup_host | tr A-Z a-z)
 
