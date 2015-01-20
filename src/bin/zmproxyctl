@@ -26,6 +26,7 @@ zmsetvars
 
 servicename=proxy
 configfile=/opt/zimbra/conf/nginx.conf
+resolverfile=/opt/zimbra/conf/nginx/resolvers.conf
 pidfile=${zimbra_log_directory}/nginx.pid
 pid=""
 
@@ -71,6 +72,7 @@ case "$1" in
     fi
     if [ "x$2" = "x" ]; then
       /opt/zimbra/libexec/configrewrite proxy > /dev/null 2>&1
+      [ -r /etc/resolv.conf ] && awk 'BEGIN{ns="";sep=""}/nameserver/{ns=ns sep $2;sep=" " }; END{ if (ns) {print "resolver " ns ";"} }' /etc/resolv.conf >> ${resolverfile}
     fi
 
     if [ ! -f ${configfile} ]; then
