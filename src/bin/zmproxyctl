@@ -72,6 +72,7 @@ case "$1" in
     fi
     if [ "x$2" = "x" ]; then
       /opt/zimbra/libexec/configrewrite proxy > /dev/null 2>&1
+      cat /dev/null > ${resolverfile}
       [ -r /etc/resolv.conf ] && awk 'BEGIN{ns="";sep=""}/nameserver/{ns=ns sep $2;sep=" " }; END{ if (ns) {print "resolver " ns ";"} }' /etc/resolv.conf >> ${resolverfile}
     fi
 
