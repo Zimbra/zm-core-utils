@@ -444,6 +444,9 @@ sub getEnabledServices {
   my $ldap_master_url=getLocalConfig("ldap_master_url");
   my $ldap_dn=getLocalConfig("zimbra_ldap_userdn");
   my $ldap_pass=getLocalConfig("zimbra_ldap_password");
+  my $require_tls=getLocalConfig("zimbra_require_interprocess_security");
+  my $ldap_starttls_supported=getLocalConfig("ldap_starttls_supported");
+
   
   my %s = ();
   $s{"zmconfigd"} = "zmconfigd";
@@ -454,6 +457,20 @@ sub getEnabledServices {
   unless ($ldap = Net::LDAP->new( $master_ref, timeout =>30 )) {
     warn "Connect: Unable to determine enabled services from ldap.\n";
     return getCachedServices();
+  }
+  if ( $ldap_starttls_supported ) {
+    my $type="none";
+    if ($require_tls) {
+      $type="require";
+    }
+    my $result = $ldap->start_tls(
+         verify => "$type",
+         capath => "/opt/zimbra/conf/ca",
+       );
+    if ($result->code) {
+      main::progress("Unable to start TLS: ". $result->error . " when connecting to ldap master.\n");
+      return 1;
+    }
   }
   unless ($result = $ldap->bind($ldap_dn, password => $ldap_pass)) {
     warn "Bind: Unable to determine enabled services from ldap.\n";
