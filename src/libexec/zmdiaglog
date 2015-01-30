@@ -675,6 +675,10 @@ sub run() {
         logmsg "ld.so.conf not present...skipping copy.\n";
     }
 
+    logmsg "Collecting server list from LDAP\n";
+    exec_with_timeout( "$SU '$ZMPROV gas' > zmprov-gas.txt 2>&1",
+        $timeout );
+
     logmsg
       "\n *** Diagnostics collection done. Data stored in $destination/.\n\n";
 
