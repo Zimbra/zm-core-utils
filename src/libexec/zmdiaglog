@@ -28,7 +28,7 @@ use File::Copy qw/cp/;
 use Zimbra::Mon::Zmstat;
 
 use vars qw(
-  $VERSION $PID_FILE $DEFAULT_DEST $JMAP $JAVA $JINFO $DEFAULT_TIMEOUT
+  $VERSION $PID_FILE $DEFAULT_DEST $DLOGDIR $JMAP $JAVA $JINFO $DEFAULT_TIMEOUT
   $HAVE_GCORE $HAVE_PSTACK $HAVE_LSOF $HAVE_DMESG $LOG_FILE $ZMSTAT_CONF
   $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT $HAVE_MYSQL $ZMMYTOP $ZMINNOTOP
 );
@@ -48,8 +48,8 @@ if ( !-d $zimbra_tmp_directory ) {
     File::Path::mkpath("$zimbra_tmp_directory");
 }
 
-$DEFAULT_DEST =
-    "$zimbra_tmp_directory/zmdiaglog-$ZMHOSTNAME."
+$DEFAULT_DEST = "$zimbra_tmp_directory";
+$DLOGDIR = "zmdiaglog-$ZMHOSTNAME."
   . strftime( "%Y%m%d-%H%M%S", localtime() ) . "."
   . $$;
 $DEFAULT_TIMEOUT                    = 120;
@@ -303,7 +303,7 @@ sub run() {
         exit 1;
     }
 
-    my $destination = $options{'d'};
+    my $destination = "$options{'d'}/$DLOGDIR";
     $destination = File::Spec->rel2abs($destination);
     my $timeout = $options{'t'};
 
