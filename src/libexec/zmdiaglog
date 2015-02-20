@@ -78,7 +78,8 @@ $SU        = "su - zimbra -c -l " if ( isMac() );
 sub logmsg($) {
     my $msg = shift;
     open( LOGFILE, ">>$LOG_FILE" );
-    print LOGFILE $msg;
+    my $logstamp = strftime( "%F %T", localtime() );
+    print LOGFILE "$logstamp $msg";
     close(LOGFILE);
     print $msg;
 }
