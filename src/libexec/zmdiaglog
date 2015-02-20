@@ -250,9 +250,9 @@ zmdiaglog [-a | -c] [-d DESTINATION] [-t TIMEOUT] [-j] [-z | -Z]
     -d    - Log destination (Default $DEFAULT_DEST)
     -t    - Timeout in seconds for hanging commands (Default $DEFAULT_TIMEOUT)
     -j    - Also include the output of /opt/zimbra/libexec/zmjavawatch
-    -z    - Archive data collected by zmdiaglog into a zip file and leave data
+    -z    - Archive data collected by zmdiaglog to a bzip2 tar archive and leave data
             collection directory intact.
-    -Z    - Archive data collected by zmdiaglog into a zip file AND remove
+    -Z    - Archive data collected by zmdiaglog to a bzip2 tar archive AND remove
             data collection directory.
     -h    - Display this help message.
 EOF
@@ -687,23 +687,24 @@ sub run() {
     chomp($dirname);
     chomp( $dirname = qx(basename $dirname) );
     if ( $options{'z'} || $options{'Z'} ) {
-        logmsg "Zipping contents of $destination into $destination.zip\n";
+        my $ext = "tar.bz2";
+        logmsg "Saving contents of $destination to bzip2 archive $destination.$ext\n";
         $LOG_FILE = "$destination/$LOG_FILE";
         chdir('..');
         my $rc = 0xffff &
-          system("nice -n 19 zip -9r $dirname.zip $dirname/ >> $LOG_FILE 2>&1");
-        if ( ( $rc == 0 ) && ( -e "$destination.zip" ) ) {
-            logmsg "\n *** Zipfile \"$destination.zip\" created.\n";
+          system("nice -n 19 /bin/tar jcf $dirname.$ext $dirname/ >> $LOG_FILE 2>&1");
+        if ( ( $rc == 0 ) && ( -e "$destination.$ext" ) ) {
+            logmsg "\n *** Archive $destination.$ext has been created.\n";
             remove_data_dir($destination) if ( $options{'Z'} );
         }
         else {
             logmsg
-"An error occurred creating $destination.zip. Leaving data collection directory intact.\n";
+"An error occurred creating $destination.$ext. Leaving data collection directory intact.\n";
             logmsg "$0 run complete\n";
         }
     }
     else {
-        logmsg "Skipping zip creation.\n";
+        logmsg "Skipping bzip2 archive creation.\n";
         logmsg "$0 run complete\n";
     }
 }
