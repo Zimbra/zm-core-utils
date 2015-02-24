@@ -26,6 +26,7 @@ use File::Spec;
 use File::Path;
 use File::Copy qw/cp/;
 use Zimbra::Mon::Zmstat;
+use Digest::MD5;
 
 use vars qw(
   $VERSION $PID_FILE $DEFAULT_DEST $DLOGDIR $JMAP $JAVA $JINFO $DEFAULT_TIMEOUT
@@ -683,8 +684,7 @@ sub run() {
     logmsg
       "\n *** Diagnostics collection done. Data stored in $destination/.\n\n";
 
-    my $dirname = qx(pwd);
-    chomp($dirname);
+    chomp( my $dirname = qx(pwd) );
     chomp( $dirname = qx(basename $dirname) );
     if ( $options{'z'} || $options{'Z'} ) {
         my $ext = "tar.bz2";
@@ -692,9 +692,19 @@ sub run() {
         $LOG_FILE = "$destination/$LOG_FILE";
         chdir('..');
         my $rc = 0xffff &
-          system("nice -n 19 /bin/tar jcf $dirname.$ext $dirname/ >> $LOG_FILE 2>&1");
+          system("nice -n 19 /bin/tar jcf $destination.$ext $dirname >> $LOG_FILE 2>&1");
         if ( ( $rc == 0 ) && ( -e "$destination.$ext" ) ) {
-            logmsg "\n *** Archive $destination.$ext has been created.\n";
+            logmsg "bzip2 archive created\n";
+            logmsg "Computing MD5 digest\n";
+            open(my $fh, "<", "$destination.$ext")
+              or die "cannot open file for reading";
+            my $ctx = Digest::MD5->new;
+            $ctx->addfile($fh);
+            my $md5 = $ctx->hexdigest;
+            close $fh;
+            logmsg "MD5 digest: $md5\n";
+            rename "$destination.$ext", "$destination-$md5.$ext";
+            logmsg "\n***Archive $destination-$md5.$ext complete.\n";
             remove_data_dir($destination) if ( $options{'Z'} );
         }
         else {
