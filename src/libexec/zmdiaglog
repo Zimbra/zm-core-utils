@@ -20,7 +20,7 @@ use strict;
 use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Util::Common;
 
-use Getopt::Std;
+use Getopt::Long;
 use POSIX qw(strftime);
 use File::Spec;
 use File::Path;
@@ -284,29 +284,36 @@ sub remove_data_dir($) {
 
 # "main"
 sub run() {
-    my %options;
-    $options{'d'} = $DEFAULT_DEST;
-    $options{'t'} = $DEFAULT_TIMEOUT;
-    getopts( 'd:t:jhaczZ', \%options );
+    Getopt::Long::Configure ("bundling");
+    my %options = ('t' => $DEFAULT_TIMEOUT);
+    my $opt_result =
+        GetOptions (\%options,
+                    't=i',
+                    'd:s',
+                    'h' => sub{ usage( \*STDERR ); exit 0; },
+                    'j', 'a', 'c', 'z', 'Z');
 
-    if ( $options{'h'} ) {
+    $options{d} = $DEFAULT_DEST if ( $options{d} eq "" );
+
+    if (! $opt_result) {
         usage( \*STDERR );
-        exit(0);
+        exit();
     }
+
     if ( $< != 0 ) {
         print STDERR "zmdiaglog needs to be run as root\n";
         exit 1;
     }
 
-    if ( $options{'a'} && $options{'c'} ) {
+    if ( $options{a} && $options{c} ) {
         print STDERR "ERROR: Specify only one of -a or -c.\n";
         usage( \*STDERR );
         exit 1;
     }
 
-    my $destination = "$options{'d'}/$DLOGDIR";
+    my $destination = "$options{d}/$DLOGDIR";
     $destination = File::Spec->rel2abs($destination);
-    my $timeout = $options{'t'};
+    my $timeout = $options{t};
 
     if ( !-d $destination ) {
         File::Path::mkpath("$destination");
@@ -325,7 +332,7 @@ sub run() {
 
     my $mailboxd_pid = get_pid();
     logmsg "No '-a' argument, skipping heap/coredump collection.\n"
-      if ( !$options{'a'} );
+      if ( !$options{a} );
     logmsg "Saving diagnostic logging output to: $destination\n";
 
     my $JAVA_VERSION = get_java_version();
@@ -489,15 +496,15 @@ sub run() {
             system($zminnotop);
         }
 
-        if ( $options{'j'} ) {
+        if ( $options{j} ) {
             system("/opt/zimbra/libexec/zmjavawatch > zmjavawatch.log 2>&1");
         }
         my $dumped =
           save_heap_info( $JAVA_VERSION, $destination, $mailboxd_pid, $timeout )
-          if ( $options{'a'} );
+          if ( $options{a} );
 
         save_jvm_core( $JAVA_VERSION, $mailboxd_pid )
-          if ( $options{'c'} || ( !$dumped && $options{'a'} ) );
+          if ( $options{c} || ( !$dumped && $options{a} ) );
 
         logmsg "Heap dump processing complete. It is now safe to restart mailboxd.\n";
     }
@@ -686,7 +693,7 @@ sub run() {
 
     chomp( my $dirname = qx(pwd) );
     chomp( $dirname = qx(basename $dirname) );
-    if ( $options{'z'} || $options{'Z'} ) {
+    if ( $options{z} || $options{Z} ) {
         my $ext = "tar.bz2";
         logmsg "Saving contents of $destination to bzip2 archive $destination.$ext\n";
         $LOG_FILE = "$destination/$LOG_FILE";
@@ -705,7 +712,7 @@ sub run() {
             logmsg "MD5 digest: $md5\n";
             rename "$destination.$ext", "$destination-$md5.$ext";
             logmsg "\n***Archive $destination-$md5.$ext complete.\n";
-            remove_data_dir($destination) if ( $options{'Z'} );
+            remove_data_dir($destination) if ( $options{Z} );
         }
         else {
             logmsg
