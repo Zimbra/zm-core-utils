@@ -1,9 +1,9 @@
-#!/bin/bash
-#
+#!/usr/bin/python
+# 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2015 Zimbra, Inc.
-#
+# 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software Foundation,
 # version 2 of the License.
@@ -17,8 +17,7 @@
 #
 #
 #
-# Consul CHECK script for Zimbra MailStoreServer & MailStoreSSLServer.
-# See https://www.consul.io/docs/agent/checks.html
+# Consul CHECK script for Zimbra MailStoreServer & MailStoreSSLServer. See https://www.consul.io/docs/agent/checks.html
 #
 # Return:
 #   0 if check is passing
@@ -26,13 +25,28 @@
 #   (other) if check is failing
 #
 
-URL="$1"
-RES=`curl -sw '%{http_code}' -I -k -o /dev/null ${URL}`
+import argparse
+import urllib2
 
-if [[ $RES -eq 200 ]]; then
-	echo "${URL}... OK"
-	exit 0
-else
-	echo "${URL}... FAILED"
-	exit 2
-fi
+arg_parser = argparse.ArgumentParser()
+arg_parser.add_argument('-url', help='URL', default='https://127.0.0.1/service/soap')
+arg_parser.add_argument('-timeout', help='Timeout in seconds', type=int, default=10)
+args = arg_parser.parse_args()
+
+
+data = """<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+<soap:Body><PingRequest xmlns="urn:zimbraAccount"/></soap:Body>
+</soap:Envelope>"""
+
+try:
+	req = urllib2.Request(args.url)
+	req.add_header('Content-Type', 'text/xml')
+	res = urllib2.urlopen(req, data, args.timeout);
+	print "{0}... OK".format(args.url)
+
+except (urllib2.HTTPError, urllib2.URLError) as err:
+	print "{0}... FAILED: {1}".format(args.url, err)
+	exit(2)
+except socket.timeout, err:
+	print "{0}... FAILED: {1}".format(args.url, err)
+	exit(2)
