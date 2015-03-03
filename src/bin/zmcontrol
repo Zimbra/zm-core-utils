@@ -468,7 +468,7 @@ sub getEnabledServices {
          capath => "/opt/zimbra/conf/ca",
        );
     if ($result->code) {
-      main::progress("Unable to start TLS: ". $result->error . " when connecting to ldap master.\n");
+      warn "Unable to start TLS: ". $result->error . " when connecting to ldap master.\n";
       return 1;
     }
   }
