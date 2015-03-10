@@ -291,7 +291,14 @@ sub run() {
                     't=i',
                     'd:s',
                     'h' => sub{ usage( \*STDERR ); exit 0; },
-                    'j', 'a', 'c', 'z', 'Z');
+                    'j', 'a', 'c', 'z', 'Z',
+                    '' => sub{ print "Error: '-' must be followed by a valid option.\n";
+                               usage( \*STDERR );
+                               exit 1; },
+                    '<>' => sub{ warn("Error: unexpected argument(s): @_\n");
+                                 usage( \*STDERR );
+                                 exit 1; }
+                   );
 
     $options{d} = $DEFAULT_DEST if ( $options{d} eq "" );
 
