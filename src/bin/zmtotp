@@ -1,13 +1,13 @@
 #!/bin/bash
-# 
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2014 Zimbra, Inc.
-# 
+# Copyright (C) 2008, 2009, 2010, 2012, 2013, 2014 Zimbra, Inc.
+#
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software Foundation,
 # version 2 of the License.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
@@ -15,23 +15,6 @@
 # If not, see <http://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
 #
-#
-# 
-# Consul CHECK script for Zimbra "webAdmin" app. See https://www.consul.io/docs/agent/checks.html
-#
-# Return:
-#   0 if check is passing
-#   1 if check is warning
-#   (other) if check is failing
-# 
+source /opt/zimbra/bin/zmshutil || exit 1
 
-URL="$1"
-RES=`curl -sw '%{http_code}' -I -k -o /dev/null ${URL}`
-
-if [[ $RES -eq 200 ]]; then
-	echo "${URL}... OK"
-	exit 0
-else
-	echo "${URL}... FAILED"
-	exit 2
-fi
+exec `dirname $0`/zmjava com.zimbra.cs.account.auth.twofactor.TOTPUtil "$@"
