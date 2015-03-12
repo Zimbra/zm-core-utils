@@ -29,7 +29,7 @@ import argparse
 import urllib2
 
 arg_parser = argparse.ArgumentParser()
-arg_parser.add_argument('-url', help='URL', default='https://127.0.0.1/service/soap')
+arg_parser.add_argument('-url', help='URL', default='https://127.0.0.1')
 arg_parser.add_argument('-timeout', help='Timeout in seconds', type=int, default=10)
 args = arg_parser.parse_args()
 
@@ -39,7 +39,7 @@ data = """<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
 </soap:Envelope>"""
 
 try:
-	req = urllib2.Request(args.url)
+	req = urllib2.Request(args.url + '/service/soap')
 	req.add_header('Content-Type', 'text/xml')
 	res = urllib2.urlopen(req, data, args.timeout);
 	print "{0}... OK".format(args.url)
