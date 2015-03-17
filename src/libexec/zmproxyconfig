@@ -278,10 +278,6 @@ if ($options{e}) {
                "zimbraReverseProxyLookupTarget TRUE ".
                "zimbraReverseProxyHttpEnabled TRUE\n";
 
-               if ($SSLToUp ne "REMAIN") {
-                   print ZMPROV "ms $hostname zimbraReverseProxySSLToUpstreamEnabled $SSLToUp\n"
-               }
-
                if ($options{C}) {
                    print ZMPROV "ms $hostname ".
                    "zimbraReverseProxyAdminEnabled TRUE ".
@@ -295,6 +291,10 @@ if ($options{e}) {
                    "zimbraAdminProxyPort $n2\n";
                }
             }
+            if ($SSLToUp ne "REMAIN") {
+                 print ZMPROV "ms $hostname zimbraReverseProxySSLToUpstreamEnabled $SSLToUp\n";
+            }
+
             if (!isEnabled("zimbra-proxy")) {
                  print ZMPROV "ms $hostname ".
                       "+zimbraServiceEnabled proxy\n";
@@ -326,10 +326,6 @@ if ($options{e}) {
                "zimbraReverseProxyLookupTarget TRUE ".
                "zimbraMailMode $storeMailMode\n";
 
-               if ($SSLToUp ne "REMAIN") {
-                   print ZMPROV "ms $hostname zimbraReverseProxySSLToUpstreamEnabled $SSLToUp\n"
-               }
-
                if ($options{C}) {
                    print ZMPROV "ms $hostname ".
                    "zimbraReverseProxyAdminEnabled TRUE ".
@@ -342,6 +338,9 @@ if ($options{e}) {
                    "zimbraAdminPort $n2 ".
                    "zimbraAdminProxyPort $n2\n";
                }
+            }
+            if ($SSLToUp ne "REMAIN") {
+                print ZMPROV "ms $hostname zimbraReverseProxySSLToUpstreamEnabled $SSLToUp\n";
             }
        }
        if (isInstalled("zimbra-proxy")) {
@@ -368,10 +367,6 @@ if ($options{e}) {
                  "zimbraReverseProxyMailMode $proxyMailMode ".
                  "zimbraReverseProxyHttpEnabled TRUE\n";
 
-                if ($SSLToUp ne "REMAIN") {
-                    print ZMPROV "ms $hostname zimbraReverseProxySSLToUpstreamEnabled $SSLToUp\n"
-                }
-
                if ($options{C}) {
                    print ZMPROV "ms $hostname ".
                    "zimbraReverseProxyAdminEnabled TRUE ".
@@ -385,6 +380,10 @@ if ($options{e}) {
                    "zimbraAdminProxyPort $n2\n";
                }
             }
+            if ($SSLToUp ne "REMAIN") {
+                 print ZMPROV "ms $hostname zimbraReverseProxySSLToUpstreamEnabled $SSLToUp\n";
+            }
+
             if (!isEnabled("zimbra-proxy")) {
                  print ZMPROV "ms $hostname ".
                       "+zimbraServiceEnabled proxy\n";
