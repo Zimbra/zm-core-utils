@@ -300,6 +300,7 @@ sub run() {
                                  exit 1; }
                    );
 
+    die "Error: Timeout must be greater than 0.\n" unless $options{t} > 0;
     $options{d} = $DEFAULT_DEST if ( $options{d} eq "" );
 
     if (! $opt_result) {
