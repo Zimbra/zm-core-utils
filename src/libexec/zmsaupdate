@@ -45,10 +45,10 @@ if ($help) {
   usage(0);
 }
 
-my $zmlocalconfig = "/opt/zimbra/bin/zmlocalconfig";
-my $rule_updates_enabled = getLocalConfig("antispam_enable_rule_updates");
-if (lc($rule_updates_enabled) =~ /true/) { $rule_updates_enabled= 1; }
-if (lc($rule_updates_enabled) =~ /false/) { $rule_updates_enabled= 0; }
+my $ldap_antispam_enable_rule_updates =  getLdapServerValue("zimbraAntiSpamEnableRuleUpdates");
+my $rule_updates_enabled;
+if ($ldap_antispam_enable_rule_updates eq "TRUE") { $rule_updates_enabled= 1; }
+if ($ldap_antispam_enable_rule_updates eq "FALSE") { $rule_updates_enabled= 0; }
 
 if (!$rule_updates_enabled) {
   exit;
@@ -59,16 +59,17 @@ my $sa="/opt/zimbra/zimbramon/bin/sa-update -v --allowplugins --refreshmirrors >
 my $restart="/opt/zimbra/bin/zmamavisdctl restart norewrite >/dev/null 2>&1";
 my $compile="/opt/zimbra/libexec/zmsacompile >/dev/null 2>&1";
 
-my $restart_enabled = getLocalConfig("antispam_enable_restarts");
 my $restart_required;
 
-my $compile_rules=getLocalConfig("antispam_enable_rule_compilation");
+my $ldap_antispam_enable_restart = getLdapServerValue("zimbraAntiSpamEnableRestarts");
+my $restart_enabled;
+if ($ldap_antispam_enable_restart eq "TRUE") { $restart_enabled = 1; }
+if ($ldap_antispam_enable_restart eq "FALSE") { $restart_enabled = 0; }
 
-if (lc($restart_enabled) =~ /true/) { $restart_enabled = 1; }
-if (lc($restart_enabled) =~ /false/) { $restart_enabled = 0; }
-
-if (lc($compile_rules) =~ /true/) { $compile_rules = 1; }
-if (lc($compile_rules) =~ /false/) { $compile_rules = 0; }
+my $ldap_antispam_enable_rule_compilation = getLdapServerValue("zimbraAntiSpamEnableRuleCompilation");
+my $compile_rules;
+if ($ldap_antispam_enable_rule_compilation eq "TRUE") { $compile_rules = 1; }
+if ($ldap_antispam_enable_rule_compilation eq "FALSE") { $compile_rules = 0; }
 
 qx($sa);
 my $rc = $?>>8;
