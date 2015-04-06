@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/bin/bash
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
@@ -25,26 +25,15 @@
 #   (other) if check is failing
 #
 
-import argparse
-import urllib2
+URL="$1"
+RES=`curl -sw '%{http_code}' -I -k -o /dev/null ${URL}`
 
-arg_parser = argparse.ArgumentParser()
-arg_parser.add_argument('-url', help='URL', default='https://127.0.0.1/redolog/health')
-arg_parser.add_argument('-timeout', help='Timeout in seconds', type=int, default=10)
-args = arg_parser.parse_args()
+if [[ $RES -eq 200 ]]; then
+    echo "${URL}... OK"
+    exit 0
+else
+    echo "${URL}... FAILED"
+    exit 2
+fi
 
 
-
-
-try:
-	req = urllib2.Request(args.url)
-	req.add_header('Content-Type', 'text/plain')
-	res = urllib2.urlopen(req, None, args.timeout);
-	print "{0}... OK".format(args.url)
-
-except (urllib2.HTTPError, urllib2.URLError) as err:
-	print "{0}... FAILED: {1}".format(args.url, err)
-	exit(2)
-except socket.timeout, err:
-	print "{0}... FAILED: {1}".format(args.url, err)
-	exit(2)
