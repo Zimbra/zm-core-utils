@@ -226,6 +226,7 @@ sub doStatus {
 	my $status = 0;
 	print "Host $localHostName\n";
 	foreach (sort keys %{$services}) {
+		if ($_ eq "syncshare") {next;}
 		my $rc = 0xffff & system ("$allservices{$_} status > $statusfile 2> $errfile");
 		$rc = $rc >> 8;
 		if ($rc) {
@@ -319,6 +320,7 @@ sub doStartup {
 	checkAvailableSpace();
 	foreach (sort {$startorder{$a} <=> $startorder{$b}} keys %{$services}) {
 		if ($_ eq "ldap") {next;}
+		if ($_ eq "syncshare") {next;}
 		checkAvailableServiceSpace($_);
 		Zimbra::Mon::Logger::Log ("info", "Starting $_ via zmcontrol");
 		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
