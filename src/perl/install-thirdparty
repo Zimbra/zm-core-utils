@@ -34,6 +34,8 @@ my $COMMON_DEFS = dirname($0) . "/../../../ZimbraBuild/defs/plat_common.def";
 my $P4_ROOT = $THIRD_PARTY_BUILDS_DIR . getPlatformDirName();
 my $PLATFORM_DIR_NAME = getPlatformDirName();
 my $JETTY_P4_PATH = "//depot/zimbra/$ARGV[0]/ThirdParty/jetty";
+my $SOLR_P4_PATH = "//depot/zimbra/$ARGV[0]/ThirdParty/solr/binary";
+
 my %BINARIES = (
     "curl" => "7.38.0",
     "cyrus-sasl" => "2.1.26.2z",
@@ -44,7 +46,8 @@ my %BINARIES = (
     "openssl" => "1.0.1i",
     "rsync" => "3.1.1",
     "tcmalloc" => "2.2",
-    "jetty" => "distribution-9.1.5.v20140505"
+    "jetty" => "distribution-9.1.5.v20140505",
+    "solr" => "5.0.0"
 );
 
 if (index($PLATFORM_DIR_NAME, "MACOSX") != -1) {
@@ -110,6 +113,8 @@ for my $binaryName (keys %BINARIES) {
         $p4Path = "$P4_ROOT/openldap/openldap-libs-$version.tgz";
     } elsif ($binaryName eq "jetty") {
         $p4Path = "$JETTY_P4_PATH/jetty-$version.tar.gz";
+    } elsif ($binaryName eq "solr") { 
+    	$p4Path = "$SOLR_P4_PATH/$binaryName-$version.tgz";
     } else {
         $p4Path = "$P4_ROOT/$binaryName/$binaryName-$version.tgz";
     }
