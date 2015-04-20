@@ -65,7 +65,6 @@ components="\
   curl \
   cyrus-sasl \
   altermime \
-  dspam \
   heimdal \
   httpd \
   keyview \
@@ -239,6 +238,29 @@ if [ -d /opt/zimbra ]; then
       chmod 700 /opt/zimbra/convertd/convert
     fi
   fi
+  
+  if [ -d /opt/zimbra/solr ]; then
+    chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/solr
+    chmod 755 /opt/zimbra/solr
+    if [ -d /opt/zimbra/solr/configsets ]; then
+      chmod 755 /opt/zimbra/solr/configsets
+    fi    
+    if [ -d /opt/zimbra/solr/configsets/zimbra ]; then
+      chmod 755 /opt/zimbra/solr/configsets/zimbra
+    fi
+    if [ -d /opt/zimbra/solr/configsets/zimbra/conf ]; then
+      chmod 755 /opt/zimbra/solr/configsets/zimbra/conf
+    fi
+    if [ -d /opt/zimbra/solr/configsets/zimbra/conf/lang ]; then
+      chmod 755 /opt/zimbra/solr/configsets/zimbra/conf/lang
+    fi
+    if [ -d /opt/zimbra/solr/lib ]; then
+      chmod 755 /opt/zimbra/solr/lib
+    fi
+    if [ -d /opt/zimbra/solr/lib/custom ]; then
+      chmod 755 /opt/zimbra/solr/lib/custom
+    fi
+  fi  
 
   if [ -d /opt/zimbra/conf ]; then
     printMsg "Fixing ownership and permissions on /opt/zimbra/conf"
@@ -454,13 +476,6 @@ if [ -L /opt/zimbra/cyrus-sasl ]; then
   fi
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/sasl2/state
   chmod 755 /opt/zimbra/data/sasl2/state 
-fi
-
-if [ -L /opt/zimbra/dspam ]; then
-  if [ ! -d "/opt/zimbra/data/dspam" ]; then
-    mkdir -p /opt/zimbra/data/dspam
-  fi
-  chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/dspam
 fi
 
 if [ -L /opt/zimbra/altermime ]; then
