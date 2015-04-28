@@ -320,7 +320,16 @@ sub doStartup {
 	checkAvailableSpace();
 	foreach (sort {$startorder{$a} <=> $startorder{$b}} keys %{$services}) {
 		if ($_ eq "ldap") {next;}
-		if ($_ eq "syncshare") {next;}
+		if ($_ eq "syncshare") {
+		    $rrc = 0xffff & system("/opt/zimbra/bin/zmresolverctl");
+		    $rrc = $rrc >> 8;
+		    if ($rrc) {
+	 	        print "resolvers.conf file generation failed.\n";
+		    } else {
+		        print "resolvers.conf file generated successfully.\n";
+            	    }
+		    next;
+		}
 		checkAvailableServiceSpace($_);
 		Zimbra::Mon::Logger::Log ("info", "Starting $_ via zmcontrol");
 		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
