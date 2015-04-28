@@ -83,7 +83,7 @@ SOLR_PID_DIR==${zimbra_log_directory}
 
 # Path to a directory where Solr creates index files, the specified directory
 # must contain a solr.xml; by default, Solr will use server/solr
-SOLR_HOME=/opt/zimbra/solr/solr
+SOLR_HOME=/opt/zimbra/data/solr
 
 # Solr provides a default Log4J configuration properties file in server/resources
 # however, you may want to customize the log settings and file appender location
