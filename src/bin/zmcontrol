@@ -320,7 +320,8 @@ sub doStartup {
 	checkAvailableSpace();
 	foreach (sort {$startorder{$a} <=> $startorder{$b}} keys %{$services}) {
 		if ($_ eq "ldap") {next;}
-		if ($_ eq "syncshare") {
+		if ($_ eq "syncshare") {next;}
+		if ($_ eq "proxy") {
 		    $rrc = 0xffff & system("/opt/zimbra/bin/zmresolverctl");
 		    $rrc = $rrc >> 8;
 		    if ($rrc) {
