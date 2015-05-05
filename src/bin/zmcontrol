@@ -326,10 +326,7 @@ sub doStartup {
 		    $rrc = $rrc >> 8;
 		    if ($rrc) {
 	 	        print "resolvers.conf file generation failed.\n";
-		    } else {
-		        print "resolvers.conf file generated successfully.\n";
-            	    }
-		    next;
+		    }
 		}
 		checkAvailableServiceSpace($_);
 		Zimbra::Mon::Logger::Log ("info", "Starting $_ via zmcontrol");
