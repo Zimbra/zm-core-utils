@@ -1,0 +1,183 @@
+#!/bin/bash
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2010, 2011, 2013, 2014 Zimbra, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <http://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+
+export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+
+zuser="zimbra"
+
+if [ x`whoami` != "x$zuser" ]; then
+    echo "ERROR: ${0##*/} must be run as user '$zuser'"
+    exit 1
+fi
+
+# this seems wasteful for just for zimbra_log_directory...
+source "${0%/*}/zmshutil" || exit 1
+zmsetvars
+
+DEBUG=
+execf="/opt/zimbra/sbin/consul"
+execn="consul"
+
+# note: consul uses up to 5 different tcp/udp ports
+# - TBD: command line args vs. config file
+#   refs:
+#     https://www.consul.io/docs/agent/options.html
+#     https://www.consul.io/docs/agent/options.html#configuration_files
+# -data-dir | "data_dir": ...
+# -syslog | "enable_syslog": true, "syslog_facility": ...
+# -server | "server": true
+# -bind | "bind_addr": ...
+agentargs="-server -pid-file '$pidfile'"
+cnffile="/opt/zimbra/conf/consul.conf"
+pidfile="${zimbra_log_directory}/consul.pid"
+
+# returns (via stdout) pid found via pidfile
+function pid_pidfile()
+{
+    pid=""
+    if [ -r "$pidfile" ]; then
+        read pid < "$pidfile"
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: pid_pidfile ret($pid)" >&2
+    echo $pid
+}
+
+# returns (via stdout) pid running as $zuser found via ps
+function pid_ps()
+{
+    pid=$(ps auxwww | awk "/$zuser"'[[:space:]]/ && /[c]onsul/ {print $2}')
+    [ -z "$DEBUG" ] || echo "DEBUG: pid_ps ret($pid)" >&2
+    echo "$pid"
+}
+
+function checkrunning_ps()
+{
+    pid=$(pid_ps)
+    if [ "x$pid" != "x" ]; then
+        kill -0 "$pid" 2>/dev/null
+        if [ $? != 0 ]; then # not our process?
+            echo "WARN: process check failed, not our pid(s)? $pid" >&2
+            pid=""
+        fi
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: checkrunning_ps ret($pid)" >&2
+    echo "$pid"
+}
+
+function checkrunning()
+{
+    pid=$(pid_pidfile)
+    if [ "x$pid" != "x" ]; then
+        kill -0 "$pid" 2>/dev/null
+        if [ $? != 0 ]; then # no process or not our process
+            [ -z "$DEBUG" ] || echo "DEBUG: kill -0 '$pid' failed, stale pidfile($pidfile)?" >&2
+            pspid=$(pid_ps)
+            if [ "$pid" = "$pspid" ]; then
+                echo "WARN: check process (kill -0) '$pid', permission denied?" >&2
+            else
+                if [ "x$pspid" != "x" ]; then
+                    echo "WARN: unexpected running process(es): $pspid (!= $pid in $pidfile)" >&2
+                fi
+
+                # clear out the pidfile and hope for the best
+                [ -z "$DEBUG" ] || echo "DEBUG: set pid='' and remove pidfile '$pidfile'" >&2
+                rm "$pidfile" || echo "ERROR: remove stale '$pidfile' pid='$pid' failed" >&2
+                pid=""
+            fi
+        fi
+    else
+        pid=$(checkrunning_ps)
+        if [ -n "$pid" ]; then
+            echo "WARN: found running pid($pid) not in '$pidfile'!" >&2
+        fi
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: checkrunning ret($pid) pidfile($pidfile)" >&2
+    echo "$pid"
+}
+
+function start() {
+    if [ ! -x "$execf" ]; then
+        echo "ERROR: unable to execute '$execf'" >&2
+        return 1
+    fi
+    if [ -r "$cnffile" ]; then
+        args="-config-file '$cnffile'"
+    fi
+    echo -n "Starting $execn..."
+    pid=$(checkrunning)
+    "$execf" agent $agentargs $args
+    ret=$?
+    [ $ret = 0 ] && echo "done" || echo "failed"
+    return $ret
+}
+
+# use kill -INT per https://www.consul.io/docs/agent/basics.html
+# could use command: consul leave
+function stop() {
+    echo -n "Stopping $execn..."
+    pid=$(checkrunning)
+    ret=0
+    if [ -n "$pid" ]; then
+        kill -INT "$pid"
+        ret=$?
+    fi
+    [ $ret = 0 ] && echo "done" || echo "failed"
+    return $ret
+}
+
+function restart() {
+    stop
+    start
+    return $?
+}
+
+# could use command: consul reload
+#function reload() {
+#}
+
+function status() {
+    echo -n "$execn is "
+    pid=$(checkrunning)
+    ret=0
+    if [ -z "$pid" ]; then
+        ret=1
+        echo -n "not "
+    fi
+    echo "running"
+    return $ret
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    reload|restart)
+        restart
+        ;;
+    status)
+        status
+        ;;
+    *)
+        echo "usage: ${0##*/} {start|stop|reload|restart|status}" >&2
+        exit 1
+esac
+
+exit $?
