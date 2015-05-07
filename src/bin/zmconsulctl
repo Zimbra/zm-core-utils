@@ -29,8 +29,9 @@ fi
 source "${0%/*}/zmshutil" || exit 1
 zmsetvars
 
+# note: DEBUG=anything will give verbose debug output
 DEBUG=
-execf="/opt/zimbra/sbin/consul"
+execf="/opt/zimbra/common/sbin/consul"
 execn="consul"
 
 # note: consul uses up to 5 different tcp/udp ports
