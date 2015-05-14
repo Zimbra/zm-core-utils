@@ -25,7 +25,9 @@ if [ x`whoami` != "x$zuser" ]; then
     exit 1
 fi
 
-# this seems wasteful for just for zimbra_log_directory...
+# set:
+#   ${ldap_host} ${ldap_is_master}
+#   ${zimbra_log_directory} ${zimbra_server_hostname}
 source "${0%/*}/zmshutil" || exit 1
 zmsetvars
 
@@ -34,18 +36,40 @@ DEBUG=
 execf="/opt/zimbra/common/sbin/consul"
 execn="consul"
 
-# note: consul uses up to 5 different tcp/udp ports
+# NOTE: consul uses up to 5 different tcp/udp ports
 # - TBD: command line args vs. config file
 #   refs:
 #     https://www.consul.io/docs/agent/options.html
 #     https://www.consul.io/docs/agent/options.html#configuration_files
-# -data-dir | "data_dir": ...
-# -syslog | "enable_syslog": true, "syslog_facility": ...
-# -server | "server": true
-# -bind | "bind_addr": ...
-agentargs="-server -pid-file '$pidfile'"
+
+# HACKS: redo/revisit in the future (bugs: 98650, 98651)
+# - IF on LDAP master localconfig(ldap_is_master=true)
+#   - use -server (OK)
+#   - use -bootstrap-expect=1 (BAD assumption)
+#     - NOTE: this will fail miserably with a cluster and must be revisited/fixed
+# - ELSE
+#   - use -client (OK)
+#   - use -join=localconfig(ldap_host) (BAD assumption) 
+#     - NOTE: need to use list of MMR hosts
+if [ "x${ldap_is_master}" = "xtrue" ]; then
+    agentargs="-server -bootstrap-expect=1"
+else
+    agentargs="-join=${ldap_host}"
+fi
+
+# - Instead of logfile=/opt/zimbra/log/consul.log
+#   - use -syslog, note LOCAL0 is used by default (/var/log/zimbra.log)
+# - TODO:
+#   - use -rejoin to rejoin a cluster
+#   - define mechanism to go from -bootstrap-expect=1 to a cluster
+#   - TBD: -bind | "bind_addr": ...
+
 cnffile="/opt/zimbra/conf/consul.conf"
+datadir="/opt/zimbra/data/consul"
 pidfile="${zimbra_log_directory}/consul.pid"
+
+baseargs="-node='${zimbra_server_hostname}' -data-dir='$datadir' -pid-file='$pidfile' -syslog"
+agentargs="$agentargs $baseargs"
 
 # returns (via stdout) pid found via pidfile
 function pid_pidfile()
@@ -116,12 +140,17 @@ function start() {
         echo "ERROR: unable to execute '$execf'" >&2
         return 1
     fi
+    if [ ! -d "$datadir" ]; then
+        echo "ERROR: data-dir '$datadir' does not exist" >&2
+        return 1
+    fi
+    confargs=""
     if [ -r "$cnffile" ]; then
-        args="-config-file '$cnffile'"
+        confargs="-config-file='$cnffile'"
     fi
     echo -n "Starting $execn..."
     pid=$(checkrunning)
-    "$execf" agent $agentargs $args
+    "$execf" agent $agentargs $confargs
     ret=$?
     [ $ret = 0 ] && echo "done" || echo "failed"
     return $ret

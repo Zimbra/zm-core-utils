@@ -343,6 +343,12 @@ if [ -d /opt/zimbra ]; then
   chmod 755 /opt/zimbra/data
   chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data
 
+  if [ ! -d /opt/zimbra/data/consul ]; then
+    mkdir -p /opt/zimbra/data/consul
+  fi
+  chmod 755 /opt/zimbra/data/consul
+  chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/consul
+
   if [ -d /opt/zimbra/extensions-network-extra ]; then
     chmod 755 /opt/zimbra/extensions-network-extra
     chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/extensions-network-extra
