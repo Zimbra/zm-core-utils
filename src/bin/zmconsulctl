@@ -20,7 +20,7 @@ export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 
 zuser="zimbra"
 
-if [ x`whoami` != "x$zuser" ]; then
+if [ "`whoami 2>/dev/null`" != "$zuser" ]; then
     echo "ERROR: ${0##*/} must be run as user '$zuser'"
     exit 1
 fi
@@ -32,7 +32,7 @@ source "${0%/*}/zmshutil" || exit 1
 zmsetvars
 
 # note: DEBUG=anything will give verbose debug output
-DEBUG=
+DEBUG=${DEBUG:-}
 execf="/opt/zimbra/common/sbin/consul"
 execn="consul"
 
@@ -49,17 +49,34 @@ execn="consul"
 #     - NOTE: this will fail miserably with a cluster and must be revisited/fixed
 # - ELSE
 #   - use -client (OK)
-#   - use -join=localconfig(ldap_host) (BAD assumption) 
+#   - use -join=localconfig(ldap_host) (BAD assumption)
 #     - NOTE: need to use list of MMR hosts
-if [ "x${ldap_is_master}" = "xtrue" ]; then
-    agentargs="-server -bootstrap-expect=1"
+
+# avoid: WARNING: It is highly recommended to set GOMAXPROCS higher than 1
+GOMAXPROCS=${GOMAXPROCS:-`nproc 2>/dev/null`}
+export GOMAXPROCS=${GOMAXPROCS:-2}
+
+# Other future TBD (must be tested!):
+# - need -advertise? If so, how do we decide which IP to advertise? refs:
+#   https://github.com/hashicorp/consul/issues/529
+#   https://github.com/hashicorp/consul/issues/725
+# - will things work in a mixed ipv4/ipv6 env and/or multiple interfaces?
+#   https://github.com/hashicorp/serf/issues/256
+if [ "${ldap_is_master}" = "true" ]; then
+    # avoid: Failed to start lan serf: Failed to parse advertise address
+    bindips=(
+        $(host "${zimbra_server_hostname}" | awk '/ address/ {print "-bind=" $NF}')
+    )
+ "${bindips[@]}"
+    agentargs=(-server -bootstrap-expect=1)
 else
-    agentargs="-join=${ldap_host}"
+    agentargs=(-join="${ldap_host}")
 fi
 
 # - Instead of logfile=/opt/zimbra/log/consul.log
 #   - use -syslog, note LOCAL0 is used by default (/var/log/zimbra.log)
 # - TODO:
+#   - use "disable_update_check": true # turn off phone home!
 #   - use -rejoin to rejoin a cluster
 #   - define mechanism to go from -bootstrap-expect=1 to a cluster
 #   - TBD: -bind | "bind_addr": ...
@@ -68,8 +85,8 @@ cnffile="/opt/zimbra/conf/consul.conf"
 datadir="/opt/zimbra/data/consul"
 pidfile="${zimbra_log_directory}/consul.pid"
 
-baseargs="-node='${zimbra_server_hostname}' -data-dir='$datadir' -pid-file='$pidfile' -syslog"
-agentargs="$agentargs $baseargs"
+agentargs+=(-node="${zimbra_server_hostname}" )
+agentargs+=(-data-dir="$datadir" -pid-file="$pidfile" -syslog)
 
 # returns (via stdout) pid found via pidfile
 function pid_pidfile()
@@ -85,7 +102,7 @@ function pid_pidfile()
 # returns (via stdout) pid running as $zuser found via ps
 function pid_ps()
 {
-    pid=$(ps auxwww | awk "/$zuser"'[[:space:]]/ && /[c]onsul/ {print $2}')
+    pid=$(ps auxwww | awk "/^$zuser"'[[:space:]]/ && /[c]onsul[[:space:]]/ {print $2}')
     [ -z "$DEBUG" ] || echo "DEBUG: pid_ps ret($pid)" >&2
     echo "$pid"
 }
@@ -93,7 +110,7 @@ function pid_ps()
 function checkrunning_ps()
 {
     pid=$(pid_ps)
-    if [ "x$pid" != "x" ]; then
+    if [ "$pid" != "" ]; then
         kill -0 "$pid" 2>/dev/null
         if [ $? != 0 ]; then # not our process?
             echo "WARN: process check failed, not our pid(s)? $pid" >&2
@@ -107,7 +124,7 @@ function checkrunning_ps()
 function checkrunning()
 {
     pid=$(pid_pidfile)
-    if [ "x$pid" != "x" ]; then
+    if [ "$pid" != "" ]; then
         kill -0 "$pid" 2>/dev/null
         if [ $? != 0 ]; then # no process or not our process
             [ -z "$DEBUG" ] || echo "DEBUG: kill -0 '$pid' failed, stale pidfile($pidfile)?" >&2
@@ -115,7 +132,7 @@ function checkrunning()
             if [ "$pid" = "$pspid" ]; then
                 echo "WARN: check process (kill -0) '$pid', permission denied?" >&2
             else
-                if [ "x$pspid" != "x" ]; then
+                if [ "$pspid" != "" ]; then
                     echo "WARN: unexpected running process(es): $pspid (!= $pid in $pidfile)" >&2
                 fi
 
@@ -144,15 +161,56 @@ function start() {
         echo "ERROR: data-dir '$datadir' does not exist" >&2
         return 1
     fi
-    confargs=""
+    confargs=()
     if [ -r "$cnffile" ]; then
-        confargs="-config-file='$cnffile'"
+        confargs=(-config-file="$cnffile")
     fi
     echo -n "Starting $execn..."
     pid=$(checkrunning)
-    "$execf" agent $agentargs $confargs
-    ret=$?
-    [ $ret = 0 ] && echo "done" || echo "failed"
+    if [ -n "$pid" ]; then
+        echo "already running pid($pid)!"
+        return $pid;
+    fi
+
+    # sigh... more hacks:
+    # 1. consul doesn't become a daemon!
+    # 2. consul writes to stdout even with -syslog
+    #    (holds on to the tty for stdin/stdout/stderr)
+
+    # avoid: Failed to start lan serf: Failed to parse advertise address
+    bindips=()
+    if [ "${ldap_is_master}" = "true" ]; then
+        ipmode=$(zmprov -l gs "${zimbra_server_hostname}" zimbraIPMode 2>/dev/null | awk '/ode:/ {print $NF}')
+        hostarg=""
+        if [ "$ipmode" = "ipv4" ]; then
+            hostarg="-t A"
+        elif [ "$ipmode" = "ipv6" ]; then
+            hostarg="-t AAAA"
+        if
+        bindips=(
+            $(host $hostarg "${zimbra_server_hostname}" | awk '/ address/ {print "-bind=" $NF}')
+        )
+    fi
+
+    [ -z "$DEBUG" ] \
+      || echo "DEBUG: running $execf" agent "${agentargs[@]}" "${confargs[@]}" "${bindips[@]}" >&2
+    ( "$execf" agent "${agentargs[@]}" "${confargs[@]}" "${bindips[@]}" 0<&- 1>&- 2>&- & )
+
+    # $? can't be used on the process exec'd via the subshell
+    # sleep if necessary to try to avoid any race conditions...
+    ret=1
+    for i in {0..9}; do
+        if [ -s "$pidfile" ]; then
+            pid=$(checkrunning)
+            if [ -n "$pid" ]; then
+                ret=0
+                break
+            fi
+        fi
+        sleep 1
+    done
+
+    [ -n "$pid" ] && echo "done" || echo "failed"
     return $ret
 }
 
@@ -165,6 +223,8 @@ function stop() {
     if [ -n "$pid" ]; then
         kill -INT "$pid"
         ret=$?
+    else
+        echo -n "(not running) "
     fi
     [ $ret = 0 ] && echo "done" || echo "failed"
     return $ret
