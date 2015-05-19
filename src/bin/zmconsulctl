@@ -62,12 +62,8 @@ export GOMAXPROCS=${GOMAXPROCS:-2}
 #   https://github.com/hashicorp/consul/issues/725
 # - will things work in a mixed ipv4/ipv6 env and/or multiple interfaces?
 #   https://github.com/hashicorp/serf/issues/256
+# - see bindips=... in 'start'
 if [ "${ldap_is_master}" = "true" ]; then
-    # avoid: Failed to start lan serf: Failed to parse advertise address
-    bindips=(
-        $(host "${zimbra_server_hostname}" | awk '/ address/ {print "-bind=" $NF}')
-    )
- "${bindips[@]}"
     agentargs=(-server -bootstrap-expect=1)
 else
     agentargs=(-join="${ldap_host}")
