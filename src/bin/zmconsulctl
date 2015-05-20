@@ -182,7 +182,7 @@ function start() {
             hostarg="-t A"
         elif [ "$ipmode" = "ipv6" ]; then
             hostarg="-t AAAA"
-        if
+        fi
         bindips=(
             $(host $hostarg "${zimbra_server_hostname}" | awk '/ address/ {print "-bind=" $NF}')
         )
