@@ -85,25 +85,25 @@ agentargs+=(-node="${zimbra_server_hostname}" )
 agentargs+=(-data-dir="$datadir" -pid-file="$pidfile" -syslog)
 
 # returns (via stdout) pid found via pidfile
-function pid_pidfile()
+function pid_pidfile ()
 {
     pid=""
     if [ -r "$pidfile" ]; then
         read pid < "$pidfile"
     fi
     [ -z "$DEBUG" ] || echo "DEBUG: pid_pidfile ret($pid)" >&2
-    echo $pid
+    echo "$pid"
 }
 
 # returns (via stdout) pid running as $zuser found via ps
-function pid_ps()
+function pid_ps ()
 {
     pid=$(ps auxwww | awk "/^$zuser"'[[:space:]]/ && /[c]onsul[[:space:]]/ {print $2}')
     [ -z "$DEBUG" ] || echo "DEBUG: pid_ps ret($pid)" >&2
     echo "$pid"
 }
 
-function checkrunning_ps()
+function checkrunning_ps ()
 {
     pid=$(pid_ps)
     if [ "$pid" != "" ]; then
@@ -117,7 +117,7 @@ function checkrunning_ps()
     echo "$pid"
 }
 
-function checkrunning()
+function checkrunning ()
 {
     pid=$(pid_pidfile)
     if [ "$pid" != "" ]; then
@@ -148,7 +148,28 @@ function checkrunning()
     echo "$pid"
 }
 
-function start() {
+function wait_for_proc () {
+    want="${1:-up}"
+    ret=1
+    [ -z "$DEBUG" ] || echo "DEBUG: wait_for_proc '$want' with pid_ps..." >&2
+
+    for (( i=1; i<=10; i++ )); do
+        pid=$(pid_ps)
+        if [[ "$want" = "down" && -z "$pid" ]]; then
+            ret=0
+            break
+        elif [[ "$want" = "up" && -n "$pid" ]]; then
+            ret=0
+            break
+        fi
+        sleep 1
+    done
+    echo "$pid"
+    return $ret
+}
+
+
+function start () {
     if [ ! -x "$execf" ]; then
         echo "ERROR: unable to execute '$execf'" >&2
         return 1
@@ -165,7 +186,7 @@ function start() {
     pid=$(checkrunning)
     if [ -n "$pid" ]; then
         echo "already running pid($pid)!"
-        return $pid;
+        return 3;
     fi
 
     # sigh... more hacks:
@@ -194,17 +215,8 @@ function start() {
 
     # $? can't be used on the process exec'd via the subshell
     # sleep if necessary to try to avoid any race conditions...
-    ret=1
-    for i in {0..9}; do
-        if [ -s "$pidfile" ]; then
-            pid=$(checkrunning)
-            if [ -n "$pid" ]; then
-                ret=0
-                break
-            fi
-        fi
-        sleep 1
-    done
+    pid=$(wait_for_proc "up")
+    ret=$?
 
     [ -n "$pid" ] && echo "done" || echo "failed"
     return $ret
@@ -212,31 +224,37 @@ function start() {
 
 # use kill -INT per https://www.consul.io/docs/agent/basics.html
 # could use command: consul leave
-function stop() {
+function stop () {
     echo -n "Stopping $execn..."
     pid=$(checkrunning)
     ret=0
     if [ -n "$pid" ]; then
         kill -INT "$pid"
         ret=$?
+        if [ $ret = 0 ]; then
+            pid=$(wait_for_proc "down")
+            ret=$?
+        fi
     else
         echo -n "(not running) "
     fi
+
     [ $ret = 0 ] && echo "done" || echo "failed"
     return $ret
 }
 
-function restart() {
+# attempt start even when stop fails
+function restart () {
     stop
     start
     return $?
 }
 
 # could use command: consul reload
-#function reload() {
+#function reload () {
 #}
 
-function status() {
+function status () {
     echo -n "$execn is "
     pid=$(checkrunning)
     ret=0
@@ -244,6 +262,7 @@ function status() {
         ret=1
         echo -n "not "
     fi
+
     echo "running"
     return $ret
 }
