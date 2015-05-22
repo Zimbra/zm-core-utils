@@ -247,8 +247,13 @@ fi
 ##################################################
 if [ -z "$JAVA_HOME" ]
 then
-    
-   JAVA=`which java`
+   if [ -x /opt/zimbra/java/bin/java ]
+   then
+      JAVA=/opt/zimbra/java/bin/java
+   else
+      JAVA=`which java`
+   fi
+
    JAVA_HOME=`dirname $JAVA`
 
    echo "Found JAVA=$JAVA in JAVA_HOME=$JAVA_HOME"
@@ -318,6 +323,17 @@ fi
 RUN_CMD="$JAVA -ea -Dfile.encoding=UTF-8 $JAVA_OPTIONS -jar $JETTY_HOME/start.jar $JETTY_ARGS $CONFIGS"
 
 #####################################################
+# Function for testing whether Jetty is running
+#####################################################
+running() {
+    if  [ -f $JETTY_PID ] && ps -p `cat $JETTY_PID` > /dev/null
+    then
+        return 0
+    fi
+    return 1
+}
+
+#####################################################
 # Comment these out after you're happy with what 
 # the script is doing.
 #####################################################
@@ -338,7 +354,7 @@ case "$ACTION" in
   start)
         echo "Starting Jetty: "
 
-        if [ -f $JETTY_PID ]
+        if running
         then
             echo "Already Running!!"
             exit 1
@@ -378,7 +394,7 @@ case "$ACTION" in
   run|demo)
         echo "Running Jetty: "
 
-        if [ -f $JETTY_PID ]
+        if running
         then
             echo "Already Running!!"
             exit 1
@@ -401,7 +417,7 @@ case "$ACTION" in
         echo "RUN_CMD        =  $RUN_CMD"
         echo
         
-        if [ -f $JETTY_RUN/jetty.pid ]
+        if running
         then
             echo "Jetty running pid="`cat $JETTY_RUN/jetty.pid`
             exit 0
