@@ -47,7 +47,7 @@ my %BINARIES = (
     "rsync" => "3.1.1",
     "tcmalloc" => "2.2",
     "jetty" => "distribution-9.1.5.v20140505",
-    "solr" => "5.1.0"
+    "solr" => "5.2.0"
 );
 
 if (index($PLATFORM_DIR_NAME, "MACOSX") != -1) {
