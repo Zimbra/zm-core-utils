@@ -26,9 +26,11 @@ zmdailyreport - report on email usage
   Options:
     --mail                 Send report via email, default is stdout
     --help                 This help message
-    --user                 User to deliver report to, default is localconfig smtp_destination
 
 =cut
+#    --user <email_address> Report usage for <email_address> only
+#    --time <start>,<end>   Default is midnight to midnight of the previous day
+#    --now                  Shortcut for midnight to the current time
 use warnings;
 use strict;
 use Pod::Usage qw(pod2usage);
@@ -42,7 +44,7 @@ use Time::Local qw(timelocal);
 
 my ( %Opt, $Debug );
 
-GetOptions( \%Opt, "mailreport", "debug", "user=s", "help" )
+GetOptions( \%Opt, "mailreport", "now", "debug", "user=s", "time=s", "help" )
   or pod2usage( -exitval => 2 );
   
 pod2usage( -exitval => 1, -verbose => 0 ) if ( $Opt{help} );
@@ -163,11 +165,9 @@ sub getLdapConfigValue {
     return (undef) unless ($attrib);
 
     my $val = getLdapServerConfigValue($attrib);
-    print "Server value for $attrib: $val\n" if $Debug;
-    if ($val eq "") {
-      $val = getLdapGlobalConfigValue($attrib);
-      print "Global value for $attrib: $val\n" if $Debug;
-    }
+    print "Server: $val\n" if $Debug;
+    $val = getLdapGlobalConfigValue($attrib) if ($val eq "");
+    print "Global: $val\n" if $Debug;
     return $val;
 }
 
@@ -204,6 +204,7 @@ sub getLdapGlobalConfigValue {
     while (<CONF>) {
         chomp;
         ( $key, $val ) = split( /:\s*/, $_, 2 );
+
         # for now just assume a single value/attribute is requested
         last if ($val);
     }
@@ -217,12 +218,7 @@ sub sendEmailReport {
 
     my $subject      = "Daily mail report for $arg{day}";
     my $from_address = getLocalConfig("smtp_source");
-    my $to_address;
-    if ($Opt{user}) {
-      $to_address = $Opt{user};
-    } else {
-      $to_address   = getLocalConfig("smtp_destination");
-    }
+    my $to_address   = getLocalConfig("smtp_destination");
     my $smtphost     = getLdapConfigValue("zimbraSmtpHostname") || "localhost";
     my $smtpport     = getLdapConfigValue("zimbraSmtpPort") || 25;
 

@@ -247,13 +247,8 @@ fi
 ##################################################
 if [ -z "$JAVA_HOME" ]
 then
-   if [ -x /opt/zimbra/java/bin/java ]
-   then
-      JAVA=/opt/zimbra/java/bin/java
-   else
-      JAVA=`which java`
-   fi
-
+    
+   JAVA=`which java`
    JAVA_HOME=`dirname $JAVA`
 
    echo "Found JAVA=$JAVA in JAVA_HOME=$JAVA_HOME"
@@ -296,7 +291,7 @@ fi
 # Add jetty properties to Java VM options.
 #####################################################
 MAILBOXD_JAVA_OPTIONS=`/opt/zimbra/bin/zmlocalconfig -x -m nokey mailboxd_java_options`
-JAVA_OPTIONS="$MAILBOXD_JAVA_OPTIONS $JAVA_OPTIONS -Djetty.home=$JETTY_HOME -XX:PermSize=128m -XX:MaxPermSize=350m"
+JAVA_OPTIONS="$MAILBOXD_JAVA_OPTIONS $JAVA_OPTIONS -Djetty.home=$JETTY_HOME"
 
 #####################################################
 # Add spnego properties to Java VM options.
@@ -323,17 +318,6 @@ fi
 RUN_CMD="$JAVA -ea -Dfile.encoding=UTF-8 $JAVA_OPTIONS -jar $JETTY_HOME/start.jar $JETTY_ARGS $CONFIGS"
 
 #####################################################
-# Function for testing whether Jetty is running
-#####################################################
-running() {
-    if  [ -f $JETTY_PID ] && ps -p `cat $JETTY_PID` > /dev/null
-    then
-        return 0
-    fi
-    return 1
-}
-
-#####################################################
 # Comment these out after you're happy with what 
 # the script is doing.
 #####################################################
@@ -354,7 +338,7 @@ case "$ACTION" in
   start)
         echo "Starting Jetty: "
 
-        if running
+        if [ -f $JETTY_PID ]
         then
             echo "Already Running!!"
             exit 1
@@ -394,7 +378,7 @@ case "$ACTION" in
   run|demo)
         echo "Running Jetty: "
 
-        if running
+        if [ -f $JETTY_PID ]
         then
             echo "Already Running!!"
             exit 1
@@ -417,7 +401,7 @@ case "$ACTION" in
         echo "RUN_CMD        =  $RUN_CMD"
         echo
         
-        if running
+        if [ -f $JETTY_RUN/jetty.pid ]
         then
             echo "Jetty running pid="`cat $JETTY_RUN/jetty.pid`
             exit 0

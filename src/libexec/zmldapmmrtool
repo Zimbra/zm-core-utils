@@ -34,7 +34,7 @@ if ($id ne "zimbra") {
     print STDERR "Error: must be run as zimbra user\n";
     exit (1);
 }
-my ($help,$masterURI,$rid,$tls,$replEntry,$entryNUM,$entryURI,$entryRID,$entryTLS,$query,$modify,$delete,$origRID,$found);
+my ($help,$masterURI,$rid,$tls,$replEntry,$entryNUM,$entryURI,$entryRID,$entryTLS,$query,$modify,$delete,$origRID,$break);
 $rid=0;
 $masterURI=0;
 $tls=0;
@@ -42,7 +42,7 @@ $query=0;
 $modify=0;
 $delete=0;
 $origRID=0;
-$found=0;
+$break=0;
 
 my $opts_good = GetOptions(
         'h|help' => \$help,
@@ -107,14 +107,15 @@ if(lc($ldap_is_master) eq "true") {
             attrs => ['olcSyncrepl']
   );
   my $size = $mesg->count;
-  my $count=0;
   if ($size > 0) {
     my $entry=$mesg->entry(0);
+    if ($query) { print "Master replication information\n"; }
+    my $count=1;
+    #$replEntry= $entry->get_value('olcSyncRepl');
     foreach ($entry->get_value('olcSyncRepl')) {
       $replEntry=$_;
       my $junk;
-      my $tmpNum;
-      ($tmpNum, $entryRID) = split (/rid=/, $_, 2);
+      ($entryNUM, $entryRID) = split (/rid=/, $_, 2);
       ($junk, $entryURI) = split (/provider=/, $_, 2);
       ($junk, $entryTLS) = split (/starttls=/, $_, 2);
       ($entryRID, $junk) = split (/ /, $entryRID, 2);
@@ -122,29 +123,22 @@ if(lc($ldap_is_master) eq "true") {
       ($entryTLS, $junk) = split (/ /, $entryTLS, 2);
       if ($modify || $delete) {
         if ($origRID == $entryRID) {
-          $found=1;
-          $entryNUM=$tmpNum;
-          if ($modify) {
-            last;
-          }
+    	  $break=1;
+    	  last;
         }
       }
       if ($query) {
-        print "Master replication agreement: " . ($count+1) . "\n";
-        print "rid: $entryRID URI: $entryURI TLS: $entryTLS\n";
+        print "Master replica $count\n";
+    	print "rid: $entryRID URI: $entryURI TLS: $entryTLS\n";
       }
       $count++;
     }
-  } else {
-    $ldap->unbind;
-    print "Error: No sync replication entries found\n";
-    exit 0;
   }
   if ($query) {
     $ldap->unbind;
     exit 0;
   }
-  if ($found == 0) {
+  if ($break == 0) {
     print "RID $origRID not found, exiting.\n";
     exit(0);
   }
@@ -194,21 +188,12 @@ if(lc($ldap_is_master) eq "true") {
       replace=>{olcSyncrepl=>"$replEntry"},
     );
     $err=$mesg->code;
-  } elsif ($delete) {
-    if ($count == 1) {
-      print "Error: It is illegal to delete the last remaining replication agreement.\n";
-      print "You must define a new replication agreement prior to deleting the final one.\n";
-      exit 0;
-    }
+  } else {
     $mesg = $ldap->modify(
       $bdn,
       delete=>{olcSyncrepl=>"$entryNUM"},
     );
     $err=$mesg->code;
-  } else {
-    print "ERROR: Should be no way to reach this else block\n";
-    $ldap->unbind;
-    exit 1;
   }
 
   $ldap->unbind;

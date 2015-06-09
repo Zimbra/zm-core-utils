@@ -205,7 +205,7 @@ sub getMysqlProcessList() {
 }
 
 sub getConvertdProcess() {
-    my @regex = ('httpd -k(.*)/convertd/(.*)httpd\.conf$');
+    my @regex = ('TransformationServer');
     my @ret = filterProcs($ZIMBRA_USER, \@regex);
     return @ret;
 }

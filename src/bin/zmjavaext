@@ -2,7 +2,7 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2013, 2014 Zimbra, Inc.
+# Copyright (C) 2006, 2007, 2008, 2009, 2010, 2013, 2014 Zimbra, Inc.
 # 
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software Foundation,
@@ -16,46 +16,40 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-# Much faster; just call zmlocalconfig once
 source `dirname $0`/zmshutil || exit 1
-zmsetvars -f
+zmsetvars
 
 if [ -d ${zimbra_java_home}/jre ]; then
     JRE_EXT_DIR=${zimbra_java_home}/jre/lib/ext
 else
-    #JRE_EXT_DIR=/System/Library/Frameworks/JavaVM.framework/Versions/1.5/Home/lib/ext
     JRE_EXT_DIR=${zimbra_java_home}/lib/ext
 fi
+zmassert -d ${JRE_EXT_DIR}
 
 if [ -f ".hotspot_compiler" ]; then
   cd /opt/zimbra
 fi
+
 case "`uname`" in
 CYGWIN*) PATHSEP=";";;
 *) PATHSEP=":";;
 esac
 
-ZIMBRA_EXTENSIONS="backup clamscanner network zimbra-license zimbrahsm zimbrasync"
-ZIMBRA_EXT_DIR="/opt/zimbra/lib/ext-common"
-for i in $ZIMBRA_EXTENSIONS; do
-  if [ -d "/opt/zimbra/lib/ext/$i" ]; then
-   ZIMBRA_EXT_DIR="${ZIMBRA_EXT_DIR}${PATHSEP}/opt/zimbra/lib/ext/$i"
-  fi
-done 
+jardirs=${JRE_EXT_DIR}${PATHSEP}/opt/zimbra/lib/jars
+if [ -e /opt/zimbra/lib/ext-common ]; then
+    jardirs=${jardirs}${PATHSEP}/opt/zimbra/lib/ext-common
+fi
 
-java_options="-XX:ErrorFile=/opt/zimbra/log"
-
-if [ x${zimbra_zmjava_java_library_path} = "x" ]; then
-  zimbra_zmjava_java_library_path=/opt/zimbra/lib
-fi  
-
-if [ x${zimbra_zmjava_java_ext_dirs} = "x" ]; then
-  zimbra_zmjava_java_ext_dirs=${JRE_EXT_DIR}${PATHSEP}/opt/zimbra/lib/jars${PATHSEP}${ZIMBRA_EXT_DIR}
-fi  
+java_version=$(${zimbra_java_home}/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
+if [ x"$java_version" = "x1.6.0" ]; then
+  java_options="-XX:ErrorFile=/opt/zimbra/log"
+else
+  java_options=""
+fi
 
 exec ${zimbra_java_home}/bin/java ${java_options} \
-     -client ${zimbra_zmjava_options} \
+     -client -Xmx256m \
      -Dzimbra.home=/opt/zimbra \
-     -Djava.library.path=${zimbra_zmjava_java_library_path} \
-     -Djava.ext.dirs=${zimbra_zmjava_java_ext_dirs} \
+     -Djava.library.path=/opt/zimbra/lib \
+     -Djava.ext.dirs=${jardirs} \
      "$@"

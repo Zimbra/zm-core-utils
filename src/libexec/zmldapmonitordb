@@ -151,6 +151,8 @@ $pages_used=0;
 if ($is_master) {
   @adb_stat=qx($mdb_stat $adbdir);
   foreach my $bit (@adb_stat) {
+    my $page_size;
+    my $pages_used;
     chomp($bit);
     if ($bit =~ /Page size:/) {
       ($junk, $page_size)=split(/: /, $bit, 2);
