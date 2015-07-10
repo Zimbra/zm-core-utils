@@ -296,7 +296,7 @@ fi
 # Add jetty properties to Java VM options.
 #####################################################
 MAILBOXD_JAVA_OPTIONS=`/opt/zimbra/bin/zmlocalconfig -x -m nokey mailboxd_java_options`
-JAVA_OPTIONS="$MAILBOXD_JAVA_OPTIONS $JAVA_OPTIONS -Djetty.home=$JETTY_HOME -XX:PermSize=128m -XX:MaxPermSize=350m"
+JAVA_OPTIONS="$MAILBOXD_JAVA_OPTIONS $JAVA_OPTIONS -Djetty.home=$JETTY_HOME -Dsolr.solr.home=/opt/zimbra/data/solr"
 
 #####################################################
 # Add spnego properties to Java VM options.
