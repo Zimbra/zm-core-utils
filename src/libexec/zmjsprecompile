@@ -24,7 +24,7 @@ fi
 zimbra_java_home=/opt/zimbra/java
 jspc_src_dir=/opt/zimbra/mailboxd/webapps/zimbra
 jspc_build_dir=/opt/zimbra/mailboxd/work/zimbra/jsp
-jspc_class_path="/opt/zimbra/jetty/lib:/opt/zimbra/jetty/lib/jsp:/opt/zimbra/jetty/lib/ext:/opt/zimbra/jetty/lib/plus:/opt/zimbra/jetty/lib/naming:/opt/zimbra/lib/ext:/opt/zimbra/jetty/common/lib:/opt/zimbra/jetty/webapps/zimbra/WEB-INF/lib"
+jspc_class_path="/opt/zimbra/jetty/lib:/opt/zimbra/jetty/lib/apache-jsp:/opt/zimbra/jetty/lib/apache-jstl:/opt/zimbra/lib/jars-ant:/opt/zimbra/jetty/lib/ext:/opt/zimbra/jetty/lib/plus:/opt/zimbra/jetty/lib/naming:/opt/zimbra/lib/ext:/opt/zimbra/jetty/common/lib:/opt/zimbra/jetty/webapps/zimbra/WEB-INF/lib"
 
 extensions="backup clamscanner network zimbra-license zimbrahsm zimbrasync"
 ext_dir="/opt/zimbra/lib/ext-common"
@@ -34,10 +34,18 @@ for i in $extensions; do
   fi
 done
 
-for i in `ls /opt/zimbra/jetty/lib/jsp/*.jar`; do
+for i in `ls /opt/zimbra/jetty/lib/apache-jsp/*.jar`; do
   if [ x"$class_path" = "x" ]; then
     class_path="$i"
-  else 
+  else
+    class_path="${class_path}:$i"
+  fi
+done
+
+for i in `ls /opt/zimbra/jetty/lib/apache-jstl/*.jar`; do
+  if [ x"$class_path" = "x" ]; then
+    class_path="$i"
+  else
     class_path="${class_path}:$i"
   fi
 done
@@ -61,12 +69,11 @@ fi
 mkdir ${jspc_build_dir}
 
 compile_jsp() {
-  file=shift
-  ${java_cmd} org.apache.jasper.JspC -v -trimSpaces -d ${jspc_build_dir} -webapp ${jspc_src_dir} -uriroot ${jspc_src_dir} -compile -classpath ${class_path}
+  ${java_cmd} -classpath ${class_path} org.apache.jasper.JspC -v -trimSpaces -d ${jspc_build_dir} -webapp ${jspc_src_dir} -uriroot ${jspc_src_dir} -compile
   return $?
 }
 
-compile_jsp ${param_jspfile}
+compile_jsp
 if [ $? = 0 ]; then
   echo "done."
 else
