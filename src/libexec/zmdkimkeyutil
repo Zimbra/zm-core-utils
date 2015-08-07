@@ -35,7 +35,8 @@ if ($id ne "zimbra") {
   exit (1);
 }
 
-my ($add, $bits, $help, $query, $update, $domain, $delete, $selector, $subdomain);
+my ($add, $help, $query, $update, $domain, $delete, $selector, $subdomain);
+my $bits=2048;
 
 my $opts_good = GetOptions(
         'h|help' => \$help,
@@ -143,14 +144,10 @@ if($add) {
   if ($subdomain) {
     $subflag="--nosubdomains";
   }
-  if ($bits) {
-     if ($bits < 1024) {
-       print "Bit size less than 1024 is not allowed, as it is insecure.\n";
-     } else {
-      qx($keygen $subflag -b $bits -s $selector -d $domain -D /opt/zimbra/data/tmp);
-     }
+  if ($bits < 2048) {
+   print "Bit size less than 2048 is not allowed, as it is insecure.\n";
   } else {
-    qx($keygen $subflag -s $selector -d $domain -D /opt/zimbra/data/tmp);
+    qx($keygen $subflag -b $bits -s $selector -d $domain -D /opt/zimbra/data/tmp);
   }
   my $privatekey = "/opt/zimbra/data/tmp/${selector}.private";
   my $publickey = "/opt/zimbra/data/tmp/${selector}.txt";
@@ -258,14 +255,10 @@ if($add) {
   if ($subdomain) {
     $subflag="--nosubdomains";
   }
-  if ($bits) {
-     if ($bits < 1024) {
-       print "Bit size less than 1024 is not allowed, as it is insecure.\n";
-     } else {
-      qx($keygen $subflag -b $bits -s $selector -d $domain -D /opt/zimbra/data/tmp);
-     }
+  if ($bits < 2048) {
+    print "Bit size less than 2048 is not allowed, as it is insecure.\n";
   } else {
-    qx($keygen $subflag -s $selector -d $domain -D /opt/zimbra/data/tmp);
+    qx($keygen $subflag -b $bits -s $selector -d $domain -D /opt/zimbra/data/tmp);
   }
   my $privatekey = "/opt/zimbra/data/tmp/${selector}.private";
   my $publickey = "/opt/zimbra/data/tmp/${selector}.txt";
@@ -355,7 +348,7 @@ sub usage() {
   print "Usage: $0 [-a [-b]] [-q] [-r] [-s selector] [-S] [-u [-b]] [-d domain]\n";
   print "-a: Add new key pair and selector for domain\n";
   print "-b: Optional parameter specifying the number of bits for the new key.\n";
-  print "    Only works with -a and -u.  Default when not specified is 1024 bits.\n";
+  print "    Only works with -a and -u.  Default when not specified is 2048 bits.\n";
   print "-d domain: Domain to use\n";
   print "-h: Show this usage block\n";
   print "-q: Query DKIM information for domain\n";
