@@ -70,7 +70,7 @@ fi
 
 rewriteConfigs() {
 	echo -n "Rewriting config files for cyrus-sasl, webxml, mailboxd, service, zimbraUI, and zimbraAdmin..."
-	/opt/zimbra/libexec/configrewrite sasl webxml mailbox service zimbra zimbraAdmin> /dev/null 2>&1
+	/opt/zimbra/libexec/configrewrite sasl webxml mailbox service zimbra zimbraAdmin zimlet> /dev/null 2>&1
 	if [ $? = 0 ]; then
 		echo "done."
 	else
