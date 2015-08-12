@@ -27,7 +27,7 @@ GetOptions("help" => \$help,
 
 my $zimbra_log_directory="/opt/zimbra/log";
 
-my @logfiles = qw(mailbox.log audit.log sync.log synctrace.log wbxml.log milter.log convertd.log);
+my @logfiles = qw(mailbox.log audit.log sync.log synctrace.log wbxml.log milter.log convertd.log ews.log);
 
 usage() if $help;
 scanLogDirectory($zimbra_log_directory);
