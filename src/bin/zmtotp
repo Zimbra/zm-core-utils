@@ -17,4 +17,4 @@
 #
 source /opt/zimbra/bin/zmshutil || exit 1
 
-exec `dirname $0`/zmjava com.zimbra.cs.account.auth.twofactor.TOTPUtil "$@"
+exec `dirname $0`/zmjava com.zimbra.cs.twofactor.TOTPUtil "$@"
