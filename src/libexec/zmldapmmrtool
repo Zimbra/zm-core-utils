@@ -188,10 +188,13 @@ if(lc($ldap_is_master) eq "true") {
     if ($rid) {
       $replEntry =~ s/rid=$entryRID/rid=$rid/;
     }
-  
     $mesg = $ldap->modify(
       $bdn,
-      replace=>{olcSyncrepl=>"$replEntry"},
+      delete=>{olcSyncrepl=>"$entryNUM"},
+    );
+    $mesg = $ldap->modify(
+      $bdn,
+      add=>{olcSyncrepl=>"$replEntry"},
     );
     $err=$mesg->code;
   } elsif ($delete) {
