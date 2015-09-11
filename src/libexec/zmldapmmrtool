@@ -166,18 +166,11 @@ if(lc($ldap_is_master) eq "true") {
         if ($ldap_starttls_supported && $zimbra_require_interprocess_security) {
           $tls="starttls=critical";
         }
-      } else {
-        if ($entryURI !~ /^ldaps/) {
-          if ($ldap_starttls_supported && $zimbra_require_interprocess_security) {
-            $tls="starttls=critical";
-          }
-        }
       }
     }
-  
-    if ($tls =~ /starttls/ && $replEntry !~ /starttls/) {
+    if ($tls && $tls =~ /starttls/ && $replEntry !~ /starttls/) {
       $replEntry =~ s/filter=/$tls filter=/;
-    } elsif ($tls !~ /starttls/ && $replEntry =~ /starttls/) {
+    } elsif ($tls && $tls !~ /starttls/ && $replEntry =~ /starttls/) {
       $replEntry =~ s/starttls=critical //;
     }
   
