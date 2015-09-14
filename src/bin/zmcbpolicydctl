@@ -62,6 +62,10 @@ checkrunning() {
 #
 case "$1" in
   'start')
+    if [ !-L /opt/zimbra/cbpolicyd ]; then
+      echo "cbpolicyd not installed, skipping."
+      exit 0
+    fi
     checkrunning
   
     echo -n "Starting policyd..."
