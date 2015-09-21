@@ -81,10 +81,10 @@ rewriteConfigs() {
 
 updateLdap() {
 	echo -n "Setting ldap config zimbraMailMode $MODE for ${zimbra_server_hostname}..."
-	/opt/zimbra/bin/zmprov -l ms ${zimbra_server_hostname} zimbraMailMode $MODE > /dev/null 2>&1
+	/opt/zimbra/bin/zmprov -l ms ${zimbra_server_hostname} zimbraMailMode $MODE > /dev/null
 	if [ $? = 0 ]; then
 		echo "done."
-	else 
+	else
 		echo "failed."
 		exit 1
 	fi
