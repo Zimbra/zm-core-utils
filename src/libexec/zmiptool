@@ -63,7 +63,7 @@ my $host = getLocalConfig("zimbra_server_hostname");
 
 my $zmlocalconfig="/opt/zimbra/bin/zmlocalconfig";
 
-my $replica_ref=[ split(/\s/, $ldapurl) ];
+my $replica_ref=[ split(" ", $ldapurl) ];
 my $ldap = Net::LDAP->new( $replica_ref ) or die "Error connecting to LDAP server: $ldapurl";
 
 my $mesg;

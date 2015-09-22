@@ -74,7 +74,7 @@ my $conf = zmlocalconfig(
 
 # ldap_url may have multiple uri's separated by spaces
 my $ldap_url = $conf->{ldap_url};
-my $replica_ref=[ split(/\s/, $ldap_url) ];
+my $replica_ref=[ split(" ", $ldap_url) ];
 
 # connect to LDAP server
 my $ldap = Net::LDAP->new(
