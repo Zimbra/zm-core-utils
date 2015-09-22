@@ -639,8 +639,7 @@ sub checkPackage {
     my $zps = getLocalConfig("zimbra_ldap_password");
     my $ldap_starttls_supported = getLocalConfig("ldap_starttls_supported");
 
-    my @replicas=split(/ /, $ldapurl);
-    my $replica_ref=\@replicas;
+    my $replica_ref=[ split(/\s/, $ldapurl) ];
     my $ldap = Net::LDAP->new( $replica_ref ) or die "Error connecting to LDAP server: $ldapurl";
 
     if ($ldapurl !~ /^ldaps/i) {

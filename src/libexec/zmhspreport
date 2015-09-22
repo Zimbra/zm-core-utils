@@ -66,8 +66,7 @@ chop($ldappass);
 chop($ldapdn);
 chop($ldapurl);
 
-my @replicas=split(/ /, $ldapurl);
-my $replica_ref=\@replicas;
+my $replica_ref= [ split(/\s/, $ldapurl) ];
 my $ldap = Net::LDAP->new( $replica_ref ) or die "Error connecting to LDAP server: $ldapurl";
 my $mesg = $ldap->bind( $ldapdn, password => $ldappass );
 
