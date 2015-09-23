@@ -194,6 +194,7 @@ sub enableSyncProv {
       objectClass=>['olcOverlayConfig','olcSyncProvConfig'],
       olcOverlay=>'{0}syncprov',
       olcSpCheckpoint=>'20 10',
+      olcSpSessionlog=>'10000000',
     ],
   );
   $mesg->code && die "Add Failed: ". $mesg->error . "\n";

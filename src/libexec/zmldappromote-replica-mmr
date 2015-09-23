@@ -143,6 +143,7 @@ if(lc($ldap_is_master) eq "true") {
     'olcOverlay=syncprov,olcDatabase={3}mdb,cn=config',
     add => [
       olcSpCheckpoint=>'20 10',
+      olcSpSessionlog=>'10000000',
     ],
   );
   $mesg=>$ldap->add(

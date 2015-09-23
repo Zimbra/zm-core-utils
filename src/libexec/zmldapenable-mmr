@@ -173,6 +173,7 @@ if(lc($ldap_is_master) eq "true") {
         objectClass=>['olcOverlayConfig','olcSyncProvConfig'],
         olcOverlay=>'{0}syncprov',
         olcSpCheckpoint=>'20 10',
+        olcSpSessionlog=>'10000000',
       ],
     );
     $mesg=>$ldap->add(
