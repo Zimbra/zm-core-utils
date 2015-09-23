@@ -95,6 +95,30 @@ if(lc($ldap_is_master) eq "true") {
       print "       Provide valid Server ID value via the -s option.\n";
       exit(1);
     }
+  } else {
+    if ($sid > 0) {
+      print "Error: Server ID provided when the Server ID is already configured.\n";
+      exit(1);
+    }
+    my $bdn="olcDatabase={3}mdb,cn=config";
+    $mesg = $ldap->search(
+            base => "$bdn",
+            filter => "(olcSyncrepl=*)",
+            attrs => ['olcSyncrepl']
+    );
+    $size = $mesg->count;
+    if ($size > 0) {
+      my $entry=$mesg->entry(0);
+      my ($junk, $entryRID);
+      foreach ($entry->get_value('olcSyncRepl')) {
+        ($junk, $entryRID) = split (/rid=/, $_, 2);
+        ($entryRID, $junk) = split (/ /, $entryRID, 2);
+        if ($rid == $entryRID) {
+          print "Error: A replication agreement for rid $rid already exists.\n";
+          exit(1);
+        }
+      }
+    }
   }
 
   my $bdn="olcDatabase={2}mdb,cn=config";
