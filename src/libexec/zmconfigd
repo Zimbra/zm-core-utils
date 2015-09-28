@@ -104,15 +104,26 @@ def watchdog():
 				Log.logMsg(3, "Watchdog: service %s status is OK." % (service,));
 
 def requestListener():
-	listener_params = ("localhost",int(state.State.mState.localconfig["zmconfigd_listen_port"]))
-	try:
-		server = listener.ThreadedStreamServer(listener_params, listener.ThreadedRequestHandler)
-	except socket.error, e:
-		Log.logMsg (1, "Error creating listener socket on port %s: %s" % (state.State.mState.localconfig["zmconfigd_listen_port"],str(e)))
-		if contactService("STATUS"):
-			Log.logMsg (0, "Can't create listener socket: %s" % str(e))
-		else:
-			Log.logMsg (0, "zmconfigd service already running, exiting")
+	if state.State.mState.serverconfig["zimbraIPMode"] == "ipv4":
+		listener_params = ("127.0.0.1",int(state.State.mState.localconfig["zmconfigd_listen_port"]))
+		try:
+			server = listener.ThreadedStreamServer(listener_params, listener.ThreadedRequestHandler)
+		except socket.error, e:
+			Log.logMsg (1, "Error creating listener socket on port %s: %s" % (state.State.mState.localconfig["zmconfigd_listen_port"],str(e)))
+			if contactService("STATUS"):
+				Log.logMsg (0, "Can't create listener socket: %s" % str(e))
+			else:
+				Log.logMsg (0, "zmconfigd service already running, exiting")
+	else:
+		listener_params = ("::1",int(state.State.mState.localconfig["zmconfigd_listen_port"]))
+		try:
+			server = listener.ThreadedStreamServerIPv6(listener_params, listener.ThreadedRequestHandler)
+		except socket.error, e:
+			Log.logMsg (1, "Error creating listener socket on port %s: %s" % (state.State.mState.localconfig["zmconfigd_listen_port"],str(e)))
+			if contactService("STATUS"):
+				Log.logMsg (0, "Can't create listener socket: %s" % str(e))
+			else:
+				Log.logMsg (0, "zmconfigd service already running, exiting")
 
 	server_thread = threading.Thread(target=server.serve_forever, name="listener")
 	server_thread.setDaemon(True)
@@ -121,7 +132,10 @@ def requestListener():
 
 def contactService(command, args=None):
 	listener_params = ("localhost",int(state.State.mState.localconfig["zmconfigd_listen_port"]))
-	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	if state.State.mState.serverconfig["zimbraIPMode"] == "ipv4":
+		sock = socket.socket(socket.AF_INET4, socket.SOCK_STREAM)
+	else:
+		sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 	message = "%s " % command
 	if args:
 		message += ' '.join(args)
