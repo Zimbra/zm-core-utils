@@ -85,7 +85,6 @@ components="\
   rsync \
   snmp \
   tcmalloc \
-  unbound \
   zeromq \
   zimbramon/bin \
   zimbramon/crontabs \

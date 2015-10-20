@@ -17,4 +17,4 @@
 # 
 
 export LD_PRELOAD=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so
-exec /opt/zimbra/unbound/sbin/unbound "$@"
+exec /opt/zimbra/common/sbin/unbound "$@"

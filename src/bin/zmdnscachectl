@@ -21,7 +21,7 @@ if [ x`whoami` != xzimbra ]; then
   exit 1
 fi
 
-if [ ! -L "/opt/zimbra/unbound" ]; then
+if [ ! -x "/opt/zimbra/common/sbin/unbound" ]; then
   exit 0
 fi
 
@@ -44,7 +44,7 @@ rewriteconfig() {
 
 getpid()
 {
-	PID=`ps auxwww | grep /opt/zimbra/unbound/sbin/unbound | grep -v grep | awk '{print $2}'`
+	PID=`pgrep -f /opt/zimbra/common/sbin/unbound`
 }
 
 
@@ -72,7 +72,7 @@ start()
       rewriteconfig
     fi
     if [ x"$RESOLVCONF" = "xtrue" ]; then
-      /opt/zimbra/unbound/sbin/unbound-checkconf -o interface | (
+      /opt/zimbra/common/sbin/unbound-checkconf -o interface | (
         while read interface; do
           if [ "x$interface" = x127.0.0.1 ]; then
             echo "nameserver 127.0.0.1"
