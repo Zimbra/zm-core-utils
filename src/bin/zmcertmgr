@@ -1,20 +1,20 @@
 #!/bin/bash
-# 
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Zimbra, Inc.
-# 
+#
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software Foundation,
 # version 2 of the License.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see <http://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
-# 
+#
 
 if [ x`whoami` != "xroot" ]; then
   echo "$0 must be run as user root"
@@ -112,7 +112,7 @@ backupSSLDirs() {
   if [ x"${1}" != "x" ]; then
     ACTION_ROOT_DIR=${1}
   fi
-  
+
   if [ -d "${ACTION_ROOT_DIR}" ]; then
     appendix=`date +%Y%m%d%H%M%S`
     echo "** Backup ${ACTION_ROOT_DIR} to ${ACTION_ROOT_DIR}.${appendix} "
@@ -166,7 +166,7 @@ initSSLDirs() {
     chown ${zimbra_uid}:${zimbra_gid} ${csr_download_directory}
     chmod -R 740 ${csr_download_directory}
   fi
-    
+
 }
 
 
@@ -191,7 +191,7 @@ isLdapRunning() {
 
   su - zimbra -c " /opt/zimbra/bin/ldap status > /dev/null 2>&1"
   LDAP_IS_RUNNING=$?
-  
+
 }
 
 saveConfigKey() {
@@ -203,7 +203,7 @@ saveConfigKey() {
     local zmprov_opts="mcf"
   elif [ $location = "server" ]; then
     local zmprov_opts="ms ${zimbra_server_hostname}"
-  else 
+  else
     echo "Unknown config section $location"
     return
   fi
@@ -236,12 +236,12 @@ loadConfigKey() {
       server=${zimbra_server_hostname}
     fi
     local zmprov_opts="gs ${server}"
-  else 
+  else
     echo "Unknown config section $location"
     return
   fi
   TMPDIR=${zimbra_tmp_directory}
-  local tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  local tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -s ${file} ]; then
     echo -n "** Retrieving $location config key $key..."
@@ -265,7 +265,7 @@ createCAKey() {
   createCASerial
 
   echo -n "** Creating CA private key ${zimbra_ca_key}..."
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   ${openssl} req -batch -subj "${SUBJECT}" \
     -${DIGEST} \
     -days ${validation_days} \
@@ -280,12 +280,12 @@ createCAKey() {
     echo
     cat ${tmpfile}
     echo
-  else 
+  else
     echo "done."
   fi
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_ca_key}
   rm -f ${tmpfile} 2> /dev/null
-  
+
 }
 
 
@@ -293,7 +293,7 @@ createCACert() {
 
   echo -n "** Creating CA cert ${zimbra_ca_crt}..."
 
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   ${openssl} x509 -trustout \
     -signkey ${zimbra_ca_key} \
     -days ${validation_days} \
@@ -307,7 +307,7 @@ createCACert() {
     echo
     cat ${tmpfile}
     echo
-  else 
+  else
     echo "done."
   fi
 
@@ -325,9 +325,9 @@ createKeystore () {
   if [ x"$type" = "xself" ]; then
     current_crt=${server_crt}
     current_key=${server_key}
-  else 
-    current_crt=${commercial_crt} 
-    current_key=${commercial_key} 
+  else
+    current_crt=${commercial_crt}
+    current_key=${commercial_key}
   fi
 
   if [ x"$mailboxd_server" = "x" ]; then
@@ -342,16 +342,16 @@ createKeystore () {
     echo "${ERROR_PREFIX} Private key ${current_key} does not exist."
     usage
   fi
-  
-  # clean up the previous settings first 
+
+  # clean up the previous settings first
   if [ -f "${mailboxd_keystore}" ]; then
     /opt/zimbra/java/bin/keytool -delete -alias ${mailboxd_server} \
       -keystore ${mailboxd_keystore} -storepass ${mailboxd_keystore_password} > /dev/null 2>&1
   fi
-  
-  #4. Loading keys and certificates via PKCS12 
+
+  #4. Loading keys and certificates via PKCS12
   #(you need both the private key and the certificate in the keystore.)
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
 
   echo -n "** Creating pkcs12 file ${zimbra_ssl_directory}/${mailboxd_server}.pkcs12..."
 
@@ -373,11 +373,11 @@ createKeystore () {
   if [ ! -s "${zimbra_ssl_directory}/${mailboxd_server}.pkcs12" ]; then
     echo "${ERROR_PREFIX} failed to create ${mailboxd_server}.pkcs12"
     exit 1
-  else 
+  else
     chmod 640 ${zimbra_ssl_directory}/${mailboxd_server}.pkcs12
     chown ${zimbra_uid}:${zimbra_gid} ${zimbra_ssl_directory}/${mailboxd_server}.pkcs12
   fi
-  
+
   echo -n "** Creating keystore file ${mailboxd_keystore}..."
   /opt/zimbra/java/bin/java ${java_options} -classpath /opt/zimbra/lib/ext/com_zimbra_cert_manager/com_zimbra_cert_manager.jar com.zimbra.cert.MyPKCS12Import ${zimbra_ssl_directory}/${mailboxd_server}.pkcs12 ${mailboxd_keystore} ${mailboxd_keystore_password} ${mailboxd_keystore_password} > ${tmpfile} 2>&1
   if [ $? != 0 ]; then
@@ -407,10 +407,10 @@ addCACERT() {
     usage
     return
   fi
-  
+
 
   echo -n "** Importing certificate ${crt} to CACERTS as $alias..."
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   /opt/zimbra/java/bin/keytool -delete -alias ${alias} -keystore ${CACERTS} -storepass ${mailboxd_truststore_password} > /dev/null 2>&1
   /opt/zimbra/java/bin/keytool -import -noprompt -keystore ${CACERTS} -file ${crt} -alias ${alias} -storepass ${mailboxd_truststore_password} > ${tmpfile} 2>&1
   if [ $? != 0 ]; then
@@ -432,7 +432,7 @@ addCACERT() {
 updateCACERTS() {
 
   echo -n "** Importing CA ${zimbra_ca_crt} into CACERTS..."
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   /opt/zimbra/java/bin/keytool -delete -alias my_ca -keystore ${CACERTS} -storepass ${mailboxd_truststore_password} > /dev/null 2>&1
   /opt/zimbra/java/bin/keytool -import -noprompt -keystore ${CACERTS} -file ${zimbra_ca_crt} -alias my_ca -storepass ${mailboxd_truststore_password} > ${tmpfile} 2>&1
   if [ $? != 0 ]; then
@@ -457,21 +457,21 @@ createCA() {
   fi
 
   # silently ignore the -new flag if this is not the ldap master
-  # we only create CA's on the ldap master 
+  # we only create CA's on the ldap master
   ldap_is_master="$(echo ${ldap_is_master} | tr 'A-Z' 'a-z')"
   if [ x"$ldap_is_master" = "xfalse" -a x"$IS_NEW_CA" != "x-new" ]; then
     IS_NEW_CA=""
   fi
-  
+
   if [ x"$1" = "x-keysize" ]; then
     shift
     KEYSIZE="$1"
     shift
-  else 
+  else
     KEYSIZE=2048
   fi
   #echo "createCA: RSA keysize: $KEYSIZE"
-  
+
   if [ x"${1}" = "x-digest" ]; then
     shift
     DIGEST="${1}"
@@ -484,13 +484,13 @@ createCA() {
     shift
     #echo "subj=$SUBJECT"
   fi
-  
+
   if [ ! -f ${zimbra_ca_ssl_conf} -o x"${IS_NEW_CA}" = "x-new" ]; then
     createConf "${zimbra_ca_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
   fi
 
 
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -f ${zimbra_ca_key} -a x"$IS_NEW_CA" = "x" ]; then
     echo -n "** Retrieving CA private key from ldap..."
@@ -505,7 +505,7 @@ createCA() {
   fi
   rm -f ${tmpfile} 2> /dev/null
 
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -f ${zimbra_ca_crt} -a x"$IS_NEW_CA" = "x" ]; then
     echo -n "** Retrieving CA cert from ldap..."
@@ -520,7 +520,7 @@ createCA() {
   fi
   rm -f ${tmpfile} 2> /dev/null
 
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -f ${commercial_ca_crt} -a x"$IS_NEW_CA" = "x" ]; then
     echo -n "** Retrieving Commercial CA cert from ldap..."
@@ -554,10 +554,10 @@ deployCA() {
   if [ "x$1" = "x-localonly" ]; then
     SKIP_LDAP=1
     shift
-  fi  
+  fi
 
   updateCACERTS
-  
+
   ldap_is_master="$(echo ${ldap_is_master} | tr 'A-Z' 'a-z')"
   if [ x"$ldap_is_master" = "xtrue" -a x"$SKIP_LDAP" != "x1" ]; then
     saveConfigKey "zimbraCertAuthorityCertSelfSigned" ${zimbra_ca_crt} "global"
@@ -565,7 +565,7 @@ deployCA() {
   fi
 
 
-  echo -n "** Copying CA to ${zimbra_conf_directory}/ca..." 
+  echo -n "** Copying CA to ${zimbra_conf_directory}/ca..."
   if [ -d "${zimbra_conf_directory}/ca" ]; then
     find ${zimbra_conf_directory}/ca -type f -o -type l -exec rm {} \;
   else
@@ -579,7 +579,7 @@ deployCA() {
     cd ${zimbra_conf_directory}/ca
     perl -e 'my $i=1; while (<>) { open(N, ">commercial_ca_$i.pem") if (/BEGIN CERTIFICATE/); print N; if (/END CERTIFICATE/) { close(N); $i++; } }' ${commercial_ca_crt}
   fi
-  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.pem 
+  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.pem
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.key
   chown -R ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca
   chmod 640 ${zimbra_conf_directory}/ca/ca.pem ${zimbra_conf_directory}/ca/ca.key
@@ -599,7 +599,7 @@ deployCA() {
       chmod 644 ${zimbra_conf_directory}/ca/$pem
     done
   fi
-  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.pem 
+  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.pem
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.key
   if [ -s "${zimbra_conf_directory}/ca/commercial_ca.pem" ]; then
     chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/commercial_ca.pem
@@ -626,7 +626,7 @@ deployCert() {
     if [ ! -f "${current_crt}" ]; then
       createCert
     fi
-  else 
+  else
 
     if [ x"${1}" = "x-new" ]; then
       shift
@@ -644,7 +644,7 @@ deployCert() {
     if [ -f "${cli_ca_chain}" ]; then
       perl -i -pe 's/\r//g' ${cli_ca_chain}
     fi
-  
+
     if [ x"${cli_comm_crt}" = "x" ]; then
       getCertFromLdap $type
       cli_comm_crt=${commercial_crt}
@@ -657,7 +657,7 @@ deployCert() {
     if [ `perl -e 'my $char; open(FILE, "'${cli_ca_chain}'"); seek(FILE, -1, 2); read(FILE, $char, 1); close(FILE); if ("$char" ne "\n") { print "1" } else { print "0" }'` == "1" ]; then
       echo "" >> ${cli_ca_chain}
     fi
-  
+
     if [ x"$cli_comm_crt" != "x" ]; then
       $0 verifycrt comm ${commercial_key} ${cli_comm_crt} ${cli_ca_chain}
       if [ $? != 0 ]; then
@@ -677,7 +677,7 @@ deployCert() {
       cp -f  ${crt_download_file} ${commercial_crt}
       chown ${zimbra_uid}:${zimbra_gid} ${commercial_crt}
     fi
-  
+
     if [ x"${cli_ca_chain}" != "x" ]; then
       echo "** Appending ca chain ${cli_ca_chain} to ${commercial_crt}"
       cat ${cli_ca_chain} >> ${commercial_crt}
@@ -691,10 +691,10 @@ deployCert() {
       addCACERT ${commercial_ca_crt}
       chown ${zimbra_uid}:${zimbra_gid} ${commercial_ca_crt}
     fi
-  
+
     current_crt=${commercial_crt}
-    current_key=${commercial_key} 
-    chmod 644 ${current_crt} 
+    current_key=${commercial_key}
+    chmod 644 ${current_crt}
     chown ${zimbra_uid}:${zimbra_gid} ${current_crt}
     chown ${zimbra_uid}:${zimbra_gid} ${current_key}
   fi
@@ -703,7 +703,7 @@ deployCert() {
     ALLSERVERS=$1
     shift
   fi
-  
+
   if [ "x$1" = "x" ]; then
     DEPLOY="all"
   elif [ "x$1" = "x-deploy" ]; then
@@ -720,7 +720,7 @@ deployCert() {
     if [ x"$ALLSERVERS" = "x-allserver" ]; then
       saveConfigKey "zimbraSSLCertificate" ${current_crt} "global"
       saveConfigKey "zimbraSSLPrivateKey" ${current_key} "global"
-    else 
+    else
       saveConfigKey "zimbraSSLCertificate" ${current_crt} "server"
       saveConfigKey "zimbraSSLPrivateKey" ${current_key} "server"
     fi
@@ -736,34 +736,34 @@ deployCert() {
 
     echo "done."
   fi
-   
+
   if [ x"$DEPLOY" = "xall" -o x"$DEPLOY" = "xldap" ]; then
     echo -n "** Installing slapd certificate and key..."
     cp -f ${current_crt} ${zimbra_conf_directory}/slapd.crt
     cp -f ${current_key} ${zimbra_conf_directory}/slapd.key
-    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/slapd.key 
+    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/slapd.key
     chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/slapd.crt
     chmod 640 ${zimbra_conf_directory}/slapd.key ${zimbra_conf_directory}/slapd.crt
     echo "done."
   fi
-      
+
   if [ x"$DEPLOY" = "xall" -o x"$DEPLOY" = "xproxy" ]; then
     echo -n "** Installing proxy certificate and key..."
     cp -f ${current_crt} ${zimbra_conf_directory}/nginx.crt
     cp -f ${current_key} ${zimbra_conf_directory}/nginx.key
-    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/nginx.key 
+    chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/nginx.key
     chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/nginx.crt
     chmod 640 ${zimbra_conf_directory}/nginx.key ${zimbra_conf_directory}/nginx.crt
     echo "done."
   fi
 
   if [ x"$DEPLOY" = "xall" -o x"$DEPLOY" = "xmailbox" ]; then
-    #if [ "x${mailboxd_server}" != "x" ]; then 
+    #if [ "x${mailboxd_server}" != "x" ]; then
       createKeystore $type
     #fi
   fi
 
-  echo -n "** Installing CA to ${zimbra_conf_directory}/ca..." 
+  echo -n "** Installing CA to ${zimbra_conf_directory}/ca..."
   if [ -d "${zimbra_conf_directory}/ca" ]; then
     find ${zimbra_conf_directory}/ca -type f -o -type l -exec rm {} \;
   else
@@ -773,7 +773,7 @@ deployCert() {
   cp -f ${zimbra_ca_key} ${zimbra_conf_directory}/ca/ca.key
   cp -f ${zimbra_ca_crt}  ${zimbra_conf_directory}/ca/ca.pem
   ln -f -s ca.pem ${zimbra_conf_directory}/ca/`${openssl} x509 -hash -noout -in ${zimbra_conf_directory}/ca/ca.pem`.0
-  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.pem 
+  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.pem
   chown ${zimbra_uid}:${zimbra_gid} ${zimbra_conf_directory}/ca/ca.key
   chmod 640 ${zimbra_conf_directory}/ca/ca.pem ${zimbra_conf_directory}/ca/ca.key
   if [ -s "${commercial_ca_crt}" ]; then
@@ -801,11 +801,11 @@ deployCert() {
       if [ x"$host" = "x${zimbra_server_hostname}" ]; then
         continue
       fi
-      echo "HOST:$host zmcertmgr getcrt $type -allserver" | /opt/zimbra/libexec/zmrc $host   
-      echo "HOST:$host zmcertmgr deploycrt $type" | /opt/zimbra/libexec/zmrc $host   
+      echo "HOST:$host zmcertmgr getcrt $type -allserver" | /opt/zimbra/libexec/zmrc $host
+      echo "HOST:$host zmcertmgr deploycrt $type" | /opt/zimbra/libexec/zmrc $host
     done
   fi
- 
+
 }
 
 saveCertToLdap() {
@@ -813,9 +813,9 @@ saveCertToLdap() {
   if [ x"$type" = "xself" ]; then
     current_crt=${server_crt}
     current_key=${server_key}
-  else 
-    current_crt=${commercial_crt} 
-    current_key=${commercial_key} 
+  else
+    current_crt=${commercial_crt}
+    current_key=${commercial_key}
   fi
   shift
   if [ ! -e ${current_crt} ]; then
@@ -835,7 +835,7 @@ saveCertToLdap() {
   if [ x"$ALLSERVERS" = "x-allserver" ]; then
     saveConfigKey "zimbraSSLCertificate" ${current_crt} "global"
     saveConfigKey "zimbraSSLPrivateKey" ${current_key} "global"
-  else 
+  else
     saveConfigKey "zimbraSSLCertificate" ${current_crt} "server"
     saveConfigKey "zimbraSSLPrivateKey" ${current_key} "server"
   fi
@@ -846,9 +846,9 @@ getCertFromLdap() {
   if [ x"$type" = "xself" ]; then
     current_crt=${server_crt}
     current_key=${server_key}
-  else 
-    current_crt=${commercial_crt} 
-    current_key=${commercial_key} 
+  else
+    current_crt=${commercial_crt}
+    current_key=${commercial_key}
   fi
   shift
   if [ -f ${current_crt} ]; then
@@ -866,7 +866,7 @@ getCertFromLdap() {
   if [ x"$ALLSERVERS" = "x-allserver" ]; then
     loadConfigKey "zimbraSSLCertificate" ${current_crt} "global"
     loadConfigKey "zimbraSSLPrivateKey" ${current_key} "global"
-  else 
+  else
     loadConfigKey "zimbraSSLCertificate" ${current_crt} "server"
     loadConfigKey "zimbraSSLPrivateKey" ${current_key} "server"
   fi
@@ -885,11 +885,11 @@ createConf() {
   # remove any duplicate hosts.
   tmphosts=`perl -e '$zimbra_server_hostname=$ARGV[0];foreach $h (@ARGV) { if ($h eq $zimbra_server_hostname) {next;} else {print "$h ";}}' $tmphosts`
   althosts=`perl -e '%uniq = map {$_ => 1} @ARGV; print join(" ", sort keys %uniq), "\n"' $tmphosts`
-  
+
   for alt in $althosts; do
     if [ "x$ALTNAMES" = "x" ]; then
       ALTNAMES="subjectAltName = DNS:${zimbra_server_hostname},DNS:${alt}"
-    else 
+    else
       ALTNAMES="${ALTNAMES},DNS:${alt}"
     fi
   done
@@ -922,11 +922,11 @@ createServerCertReq() {
   if [ x"$type" = "xself" ]; then
     current_crt=${server_crt}
     current_key=${server_key}
-  else 
-    current_crt=${commercial_crt} 
-    current_key=${commercial_key} 
+  else
+    current_crt=${commercial_crt}
+    current_key=${commercial_key}
   fi
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
 
   echo -n "** Creating server cert request ${current_csr}..."
 
@@ -973,7 +973,7 @@ createCert() {
     shift
     KEYSIZE="$1"
     shift
-  else 
+  else
     KEYSIZE=2048
   fi
   #echo "createCert: RSA keysize: $KEYSIZE"
@@ -1004,10 +1004,10 @@ createCert() {
 
   initSSLDirs
 
-  createCASerial  
+  createCASerial
 
   createConf "${zimbra_cert_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
-  
+
   # see if we already have a valid cert, we don't want to recreate
   # self-signed certs on upgrade
   if [ -s "${server_crt}" -a "x${IS_NEW_CRT}" != "x-new" ]; then
@@ -1042,7 +1042,7 @@ createCert() {
     createCSR self ${IS_NEW_CRT} -keysize ${KEYSIZE} -digest ${DIGEST}
   fi
 
-  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   echo -n "** Signing cert request ${server_csr}..."
   if [ -f "${zimbra_ca_directory}/index.txt.attr" ]; then
     rm ${zimbra_ca_directory}/index.txt.attr
@@ -1052,7 +1052,7 @@ createCert() {
     chmod 644 ${zimbra_ca_directory}/index.txt
     chown ${zimbra_uid}:${zimbra_gid} ${zimbra_ca_directory}/index.txt
   fi
-  
+
   ${openssl} ca -out ${server_crt} -notext \
     -config ${zimbra_ca_ssl_conf} \
     -days ${validation_days} \
@@ -1101,23 +1101,23 @@ viewstagedcrt() {
     fi
   elif [  x"${1}" != "xself" -a x"${1}" != "xcomm" ]; then
     usage
-  else  
-    type=$1 
+  else
+    type=$1
     if [ x"$type" = "xself" ]; then
       current_crt=${server_crt}
-    else 
-      current_crt=${commercial_crt} 
+    else
+      current_crt=${commercial_crt}
     fi
   fi
 
   if [ x"$2" != "x" ]; then
     current_crt=${2}
   fi
- 
+
   if [ ! -f "${current_crt}" ]; then
     echo "$ERROR_PREFIX Certificate file ${current_crt} does not exist."
     usage
-  fi 
+  fi
   ${openssl} x509  -in ${current_crt} -dates -subject -issuer -noout
   getsubjectaltnames ${current_crt} crt
 }
@@ -1128,7 +1128,7 @@ getsubjectaltnames() {
     return
   fi
   case "${2}" in
-    "crt") 
+    "crt")
       req=x509
       ;;
     "csr")
@@ -1149,7 +1149,7 @@ checkCertExpiration() {
     exp_thres_days=$1
     shift
     exp_thres_secs=$((exp_thres_days*24*60*60))
-  fi 
+  fi
 
   if [ "x$1" = "x" ]; then
     VIEW="all"
@@ -1168,9 +1168,9 @@ checkCertExpiration() {
       if [ $? != 0 ]; then
         status=1
         echo "${service_crt} is expiring within ${exp_thres_days} days."
-        ${openssl} x509  -in ${service_crt} -enddate -noout 
+        ${openssl} x509  -in ${service_crt} -enddate -noout
       fi
-    else 
+    else
       echo "${ERROR_PREFIX} ${service_crt} does not exist"
     fi
   fi
@@ -1183,19 +1183,19 @@ checkCertExpiration() {
       if [ $? != 0 ]; then
         status=1
         echo "${service_crt} is expiring within ${exp_thres_days} days."
-        ${openssl} x509  -in ${service_crt} -enddate -noout 
+        ${openssl} x509  -in ${service_crt} -enddate -noout
       fi
-    else 
+    else
       echo "${ERROR_PREFIX} ${service_crt} does not exist"
     fi
   fi
-  
+
   if [ $VIEW = "all" -o $VIEW = "mailboxd" ]; then
     service_der=/opt/zimbra/mailboxd/etc/mailboxd.der
     service_crt=/opt/zimbra/mailboxd/etc/mailboxd.pem
     if [ -f ${mailboxd_keystore} -a -d "/opt/zimbra/mailboxd" ]; then
     #echo "::service mailboxd::"
-      tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "${ERROR_PREFIX} Failed to create tmpfile" && exit 1)
+      tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "${ERROR_PREFIX} Failed to create tmpfile"; exit 1; }
       /opt/zimbra/java/bin/keytool -export -file ${service_der} -alias ${mailboxd_server} \
         -keystore ${mailboxd_keystore} -storepass ${mailboxd_keystore_password} > ${tmpfile} 2>&1
       if [ $? != 0 ]; then
@@ -1211,9 +1211,9 @@ checkCertExpiration() {
         if [ $? != 0 ]; then
           status=1
           echo "${service_crt} is expiring within ${exp_thres_days} days."
-          ${openssl} x509  -in ${service_crt} -enddate -noout 
+          ${openssl} x509  -in ${service_crt} -enddate -noout
         fi
-      else 
+      else
         echo "${ERROR_PREFIX} ${service_crt} does not exist"
       fi
     fi
@@ -1227,9 +1227,9 @@ checkCertExpiration() {
       if [ $? != 0 ]; then
         status=1
         echo "${service_crt} is expiring within ${exp_thres_days} days."
-        ${openssl} x509  -in ${service_crt} -enddate -noout 
+        ${openssl} x509  -in ${service_crt} -enddate -noout
       fi
-    else 
+    else
       echo "${ERROR_PREFIX} ${service_crt} does not exist"
     fi
   fi
@@ -1253,7 +1253,7 @@ viewdeployedcrt() {
     if [ -f "${service_crt}" ]; then
       ${openssl} x509  -in ${service_crt} -dates -subject -issuer -noout
       getsubjectaltnames $service_crt crt
-    else 
+    else
       echo "${ERROR_PREFIX} ${service_crt} does not exist"
     fi
   fi
@@ -1264,17 +1264,17 @@ viewdeployedcrt() {
     if [ -f "${service_crt}" ]; then
       ${openssl} x509  -in ${service_crt} -dates -subject -issuer -noout
       getsubjectaltnames $service_crt crt
-    else 
+    else
       echo "${ERROR_PREFIX} ${service_crt} does not exist"
     fi
   fi
-  
+
   if [ $VIEW = "all" -o $VIEW = "mailboxd" ]; then
     service_der=/opt/zimbra/mailboxd/etc/mailboxd.der
     service_crt=/opt/zimbra/mailboxd/etc/mailboxd.pem
     if [ -f ${mailboxd_keystore} -a -d "/opt/zimbra/mailboxd" ]; then
       echo "::service mailboxd::"
-      tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "${ERROR_PREFIX} Failed to create tmpfile" && exit 1)
+      tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "${ERROR_PREFIX} Failed to create tmpfile"; exit 1; }
       /opt/zimbra/java/bin/keytool -export -file ${service_der} -alias ${mailboxd_server} \
         -keystore ${mailboxd_keystore} -storepass ${mailboxd_keystore_password} > ${tmpfile} 2>&1
       if [ $? != 0 ]; then
@@ -1288,7 +1288,7 @@ viewdeployedcrt() {
         ${openssl} x509  -inform DER -outform PEM -in ${service_der} -out ${service_crt}
         ${openssl} x509  -in ${service_crt} -dates -subject -issuer -noout
         getsubjectaltnames $service_crt crt
-      else 
+      else
         echo "${ERROR_PREFIX} ${service_der} does not exist"
       fi
     fi
@@ -1300,7 +1300,7 @@ viewdeployedcrt() {
     if [ -f "${service_crt}" ]; then
       ${openssl} x509  -in ${service_crt} -dates -subject -issuer -noout
       getsubjectaltnames $service_crt crt
-    else 
+    else
       echo "${ERROR_PREFIX} ${service_crt} does not exist"
     fi
   fi
@@ -1308,15 +1308,15 @@ viewdeployedcrt() {
 
 showcsr() {
   type=$1
-  
+
   if [ x"${1}" = "x" ] || [  x"${1}" != "xself" -a x"${1}" != "xcomm" ]; then
     usage
-  else  
-    type=$1 
+  else
+    type=$1
     if [ x"$type" = "xself" ]; then
       current_csr=${server_csr}
-    else 
-      current_csr=${commercial_csr} 
+    else
+      current_csr=${commercial_csr}
     fi
   fi
 
@@ -1333,7 +1333,7 @@ showcsr() {
 }
 
 createCSR() {
-  
+
   echo "** Generating a server csr for download $*"
 
   if [ x"$1" = "x" ]; then
@@ -1356,10 +1356,10 @@ createCSR() {
     shift
     KEYSIZE="$1"
     shift
-  else 
+  else
     KEYSIZE=2048
   fi
-  
+
   if [ x"${1}" = "x-digest" ]; then
     shift
     DIGEST="$1"
@@ -1369,7 +1369,7 @@ createCSR() {
 
   #echo "CreateCSR: RSA keysize: $KEYSIZE"
 
-  if [ "x${1}" != "x" ]; then 
+  if [ "x${1}" != "x" ]; then
     if [ "x${1}" = "x-subject" ]; then
       shift
       if [ "x${1}" != "x" -a "x$(echo ${1} | cut -c1)" != "x-" ]; then
@@ -1392,25 +1392,25 @@ createCSR() {
 
   if [ x"$type" = "xself" ]; then
     current_csr=${server_csr}
-  else 
-    current_csr=${commercial_csr} 
+  else
+    current_csr=${commercial_csr}
   fi
 
-  if [ -f "${current_csr}" ]; then      
+  if [ -f "${current_csr}" ]; then
     if [ x"${IS_NEW_CSR}" != "x-new" ]; then
       echo "${ERROR_PREFIX} The Certificate Signing Request already existed."
       usage
     fi
     createConf "${zimbra_cert_ssl_conf}" "$zimbra_server_hostname,$subject_alt_names"
   fi
-  
+
   backupSSLDirs ${zimbra_ssl_directory}
   initSSLDirs
   createCA -keysize ${KEYSIZE} -digest ${DIGEST}
   createServerCertReq $type
-  
-  if [ x"$type" = "xcomm" ]; then 
-    if [ -f "${csr_download_file}" ]; then 
+
+  if [ x"$type" = "xcomm" ]; then
+    if [ -f "${csr_download_file}" ]; then
       rm -rf ${csr_download_file}
     fi
     cp -f ${commercial_csr} ${csr_download_file}
@@ -1423,8 +1423,8 @@ createCSR() {
 verifycrt() {
   if [ x"${1}" = "x" ] || [  x"${1}" != "xself" -a x"${1}" != "xcomm" ]; then
     usage
-  else  
-    type=$1 
+  else
+    type=$1
     shift
     key=$1
     crt=$2
@@ -1436,7 +1436,7 @@ verifycrt() {
           key=${commercial_key}
         fi
     fi
-  
+
    if [ x"${crt}" = "x" ] ; then
       if [ "$type" = "self" ]; then
           crt=${server_crt}
@@ -1452,10 +1452,10 @@ verifycrt() {
           ca_crt=${commercial_ca_crt}
       fi
     fi
-  fi  
+  fi
 
   echo "** Verifying $crt against $key"
-  
+
   if [ ! -f $key ]; then
     echo "${ERROR_PREFIX} Can't find private key  ${key}  "
     exit 1
@@ -1465,16 +1465,16 @@ verifycrt() {
   else
     key_md5=`${openssl} rsa -noout -modulus -in ${key} | ${openssl} md5`
     crt_md5=`${openssl} x509 -noout -modulus -in ${crt} | ${openssl} md5`
-  
+
     #echo "key_md5=${key_md5}"
-    #echo "crt_md5=${crt_md5}"  
+    #echo "crt_md5=${crt_md5}"
   fi
-  
+
   if [ x"${key_md5}" != "x"  -a  x"${key_md5}" = x"${crt_md5}" ] ; then
     echo "Certificate (${crt}) and private key (${key}) match."
   else
     echo "${ERROR_PREFIX} Unmatching certificate (${crt}) and private key (${key}) pair."
-    exit 1 
+    exit 1
   fi
 
   # check validity of the cert
@@ -1490,8 +1490,8 @@ verifycrt() {
 verifycrtkey() {
   if [ x"${1}" = "x" ] || [  x"${1}" != "xself" -a x"${1}" != "xcomm" ]; then
     usage
-  else  
-    type=$1 
+  else
+    type=$1
     shift
     key=$1
     crt=$2
@@ -1502,7 +1502,7 @@ verifycrtkey() {
           key=${commercial_key}
         fi
     fi
-  
+
    if [ x"${crt}" = "x" ] ; then
       if [ "$type" = "self" ]; then
           crt=${server_crt}
@@ -1511,10 +1511,10 @@ verifycrtkey() {
         fi
     fi
 
-  fi  
+  fi
 
   echo "** Verifying $crt against $key"
-  
+
   if [ ! -f $key ]; then
     echo "${ERROR_PREFIX} Can't find private key  ${key}  "
     exit 1
@@ -1524,25 +1524,25 @@ verifycrtkey() {
   else
     key_md5=`${openssl} rsa -noout -modulus -in ${key} | ${openssl} md5`
     crt_md5=`${openssl} x509 -noout -modulus -in ${crt} | ${openssl} md5`
-  
+
     #echo "key_md5=${key_md5}"
-    #echo "crt_md5=${crt_md5}"  
+    #echo "crt_md5=${crt_md5}"
   fi
-  
+
   if [ x"${key_md5}" != "x"  -a  x"${key_md5}" = x"${crt_md5}" ] ; then
     echo "Certificate (${crt}) and private key (${key}) match."
   else
     echo "${ERROR_PREFIX} Unmatching certificate (${crt}) and private key (${key}) pair."
-    exit 1 
+    exit 1
   fi
 }
 
 verifycrtchain () {
-    cafile=$1 
+    cafile=$1
     crt=$2
-   
+
      result=`${openssl} verify -purpose sslserver -CAfile $cafile $crt`
-    
+
     if [ x"${result}" = x"${crt}: OK" ]; then
         echo "Valid Certificate Chain: $result"
     else
@@ -1570,7 +1570,7 @@ migrate () {
 
   if [ -f "${prev_ca_crt}" ]; then
     cp -f ${prev_ca_crt} ${zimbra_ca_crt}
-  else 
+  else
     echo "${prev_ca_crt} not found"
   fi
   if [ -f "${prev_ca_key}" ]; then
@@ -1626,7 +1626,7 @@ usage () {
   echo "  $0 migrate"
   echo
   echo "Comments:  "
-  echo "-  Default <certfile> " 
+  echo "-  Default <certfile> "
   echo "     self-signed ${server_crt}"
   echo "     commerical  ${commercial_crt}"
   echo "-  Default <priv_key>"
@@ -1646,7 +1646,7 @@ usage () {
   echo "-  Default digest mode is sha256.  Other digest mechansims are:"
   echo "     md4, md5, ripemd160, sha, sha1, sha224, sha384, sha512"
   echo ""
-  
+
   exit 1;
 }
 
@@ -1659,10 +1659,10 @@ ACTION=$1
 shift
 
 ACTION_ROOT_DIR=${zimbra_ssl_directory}
- 
+
 # check for valid usage
 if [ x"$ACTION" = "xviewdeployedcrt" ]; then
-  viewdeployedcrt $@ 
+  viewdeployedcrt $@
 elif [ x"$ACTION" = "xviewstagedcrt" -o x"$ACTION" = "xviewcrt" ]; then
   viewstagedcrt  $@
 elif [ x"$ACTION" = "xviewcsr" ]; then
@@ -1694,10 +1694,10 @@ elif [ x"$ACTION" = "xaddcacert" ]; then
 elif [ x"$ACTION" = "xmigrate" ]; then
   migrate $@
 elif [ x"$ACTION" = "x-help" -o x"$ACTION" = "xhelp" -o x"$ACTION" = "x-h" -o x"$ACTION" = "x--help" ]; then
-  usage 
+  usage
 else
   usage
 fi
 
-exit 0 
+exit 0
 

@@ -30,7 +30,7 @@ getPubKey() {
 replacePubKey() {
 	server=$1
 	key=$2
-  echo "Updating keys for $server"
+	echo "Updating keys for $server"
 	keyhost=`echo ${key} | awk '{print $3}'`
 
 	echo "${authkeys}" > ${tempkeysfile}
@@ -73,7 +73,7 @@ if [ ! -d ${zimbra_tmp_directory} ]; then
   mkdir -p ${zimbra_tmp_directory} > /dev/null 2>&1
 fi
 
-tempkeysfile=`mktemp -t auth_keys.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+tempkeysfile=`mktemp -t auth_keys.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
 
 if [ -f $authkeysfile ]; then
 	authkeys=`cat ${authkeysfile}`
