@@ -1,20 +1,20 @@
 #!/bin/bash
-# 
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2011, 2013, 2014 Zimbra, Inc.
-# 
+#
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software Foundation,
 # version 2 of the License.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see <http://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
-# 
+#
 
 if [ x`whoami` != "xzimbra" ]; then
   echo "$0 must be run as user zimbra"
@@ -24,7 +24,7 @@ umask 027
 
 platform=$(/opt/zimbra/libexec/get_plat_tag.sh 2> /dev/null := UNKNOWN)
 source /opt/zimbra/bin/zmshutil || exit 1
-zmsetvars -f 
+zmsetvars -f
 
 export JAVA_HOME=${zimbra_java_home}
 
@@ -57,7 +57,7 @@ isLdapRunning() {
 
   /opt/zimbra/bin/ldap status > /dev/null 2>&1
   LDAP_IS_RUNNING=$?
-  
+
 }
 
 saveConfigKey() {
@@ -72,7 +72,7 @@ saveConfigKey() {
   elif [ $location = "domain" ]; then
     local domain=$4
     local zmprov_opts="md ${domain}"
-  else 
+  else
     echo "Unknown config section $location"
     return
   fi
@@ -96,7 +96,7 @@ cleanConfigKey() {
   elif [ $location = "domain" ]; then
     local domain=$3
     local zmprov_opts="md ${domain}"
-  else 
+  else
     echo "Unknown config section $location"
     return
   fi
@@ -126,12 +126,12 @@ loadConfigKey() {
   elif [ $location = "domain" ]; then
     local domain=$4
     local zmprov_opts="gd ${domain}"
-  else 
+  else
     echo "Unknown config section $location"
     return
   fi
   TMPDIR=${zimbra_tmp_directory}
-  local tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || (echo "Failed to create tmpfile" && exit 1)
+  local tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
   chown ${zimbra_uid} ${tmpfile}
   if [ ! -s ${file} ]; then
     echo -n "** Retrieving $location config key $key..."
@@ -151,13 +151,13 @@ deployCerts() {
   if [ "x$1" = "x-force" ]; then
     rm -rf ${zimbra_domain_cert_directory} > /dev/null 2>&1
   fi
-  
+
   DOMAINS=$(/opt/zimbra/bin/zmprov -m -l -- garpd | awk '{print \$1}')
   if [ $? != 0 ]; then
     echo "Unable to retrieve list of domains with SSL certificates";
     exit 1
   fi
-  
+
   for i in ${DOMAINS}; do
     echo -n "** Deploying cert for ${i}..."
     getClientCertFromLdap $i > /dev/null 2>&1
@@ -166,7 +166,7 @@ deployCerts() {
     else
       echo "failed."
     fi
-    
+
   done
 }
 
@@ -177,7 +177,7 @@ saveClientCertToLdap() {
     echo "$ERROR_PREFIX Certificate file ${current_crt} does not exist."
     return
   fi
-  
+
   if [ x"$target" = "xglobal" ]; then
     saveConfigKey "zimbraReverseProxyClientCertCA" ${current_crt} "global"
     return
@@ -189,7 +189,7 @@ saveClientCertToLdap() {
   fi
 
   domain=$target
-  
+
   if [ x"$domain" = "x" ]; then
     echo "$ERROR_PREFIX Domain must be specified."
     return
@@ -211,7 +211,7 @@ cleanClientCertFromLdap() {
   fi
 
   domain=$target
-  
+
   if [ x"$domain" = "x" ]; then
     echo "$ERROR_PREFIX Domain must be specified."
     return
@@ -248,7 +248,7 @@ usage () {
   echo "  $0 cleancrt server"
   echo "  $0 cleancrt global"
   echo
-  
+
   exit 1;
 }
 
@@ -266,10 +266,10 @@ if [ x"$ACTION" = "xsavecrt" ]; then
 elif [ x"$ACTION" = "xcleancrt" ]; then
   cleanClientCertFromLdap $@
 elif [ x"$ACTION" = "x-help" -o x"$ACTION" = "xhelp" -o x"$ACTION" = "x-h" -o x"$ACTION" = "x--help" ]; then
-  usage 
+  usage
 else
   usage
 fi
 
-exit 0 
+exit 0
 
