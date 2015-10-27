@@ -99,6 +99,7 @@ if(lc($ldap_is_master) eq "true") {
         $dn,
         add=>{olcServerID =>$sid},
       );
+    }
   } else {
     if ($sid > 0) {
       print "Error: Server ID provided when the Server ID is already configured.\n";
