@@ -82,7 +82,6 @@ components="\
   openldap-clibs \
   openssl \
   pflogsumm \
-  rsync \
   snmp \
   tcmalloc \
   zeromq \

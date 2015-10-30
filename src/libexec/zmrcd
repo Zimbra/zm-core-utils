@@ -271,7 +271,7 @@ sub isRsyncCmd {
     my @parts = split(/\s+/, $cmd);
     my $prog = $parts[0];
     if ($prog =~ /rsync$/) {
-      if (($prog ne 'rsync') && ($prog ne '/opt/zimbra/rsync/bin/rsync')) {
+      if (($prog ne 'rsync') && ($prog ne '/opt/zimbra/common/bin/rsync')) {
         logError("command '$prog' not allowed");
         exit 1;
       }
