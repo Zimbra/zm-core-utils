@@ -1,97 +1,226 @@
 #!/bin/bash
-# 
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2013, 2014 Zimbra, Inc.
-# 
+#
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software Foundation,
 # version 2 of the License.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see <http://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
-# 
+#
 
-
-
-if [ x`whoami` != "xzimbra" ]; then
-  echo "$0 must be run as user zimbra"
-  exit 1
+if [ x$(whoami) != "xzimbra" ]; then
+    echo "Error: $0 must be run as user zimbra"
+    exit 1
 fi
 
-source `dirname $0`/zmshutil || exit 1
-zmsetvars
+function chk_command () {
+    for cmd in "$@"; do
+        if [ ! -x "$cmd" ]; then
+            echo "error: unable to find the command '${cmd##*/}'";
+            exit 1;
+        fi
+    done
+}
+
+ldapsearch="/opt/zimbra/bin/ldapsearch"
+zmhostname="/opt/zimbra/bin/zmhostname"
+zmlocalconfig="/opt/zimbra/bin/zmlocalconfig"
+zmprov="/opt/zimbra/bin/zmprov"
+
+chk_command $ldapsearch $zmhostname $zmlocalconfig $zmprov
+
+hostname=$($zmhostname)
+
+validate_setting=1
+zmvalidatehost() {
+    hosts=$(${zmprov} garpb | awk '/server/ {split($2,parts,":"); print parts[1]}')
+    for h in ${hosts[@]}; do
+        if [ "$hostname" = "$h" ]; then
+            return
+        fi
+    done
+    echo "Warning: $hostname is not in the list of reverse proxy backends. No validation will be performed."
+    validate_setting=0
+}
+zmvalidatehost
+
+
+# NOTE: ldap_url may be multi-valued
+if ! eval $(${zmlocalconfig} -q -m export ldap_url zimbra_ldap_userdn zimbra_ldap_password); then
+    echo "Error: executing: ${zmlocalconfig} -q -m export"
+    exit 1
+fi
+
+zmgetallproxies() {
+    ldap_urls=($ldap_url)
+    proxies=
+    search=$(${ldapsearch} -LL -H "$ldap_urls" -D "$zimbra_ldap_userdn" -w "$zimbra_ldap_password" \
+        -b 'cn=servers,cn=zimbra' '(&(objectClass=zimbraServer)(zimbraServiceEnabled=proxy))' cn 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        proxies=$(echo "$search" | awk '/cn:/ {print $2}')
+        echo "$proxies"
+        return
+    fi
+    echo ""
+}
+
+zmgetproxyforhost() {
+    host=$1
+    ldap_urls=($ldap_url)
+    found_rp_avail_lookups=
+    # First, see if there is a proxy (or proxies) sepcifically designated for this host
+    proxies=
+    search=$(${ldapsearch} -LL -H "$ldap_urls" -D "$zimbra_ldap_userdn" -w "$zimbra_ldap_password" \
+        -b 'cn=servers,cn=zimbra' "(&(objectClass=zimbraServer)(zimbraReverseProxyAvailableLookupTargets=*$host*))" \
+        cn 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        proxies=$(echo "$search" | awk '/cn:/ {print $2}')
+        if [ "x${proxies}" != "x" ]; then
+            echo "$proxies"
+            return
+        fi
+    fi
+    # If not, just return the list of all proxies and we will use the first one that works
+    zmgetallproxies
+}
 
 sasl_conf_directory=/opt/zimbra/cyrus-sasl/etc
 mailboxd_server=jetty
 mailboxd_conf_directory=${mailboxd_directory}/etc
 jetty_web_xml=/opt/zimbra/jetty/etc
 
+usage() {
+    exitcode=$1
+    if [ $validate_setting -eq 1 ]; then
+        echo "Usage: $0 [both|http|https|help]"
+    else
+        echo "Usage: $0 [both|http|https|redirect|mixed|help]"
+    fi
+    exit $exitcode
+}
+
+
 if [ $# -gt 1 ]; then
-    echo "Usage: $0 [mixed|both|http|https|redirect|help]"
-    exit 1
+    usage 1
 fi
-  
+
 case "$1" in
-  mixed|both|http|https|redirect)
-    MODE=$1
-    UPDATE_MAIL_MODE=1
+    both|http|https|mixed|redirect)
+        MODE=$1
+        UPDATE_MAIL_MODE=1
     ;;
-  help|--help|-help)
-    echo "Usage: $0 [mixed|both|http|https|redirect]"
-    exit 0
+    help|--help|-help)
+        usage 0
     ;;
-  '')
+    '')
     ;;
-  *)
-    echo "Usage: $0 [mixed|both|http|https|redirect|help]"
-    exit 1
+    *)
+        usage 1
     ;;
 esac
 
 export JAVA_HOME=${zimbra_java_home}
 
 if [ "x${zimbra_tmp_directory}" = "x" ]; then
-  zimbra_tmp_directory=/opt/zimbra/data/tmp
+    zimbra_tmp_directory=/opt/zimbra/data/tmp
 fi
-
 if [ ! -d ${zimbra_tmp_directory} ]; then
-  mkdir -p ${zimbra_tmp_directory}
+    mkdir -p ${zimbra_tmp_directory}
 fi
 
-if [ "x$zimbra_server_hostname" = "x" ]; then
-  echo "ERROR: Unable to determine zmhostname"
-  exit 1;
-fi
 
 rewriteConfigs() {
-	echo -n "Rewriting config files for cyrus-sasl, webxml, mailboxd, service, zimbraUI, and zimbraAdmin..."
-	/opt/zimbra/libexec/configrewrite sasl webxml mailbox service zimbra zimbraAdmin zimlet> /dev/null 2>&1
-	if [ $? = 0 ]; then
-		echo "done."
-	else
-		echo "failed."
-		exit 1
-	fi
+    echo -n "Rewriting config files for cyrus-sasl, webxml, mailboxd, service, zimbraUI, and zimbraAdmin..."
+    /opt/zimbra/libexec/configrewrite sasl webxml mailbox service zimbra zimbraAdmin zimlet> /dev/null 2>&1
+    if [ $? = 0 ]; then
+        echo "done."
+    else
+        echo "failed."
+        exit 1
+    fi
 }
 
 updateLdap() {
-	echo -n "Setting ldap config zimbraMailMode $MODE for ${zimbra_server_hostname}..."
-	/opt/zimbra/bin/zmprov -l ms ${zimbra_server_hostname} zimbraMailMode $MODE > /dev/null
-	if [ $? = 0 ]; then
-		echo "done."
-	else
-		echo "failed."
-		exit 1
-	fi
+    if [ $validate_setting -eq 1 ]; then
+        # check the value of zimbraReverseProxySSLToUpstreamEnabled and zimbraReverseProxyMailMode
+        # on a suitable proxy server
+        sslup=
+        rpmm=
+        proxies=$(zmgetproxyforhost $hostname)
+        for proxy in "${proxies[@]}"; do
+            echo "Attempting to query proxy ($proxy) settings for zimbraReverseProxyMailMode and zimbraReverseProxySSLToUpstreamEnabled."
+            setting=$(/opt/zimbra/bin/zmprov -l gs ${proxy} zimbraReverseProxySSLToUpstreamEnabled zimbraReverseProxyMailMode)
+            if [ $? -eq 0 ]; then
+                sslup=$(echo "$setting" | awk '/zimbraReverseProxySSLToUpstreamEnabled:/ {print $2}')
+                rpmm=$(echo "$setting" | awk '/zimbraReverseProxyMailMode:/ {print $2}')
+                break
+            fi
+        done
+        if [ "x$sslup" = "x" ]; then
+            echo "Error: Unable to determine the proxy's value of zimbraReverseProxySSLToUpstreamEnabled"
+            exit 1
+        fi
+        if [ "x$rpmm" = "x" ]; then
+            echo "Error: Unable to determine the proxy's value of zimbraReverseProxyMailMode"
+            exit 1
+        fi
+        # validate setting of zimbraReverseProxyMailMode based on the setting of zimbraReverseProxySSLToUpstreamEnabled
+        echo "On proxy ($proxy): zimbraReverseProxyMailMode='$rpmm', zimbraReverseProxySSLToUpstreamEnabled='$sslup'"
+        if [ "$sslup" = "TRUE" -a "$rpmm" != "both" -a "$rpmm" != "https" -a "$rpmm" != "mixed" -a "$rpmm" != "redirect" ]; then
+            echo "Error: When zimbraReverseProxySSLToUpstreamEnabled (on the proxy server) is TRUE, zimbraReverseProxyMailMode must be one of the following: both, https, mixed, or redirect. Please correct this on the proxy server then retry this command."
+            exit 1
+        fi
+        if [ "$sslup" = "FALSE" -a "$rpmm" != "both" -a "$rpmm" != "http" ]; then
+            echo "Error: When zimbraReverseProxySSLToUpstreamEnabled (on the proxy server) is FALSE, zimbraReverseProxyMailMode must be one of the following: both or http. Please correct this on the proxy server then retry this command."
+            exit 1
+        fi
+        # Validate the new setting of zimbraMailMode based on the setting of zimbraReverseProxyMailMode
+        if [ "$rpmm" = "both" -a "$MODE" != "both" ]; then
+            echo "Error: When zimbraReverseProxyMailMode (on the proxy server) is both, the only valid setting for zimbraMailMode is both."
+            exit 1
+        fi
+        if [ "$rpmm" = "http" -a "$MODE" != "both" -a "$MODE" != "http" ]; then
+            echo "Error: When zimbraReverseProxyMailMode (on the proxy server) is http, the only valid settings for zimbraMailMode are both or http."
+            exit 1
+        fi
+        if [ "$rpmm" = "https" -a "$MODE" != "both" -a "$MODE" != "https" ]; then
+            echo "Error: When zimbraReverseProxyMailMode (on the proxy server) is https, the only valid settings for zimbraMailMode are both or https."
+            exit 1
+        fi
+        if [ "$rpmm" = "mixed" -a "$MODE" != "both" ]; then
+            echo "Error: When zimbraReverseProxyMailMode (on the proxy server) is mixed, the only valid setting for zimbraMailMode is both."
+            exit 1
+        fi
+        if [ "$rpmm" = "redirect" -a "$MODE" != "both" -a "$MODE" != "https" ]; then
+            echo "Error: When zimbraReverseProxyMailMode (on the proxy server) is redirect, the only valid settings for zimbraMailMode are both or https."
+            exit 1
+        fi
+    fi
+
+    tmpfile=$(mktemp ${zimbra_tmp_directory}/zmprov.XXX 2> /dev/null) || { echo "Failed to create tmpfile"; exit 1; }
+    echo -n "Attempting to set ldap config zimbraMailMode $MODE on host ${hostname}..."
+    /opt/zimbra/bin/zmprov -l ms ${hostname} zimbraMailMode $MODE > /dev/null 2>$tmpfile
+    if [ $? -eq 0 ]; then
+        echo "done."
+        rm $tmpfile
+        return
+    fi
+    echo "failed."
+    cat $tmpfile
+    rm $tmpfile
+    exit 1
 }
 
 if [ x"$UPDATE_MAIL_MODE" = "x1" ]; then
-  updateLdap
+    updateLdap
 fi
 
 rewriteConfigs
