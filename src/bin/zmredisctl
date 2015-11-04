@@ -1,0 +1,313 @@
+#!/bin/bash
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2010, 2011, 2013, 2014 Zimbra, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <http://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+
+export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+
+zuser="zimbra"
+
+if [ "`whoami 2>/dev/null`" != "$zuser" ]; then
+    echo "ERROR: ${0##*/} must be run as user '$zuser'"
+    exit 1
+fi
+
+# set:
+#   ${ldap_is_master}
+#   ${zimbra_log_directory} ${zimbra_server_hostname}
+source "${0%/*}/zmshutil" || exit 1
+zmsetvars
+
+# note: DEBUG=anything will give verbose debug output
+DEBUG=${DEBUG:-}
+execcli="/opt/zimbra/common/sbin/redis-cli"
+execsvr="/opt/zimbra/common/sbin/redis-server"
+execn=${execsvr##*/}
+
+# Usage: ./redis-server [/path/to/redis.conf] [options]
+# NOTE: redis cluster requires two open TCP connections
+#   default ports: 6379 and 16379
+# - TBD: command line args vs. config file
+#   refs:
+#     http://redis.io/topics/config
+#     http://redis.io/topics/cluster-tutorial
+
+# HACKS: redo/revisit in the future (bug 98653)
+# - IF on LDAP master localconfig(ldap_is_master=true)
+#   - check zimbraRedisUrl (global) is set to redis://<zmhostname>:6379
+#   - start server
+#     - NOTE: this does not take into account a cluster
+if [ "${ldap_is_master}" != "true" ]; then
+    echo "ERROR: ${0##*/} is only allowed on an LDAP master (to be fixed)!" >&2
+    exit 1
+fi
+
+cnffile="/opt/zimbra/conf/redis.conf"
+datadir="/opt/zimbra/data/redis"
+pidfile="${zimbra_log_directory}/redis.pid"
+
+# --dir => working directory where data is written
+# defaults:
+#   --syslog-facility local0
+svrargs=(--daemonize yes --pidfile "$pidfile" --dir "$datadir")
+svrargs+=(--syslog-enabled yes)
+
+# NOTE: zimbraRedisUrl is a multi-valued attribute
+REDIS_URL=${REDIS_URL:-}
+function get_redisurl () {
+    if [ -z "$REDIS_URL" ]; then
+        REDIS_URL=$(zmprov -l gs "${zimbra_server_hostname}" zimbraRedisUrl 2>/dev/null | awk '/Url:/ {print $NF}')
+    fi
+
+    [ -z "$DEBUG" ] || echo "DEBUG: REDIS_URL ret($REDIS_URL)" >&2
+    echo "$REDIS_URL"
+}
+
+function check_redisurl_global () {
+    url=$(zmprov -l gacf zimbraRedisUrl 2>/dev/null | awk '/Url:/ {print $NF}')
+    if [ -z "$url" ]; then
+        echo "zimbraRedisUrl appears to be empty, please check/set!"
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: check_redisurl_global ret($url)" >&2
+}
+
+
+# returns (via stdout) port redis-server is expected on
+function get_port ()
+{
+    url=$(get_redisurl)
+    port=
+    if [ -n "$url" ]; then
+        port=${url##*:}
+    fi
+    port=${port:-6379}
+
+    [ -z "$DEBUG" ] || echo "DEBUG: get_port ret($port)" >&2
+    echo "$port"
+}
+
+# returns (via stdout) pid found via pidfile
+function pid_pidfile ()
+{
+    pid=""
+    if [ -r "$pidfile" ]; then
+        read pid < "$pidfile"
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: pid_pidfile ret($pid)" >&2
+    echo "$pid"
+}
+
+# returns (via stdout) pid running as $zuser found via ps
+function pid_ps ()
+{
+    pid=$(ps auxwww | awk "/^$zuser"'[[:space:]]/ && /[r]edis-server[[:space:]]/ {print $2}')
+    [ -z "$DEBUG" ] || echo "DEBUG: pid_ps ret($pid)" >&2
+    echo "$pid"
+}
+
+function checkrunning_ps ()
+{
+    pid=$(pid_ps)
+    if [ "$pid" != "" ]; then
+        kill -0 "$pid" 2>/dev/null
+        if [ $? != 0 ]; then # not our process?
+            echo "WARN: process check failed, not our pid(s)? $pid" >&2
+            pid=""
+        fi
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: checkrunning_ps ret($pid)" >&2
+    echo "$pid"
+}
+
+function checkrunning ()
+{
+    pid=$(pid_pidfile)
+    if [ "$pid" != "" ]; then
+        kill -0 "$pid" 2>/dev/null
+        if [ $? != 0 ]; then # no process or not our process
+            [ -z "$DEBUG" ] || echo "DEBUG: kill -0 '$pid' failed, stale pidfile($pidfile)?" >&2
+            pspid=$(pid_ps)
+            if [ "$pid" = "$pspid" ]; then
+                echo "WARN: check process (kill -0) '$pid', permission denied?" >&2
+            else
+                if [ "$pspid" != "" ]; then
+                    echo "WARN: unexpected running process(es): $pspid (!= $pid in $pidfile)" >&2
+                fi
+
+                # clear out the pidfile and hope for the best
+                [ -z "$DEBUG" ] || echo "DEBUG: set pid='' and remove pidfile '$pidfile'" >&2
+                rm "$pidfile" || echo "ERROR: remove stale '$pidfile' pid='$pid' failed" >&2
+                pid=""
+            fi
+        fi
+    else
+        pid=$(checkrunning_ps)
+        if [ -n "$pid" ]; then
+            echo "WARN: found running pid($pid) not in '$pidfile'!" >&2
+        fi
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: checkrunning ret($pid) pidfile($pidfile)" >&2
+    echo "$pid"
+}
+
+function wait_for_proc () {
+    want="${1:-up}"
+    pid="$2"
+    ret=7
+    [ -z "$DEBUG" ] || echo "DEBUG: wait_for_proc '$want' with pid_ps($pid)..." >&2
+
+    for (( i=1; i<=10; i++ )); do
+        if [ "$want" = "down" ]; then
+            if [ ! -x "/proc/$pid" ]; then
+                ret=0
+                break
+            fi
+        else # up...
+            pid=$(pid_ps)
+            if [ -n "$pid" ]; then
+                ret=0
+                break
+            fi
+        fi
+        sleep 1
+    done
+    [ -n "$pid" ] && echo "$pid"
+    return $ret
+}
+
+# HACK: if listening on >1 interfaces (non-wildcard) multiple
+# processes are started - just listen on all for now...
+function get_bindips () {
+    echo ""; return # HACK: remove this
+
+    ipmode=$(zmprov -l gs "${zimbra_server_hostname}" zimbraIPMode 2>/dev/null | awk '/ode:/ {print $NF}')
+    hostarg=""
+    if [ "$ipmode" = "ipv4" ]; then
+        hostarg="-t A"
+    elif [ "$ipmode" = "ipv6" ]; then
+        hostarg="-t AAAA"
+    fi
+    bindips=(
+        $(host $hostarg "${zimbra_server_hostname}" | awk '/ address/ {print "--bind " $NF}')
+    )
+    echo "${bindips[@]}"
+}
+
+function start () {
+    if [ ! -x "$execsvr" ]; then
+        echo "${0##*/}: ERROR: unable to execute '$execsvr'" >&2
+        return 1
+    fi
+    if [ ! -d "$datadir" ]; then
+        echo "NOTE: (working) dir '$datadir' does not exist, creating..." >&2
+        mkdir "$datadir"
+    fi
+
+    gacferr=$(check_redisurl_global)
+    if [ -n "$gacferr" ]; then
+        echo "${0##*/}: WARN: zmprov gacf: '$gacferr'" >&2
+    fi
+    confargs=()
+    if [ -r "$cnffile" ]; then
+        confargs=("$cnffile")
+    fi
+    echo -n "Starting $execn..."
+    pid=$(checkrunning)
+    if [ -n "$pid" ]; then
+        echo "already running pid($pid)!"
+        return 3;
+    fi
+
+    bindips=($get_bindips)
+    [ -z "$DEBUG" ] \
+      || echo "DEBUG: running $execsvr" "${confargs[@]}" "${svrargs[@]}" "${bindips[@]}" >&2
+    "$execsvr" "${confargs[@]}" "${svrargs[@]}" "${bindips[@]}"
+    ret=$?
+
+    # sleep if necessary to try to avoid any race conditions...
+    if [ "$ret" = 0 ]; then
+        pid=$(wait_for_proc "up")
+        ret=$?
+    fi
+
+    [ -n "$pid" ] && echo "done" || echo "failed"
+    return $ret
+}
+
+function stop () {
+    if [ ! -x "$execcli" ]; then
+        echo "${0##*/}: ERROR: unable to execute '$execcli'" >&2
+        return 1
+    fi
+    echo -n "Stopping $execn..."
+    pid=$(checkrunning)
+    ret=0
+    if [ -n "$pid" ]; then
+        port=$(get_port)
+        "$execcli" -p "$port" shutdown
+        ret=$?
+        if [ $ret = 0 ]; then
+            pid=$(wait_for_proc "down" "$pid")
+            ret=$?
+        fi
+    else
+        echo -n "(not running) "
+    fi
+
+    [ $ret = 0 ] && echo "done" || echo "failed"
+    return $ret
+}
+
+# attempt start even when stop fails
+#function reload () { ; }
+function restart () {
+    stop
+    start
+    return $?
+}
+
+function status () {
+    echo -n "$execn is "
+    pid=$(checkrunning)
+    ret=0
+    if [ -z "$pid" ]; then
+        ret=1
+        echo -n "not "
+    fi
+
+    echo "running"
+    return $ret
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    reload|restart)
+        restart
+        ;;
+    status)
+        status
+        ;;
+    *)
+        echo "usage: ${0##*/} {start|stop|reload|restart|status}" >&2
+        exit 1
+esac
+
+exit $?
