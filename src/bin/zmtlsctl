@@ -149,12 +149,12 @@ rewriteConfigs() {
 }
 
 updateLdap() {
-    if [ $validate_setting -eq 1 ]; then
+    proxies=$(zmgetproxyforhost $hostname)
+    if [ $validate_setting -eq 1 -a x"$proxies" != "x" ]; then
         # check the value of zimbraReverseProxySSLToUpstreamEnabled and zimbraReverseProxyMailMode
         # on a suitable proxy server
         sslup=
         rpmm=
-        proxies=$(zmgetproxyforhost $hostname)
         for proxy in "${proxies[@]}"; do
             echo "Attempting to query proxy ($proxy) settings for zimbraReverseProxyMailMode and zimbraReverseProxySSLToUpstreamEnabled."
             setting=$(/opt/zimbra/bin/zmprov -l gs ${proxy} zimbraReverseProxySSLToUpstreamEnabled zimbraReverseProxyMailMode)
