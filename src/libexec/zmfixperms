@@ -58,7 +58,6 @@ verbose=no
 
 components="\
   amavisd \
-  aspell \
   bdb \
   cbpolicyd \
   clamav \
@@ -67,7 +66,6 @@ components="\
   cyrus-sasl \
   altermime \
   heimdal \
-  httpd \
   keyview \
   ldns \
   libmemcached \
@@ -175,9 +173,9 @@ if [ -d /opt/zimbra ]; then
     if [ "`cat /selinux/enforce 2> /dev/null`" = "1" ]; then
       # make sure ssh keys are in home dir selinux type
       chcon -R -v -u system_u -t user_home_t /opt/zimbra/.ssh/
-      if [ -f /opt/zimbra/httpd/modules/libphp5.so ]; then
+      if [ -f /opt/zimbra/common/lib/apache2/modules/libphp5.so ]; then
         # allow text relocation for these problem files
-        chcon -t textrel_shlib_t /opt/zimbra/httpd/modules/libphp5.so
+        chcon -t textrel_shlib_t /opt/zimbra/common/lib/apache2/modules/libphp5.so
       fi
       # Fix Zimbra upgrades selinux perms
       restorecon -R /etc/security

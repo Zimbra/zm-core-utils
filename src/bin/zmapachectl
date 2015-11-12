@@ -17,7 +17,7 @@
 # 
 
 BASE=/opt/zimbra
-APACHECTL=$BASE/httpd/bin/apachectl
+APACHECTL=$BASE/common/bin/apachectl
 CONF=$BASE/conf/httpd.conf
 PIDFILE=$BASE/log/httpd.pid
 
