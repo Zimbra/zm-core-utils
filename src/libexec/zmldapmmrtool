@@ -100,16 +100,35 @@ if(lc($ldap_is_master) eq "true") {
   my $mesg = $ldap->bind("cn=config", password=>"$ldap_root_password");
   $mesg->code && die "Bind: ". $mesg->error . "\n"; 
 
-  my $bdn="olcDatabase={3}mdb,cn=config";
+  my ($bdn,$size,$entry,$sid);
+  if ($query) {
+    $bdn="cn=config";
+    $mesg = $ldap->search (
+              base => "$bdn",
+              scope => 'base',
+              filter => "(olcServerID=*)",
+              attrs => ['olcServerID']
+    );
+    $size = $mesg->count;
+    if ($size > 0) {
+      $entry=$mesg->entry(0);
+      print "Master Server ID: " . $entry->get_value('olcServerID') . "\n";
+    } else {
+      $ldap->unbind;
+      print "Error: No Server ID found.  This does not appear to be a multi-master server.\n";
+      exit 0;
+    }
+  }
+  $bdn="olcDatabase={3}mdb,cn=config";
   $mesg = $ldap->search(
             base => "$bdn",
             filter => "(olcSyncrepl=*)",
             attrs => ['olcSyncrepl']
   );
-  my $size = $mesg->count;
+  $size = $mesg->count;
   my $count=0;
   if ($size > 0) {
-    my $entry=$mesg->entry(0);
+    $entry=$mesg->entry(0);
     foreach ($entry->get_value('olcSyncRepl')) {
       $replEntry=$_;
       my $junk;
