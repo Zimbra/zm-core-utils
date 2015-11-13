@@ -54,7 +54,7 @@ checkrunning()
 
 case "$1" in 
   start)
-    if [ ! -L /opt/zimbra/nginx ]; then
+    if [ ! -x /opt/zimbra/common/sbin/nginx ]; then
       echo "Error: nginx not installed"
       exit 1
     fi
@@ -88,7 +88,7 @@ case "$1" in
         exit 1
     fi
 
-    sudo /opt/zimbra/nginx/sbin/nginx -c ${configfile}
+    sudo /opt/zimbra/common/sbin/nginx -c ${configfile}
     for ((i=0; i < 30; i++)); do
       checkrunning
       if [ $running = 1 ]; then

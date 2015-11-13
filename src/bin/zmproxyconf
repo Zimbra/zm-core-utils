@@ -28,7 +28,7 @@ my $fh;
 my %options = undef;
 my $sprefix = "";
 
-if ( !-l "/opt/zimbra/nginx" ) {
+if ( !-x "/opt/zimbra/common/sbin/nginx" ) {
   print "Nginx not installed, exiting\n";
   exit 1;
 }

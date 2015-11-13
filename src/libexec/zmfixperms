@@ -74,7 +74,6 @@ components="\
   mariadb \
   mysql \
   net-snmp \
-  nginx \
   opendkim \
   openldap \
   openldap-clibs \
