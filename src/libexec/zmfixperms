@@ -68,9 +68,7 @@ components="\
   heimdal \
   keyview \
   ldns \
-  libmemcached \
   libtool \
-  memcached \
   mariadb \
   mysql \
   opendkim \
