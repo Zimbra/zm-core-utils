@@ -73,13 +73,11 @@ components="\
   memcached \
   mariadb \
   mysql \
-  net-snmp \
   opendkim \
   openldap \
   openldap-clibs \
   openssl \
   pflogsumm \
-  snmp \
   tcmalloc \
   zeromq \
   zimbramon/bin \
@@ -616,11 +614,6 @@ if [ -L /opt/zimbra/openldap ]; then
       done
     fi
   fi
-fi
-
-if [ -d /opt/zimbra/snmp/var ]; then
-  printMsg "Fixing ownership and permissions on /opt/zimbra/snmp/var"
-  chown ${zimbra_user}:${zimbra_group} /opt/zimbra/snmp/var
 fi
 
 if [ -d /opt/zimbra/logger/db ]; then
