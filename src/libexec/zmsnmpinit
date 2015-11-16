@@ -26,7 +26,7 @@ source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars
 
 if [ ${snmp_notify} = "1" -o x${snmp_notify} = x"yes" ]; then
-	SOURCEFILE=/opt/zimbra/snmp/share/snmp/snmpd.conf.in
+	SOURCEFILE=/opt/zimbra/conf/snmpd.conf.in
 	FILE=/opt/zimbra/conf/snmpd.conf
 	echo creating $FILE
 	cat ${SOURCEFILE} | sed -e "s/@@SNMPHOST@@/${snmp_trap_host}/g" > ${FILE}
