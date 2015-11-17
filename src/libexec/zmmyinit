@@ -99,6 +99,7 @@ rm -f ${mysql_mycnf}
 #
 echo '*' Creating database in ${mysql_data_directory}
 (/opt/zimbra/common/share/mysql/scripts/mysql_install_db \
+    --basedir=/opt/zimbra/common \
     --defaults-file=${mysql_mycnf}) \
     >> ${zimbra_log_directory}/zmmyinit.log 2>&1
 
