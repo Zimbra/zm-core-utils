@@ -78,7 +78,7 @@ sub checkDbs() {
   my $mysql_root_passwd = getLocalConfig("mysql_root_password");
   my $mysql_socket = getLocalConfig("mysql_socket") || "/opt/zimbra/db/mysql.sock";
   my $mysql_mycnf = getLocalConfig("mysql_mycnf") || "/opt/zimbra/conf/my.cnf";
-  my $cmd = "/opt/zimbra/mysql/bin/mysqlcheck";
+  my $cmd = "/opt/zimbra/common/bin/mysqlcheck";
   $cmd .= " --defaults-file=${mysql_mycnf}";
   $cmd .= " -S ${mysql_socket}";
   $cmd .= " -A -C";

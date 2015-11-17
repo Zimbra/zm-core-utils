@@ -55,7 +55,7 @@ cat<<EOF
 
 [mysqld]
 
-basedir        = ${mysql_directory}
+basedir        = /opt/zimbra/common/bin
 datadir        = ${mysql_data_directory}
 socket         = ${mysql_socket}
 pid-file       = ${mysql_pidfile}

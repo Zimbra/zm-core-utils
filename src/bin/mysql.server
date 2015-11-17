@@ -24,7 +24,7 @@ if [ x`whoami` != "x${zimbra_user}" ]; then
   exit 1
 fi
 
-if [ ! -d ${mysql_directory}/bin ]; then
+if [ ! -x /opt/zimbra/common/bin/mysqld_safe ]; then
   exit 0
 fi
 
@@ -32,9 +32,7 @@ if [ ! -d ${zimbra_tmp_directory}/mysql ]; then
   mkdir -p ${zimbra_tmp_directory}/mysql > /dev/null 2>&1
 fi
 
-zmassert -d ${mysql_directory}
 zmassert -d ${zimbra_tmp_directory}
-zmassert -x ${mysql_directory}/bin/mysqld_safe
 zmassert -r ${mysql_mycnf}
 zmassert -d `dirname ${mysql_pidfile}`
 
@@ -88,13 +86,12 @@ case "$1" in
     fi
     # --defaults-file must be first argument
     echo -n "Starting mysqld..."
-    cd ${mysql_directory}; \
-      ${mysql_directory}/bin/mysqld_safe \
+    /opt/zimbra/common/bin/mysqld_safe \
       --defaults-file=${mysql_mycnf} \
       --external-locking \
       --log-error=${mysql_errlogfile} \
-      --malloc-lib=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so \
-      --ledir=${mysql_directory}/bin < /dev/null > /dev/null 2>&1 &
+      --malloc-lib=/opt/zimbra/common/lib/libtcmalloc_minimal.so \
+      --ledir=/opt/zimbra/common/bin < /dev/null > /dev/null 2>&1 &
     SQLSTARTED=0
     for ((i = 0; i < 60; i++))
     do

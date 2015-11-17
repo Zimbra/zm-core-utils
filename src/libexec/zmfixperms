@@ -69,8 +69,6 @@ components="\
   keyview \
   ldns \
   libtool \
-  mariadb \
-  mysql \
   opendkim \
   openldap \
   openldap-clibs \
