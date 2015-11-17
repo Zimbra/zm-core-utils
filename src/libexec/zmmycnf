@@ -55,7 +55,7 @@ cat<<EOF
 
 [mysqld]
 
-basedir        = /opt/zimbra/common/bin
+basedir        = /opt/zimbra/common
 datadir        = ${mysql_data_directory}
 socket         = ${mysql_socket}
 pid-file       = ${mysql_pidfile}
@@ -101,7 +101,7 @@ max_allowed_packet             = 16777216
 
 [mysqld_safe]
 
-err-log      = ${zimbra_log_directory}/mysqld.log
+log-error      = ${zimbra_log_directory}/mysqld.log
 pid-file     = ${mysql_pidfile}
 
 
