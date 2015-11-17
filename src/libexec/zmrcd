@@ -46,7 +46,7 @@ my %SIMPLE_COMMANDS = (
    "showqueue"        => "/opt/zimbra/postfix/sbin/postqueue -p",
    "zmserverips"      => "/opt/zimbra/libexec/zmserverips",
    "zmupdateauthkeys" => "/opt/zimbra/bin/zmupdateauthkeys",
-   "slapcat"          => "/opt/zimbra/openldap/sbin/slapcat -F /opt/zimbra/data/ldap/config -b ''",
+   "slapcat"          => "/opt/zimbra/common/sbin/slapcat -F /opt/zimbra/data/ldap/config -b ''",
    "zmqstat all"      => "sudo /opt/zimbra/libexec/zmqstat",
    "zmqstat incoming" => "sudo /opt/zimbra/libexec/zmqstat incoming",
    "zmqstat hold"     => "sudo /opt/zimbra/libexec/zmqstat hold",
@@ -54,7 +54,7 @@ my %SIMPLE_COMMANDS = (
    "zmqstat deferred" => "sudo /opt/zimbra/libexec/zmqstat deferred",
    "zmqstat corrupt"  => "sudo /opt/zimbra/libexec/zmqstat corrupt",
    "zmcollectconfigfiles" => "tar cv /opt/zimbra/conf | gzip -cf",
-   "zmcollectldapzimbra" => "/opt/zimbra/openldap/sbin/slapcat -F /opt/zimbra/data/ldap/config -b '' -s cn=zimbra | gzip -cf",
+   "zmcollectldapzimbra" => "/opt/zimbra/common/sbin/slapcat -F /opt/zimbra/data/ldap/config -b '' -s cn=zimbra | gzip -cf",
    "zmschedulebackup" => "/opt/zimbra/bin/zmschedulebackup"
 );
 

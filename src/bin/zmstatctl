@@ -158,7 +158,7 @@ if (defined($cmd)) {
         my $doNginx = $procs =~ /\bnginx\b/;
         my $doMysql = -x "/opt/zimbra/common/bin/mysqld" ? 1 : 0;
         my $doMtaQueue = (-x "/opt/zimbra/postfix/sbin/postqueue" && $procs =~ /\bmta\b/) ? 1 : 0;
-	my $doLdap = -x "/opt/zimbra/openldap/sbin/slapd" ? 1 : 0;
+	my $doLdap = -x "/opt/zimbra/common/libexec/slapd" ? 1 : 0;
         my $outfile = getZmstatRoot() . "/zmstat.out";
         my $scriptDir = dirname($0);
         my $parentDir = dirname($scriptDir);

@@ -30,7 +30,7 @@ function chk_command () {
     done
 }
 
-ldapsearch="/opt/zimbra/bin/ldapsearch"
+ldapsearch="/opt/zimbra/common/bin/ldapsearch"
 zmhostname="/opt/zimbra/bin/zmhostname"
 zmlocalconfig="/opt/zimbra/bin/zmlocalconfig"
 zmprov="/opt/zimbra/bin/zmprov"

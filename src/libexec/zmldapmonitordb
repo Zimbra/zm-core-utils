@@ -8,7 +8,7 @@ use POSIX;
 use Mail::Mailer;
 use Net::LDAP;
 
-if ( ! -d "/opt/zimbra/openldap/etc" ) {
+if ( ! -d "/opt/zimbra/common/etc/openldap/schema" ) {
   print "ERROR: openldap does not appear to be installed - exiting\n";
   exit(1);
 }
@@ -117,7 +117,7 @@ if ($ldap_monitor_growth > 1) {
 }
 
 my $zmlocalconfig="/opt/zimbra/bin/zmlocalconfig";
-my $mdb_stat="/opt/zimbra/openldap/bin/mdb_stat -e";
+my $mdb_stat="/opt/zimbra/common/bin/mdb_stat -e";
 my $db="/opt/zimbra/data/ldap/mdb/db/data.mdb";
 my $adb="/opt/zimbra/data/ldap/accesslog/db/data.mdb";
 my $dbdir="/opt/zimbra/data/ldap/mdb/db";
