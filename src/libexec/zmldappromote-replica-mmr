@@ -23,7 +23,7 @@ use Getopt::Long;
 use File::Copy qw/ cp /;
 use File::Path;
 
-if ( ! -d "/opt/zimbra/openldap/etc" ) {
+if ( ! -d "/opt/zimbra/common/etc/openldap/schema" ) {
   print "ERROR: openldap does not appear to be installed - exiting\n";
   exit(1);
 }

@@ -18,13 +18,13 @@
 ulimit -n 32768
 ulimit -c unlimited
 ulimit -v unlimited
-export LD_PRELOAD=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so
+export LD_PRELOAD=/opt/zimbra/common/lib/libtcmalloc_minimal.so
 
 umask 027
 source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars
 
-if [ ! -x /opt/zimbra/openldap/sbin/slapcat ]; then
+if [ ! -x /opt/zimbra/common/sbin/slapcat ]; then
 	exit 0
 fi
 
@@ -63,17 +63,17 @@ fi
 mkdir -p $DEST
 RC=0
 if [ x$CONFIG = "xyes" ]; then
-	/opt/zimbra/openldap/sbin/slapcat -F /opt/zimbra/data/ldap/config -n 0 -l ${DEST}/${FILE}
+	/opt/zimbra/common/sbin/slapcat -F /opt/zimbra/data/ldap/config -n 0 -l ${DEST}/${FILE}
 	RC=$?
 elif [ x$ALOG = "xyes" ]; then
 	if [ -d /opt/zimbra/data/ldap/accesslog/db ]; then
-		/opt/zimbra/openldap/sbin/slapcat -F /opt/zimbra/data/ldap/config -b "cn=accesslog" -l ${DEST}/${FILE}
+		/opt/zimbra/common/sbin/slapcat -F /opt/zimbra/data/ldap/config -b "cn=accesslog" -l ${DEST}/${FILE}
 		RC=$?
 	else
 		exit $RC
 	fi
 else
-	/opt/zimbra/openldap/sbin/slapcat -F /opt/zimbra/data/ldap/config -b "" -l ${DEST}/${FILE}
+	/opt/zimbra/common/sbin/slapcat -F /opt/zimbra/data/ldap/config -b "" -l ${DEST}/${FILE}
 	RC=$?
 fi
 

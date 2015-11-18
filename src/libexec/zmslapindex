@@ -18,13 +18,13 @@
 ulimit -n 32768
 ulimit -c unlimited
 ulimit -v unlimited
-export LD_PRELOAD=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so
+export LD_PRELOAD=/opt/zimbra/common/lib/libtcmalloc_minimal.so
 
 umask 027
 source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars
 
-if [ ! -x /opt/zimbra/openldap/sbin/slapindex ]; then
+if [ ! -x /opt/zimbra/common/sbin/slapindex ]; then
 	exit 0
 fi
 
@@ -56,13 +56,13 @@ else
 fi
 
 if [ x$CONFIG = "xyes" ]; then
-	/opt/zimbra/openldap/sbin/slapindex -q -F /opt/zimbra/data/ldap/config -n 0 $KEY
+	/opt/zimbra/common/sbin/slapindex -q -F /opt/zimbra/data/ldap/config -n 0 $KEY
 	RETVAL=$?
 elif [ x$ALOG = "xyes" ]; then
-	/opt/zimbra/openldap/sbin/slapindex -q -F /opt/zimbra/data/ldap/config -b "cn=accesslog" $KEY
+	/opt/zimbra/common/sbin/slapindex -q -F /opt/zimbra/data/ldap/config -b "cn=accesslog" $KEY
 	RETVAL=$?
 else
-	/opt/zimbra/openldap/sbin/slapindex -q -F /opt/zimbra/data/ldap/config -b "" $KEY
+	/opt/zimbra/common/sbin/slapindex -q -F /opt/zimbra/data/ldap/config -b "" $KEY
 	RETVAL=$?
 fi
 

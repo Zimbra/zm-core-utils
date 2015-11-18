@@ -27,7 +27,7 @@ use Net::LDAP::Entry;
 use Crypt::SaltedHash;
 use MIME::Base64;
 
-my $source_config_dir = "/opt/zimbra/openldap/etc/openldap";
+my $source_config_dir = "/opt/zimbra/common/etc/openldap";
 my $config_dir = "/opt/zimbra/conf";
 my $ldap_config_dir="/opt/zimbra/data/ldap/config/cn\=config";
 

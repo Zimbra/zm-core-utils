@@ -18,7 +18,7 @@
 source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars -f
 
-COMPUTE_HOST=`/opt/zimbra/bin/ldapsearch -x -H "${ldap_url}" -w ${zimbra_ldap_password} -D uid=zimbra,cn=admins,cn=zimbra -b '' '(&(objectClass=zimbraServer)(zimbraServiceEnabled=mailbox))' zimbraServiceHostname | awk 'BEGIN { FOUND=0 } { if ((FOUND == 0) && ($1 ~ /^zimbraServiceHostname:$/)) { print $2 ; FOUND=1 } }'`
+COMPUTE_HOST=`/opt/zimbra/common/bin/ldapsearch -x -H "${ldap_url}" -w ${zimbra_ldap_password} -D uid=zimbra,cn=admins,cn=zimbra -b '' '(&(objectClass=zimbraServer)(zimbraServiceEnabled=mailbox))' zimbraServiceHostname | awk 'BEGIN { FOUND=0 } { if ((FOUND == 0) && ($1 ~ /^zimbraServiceHostname:$/)) { print $2 ; FOUND=1 } }'`
 
 while [ $# -gt 0 ]
 do

@@ -43,7 +43,7 @@ my $zimbra_user=getLocalConfig("zimbra_user");
 my $zimbra_tmp_directory=getLocalConfig("zimbra_tmp_directory");
 my $ldap_master_url=getLocalConfig("ldap_master_url");
 my $ldap_starttls_supported=getLocalConfig("ldap_starttls_supported");
-my $source_config_dir="/opt/zimbra/openldap/etc/openldap";
+my $source_config_dir="/opt/zimbra/common/etc/openldap";
 my $config_dir="/opt/zimbra/conf";
 my $ldap_config_dir="/opt/zimbra/data/ldap/config/cn\=config";
 

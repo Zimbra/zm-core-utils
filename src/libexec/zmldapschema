@@ -28,7 +28,7 @@ fi
 
 verifyLdapInstalled() {
   echo -n "Looking for LDAP installation..."
-  if [ ! -d /opt/zimbra/openldap/etc/openldap/schema ]; then
+  if [ ! -d /opt/zimbra/common/etc/openldap/schema ]; then
     echo "FAILED"
     echo "ERROR: openldap does not appear to be installed - exiting"
     exit 1
@@ -44,7 +44,7 @@ createSchemaDir() {
 
 installCoreSchema() {
   echo "Installing core schema..."
-  cp -f /opt/zimbra/openldap/etc/openldap/schema/core.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{0\}core.ldif
+  cp -f /opt/zimbra/common/etc/openldap/schema/core.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{0\}core.ldif
   chown ${zimbra_user}:${zimbra_user} /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{0\}core.ldif
   chmod 600 /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{0\}core.ldif
   sed -i.orig -e '/^dn: cn=core,/ s/dn: cn=core,cn=schema,cn=config/dn: cn={0}core/' -e '/^cn: core/ s/cn: core/cn: {0}core/' \
@@ -53,7 +53,7 @@ installCoreSchema() {
 
 installCosineSchema() {
   echo "Installing cosine schema..."
-  cp -f /opt/zimbra/openldap/etc/openldap/schema/cosine.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{1\}cosine.ldif
+  cp -f /opt/zimbra/common/etc/openldap/schema/cosine.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{1\}cosine.ldif
   chown ${zimbra_user}:${zimbra_user} /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{1\}cosine.ldif
   chmod 600 /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{1\}cosine.ldif
   sed -i.orig -e '/^dn: cn=cosine,/ s/dn: cn=cosine,cn=schema,cn=config/dn: cn={1}cosine/' -e '/^cn: cosine/ s/cn: cosine/cn: {1}cosine/' \
@@ -62,7 +62,7 @@ installCosineSchema() {
 
 installInetOrgPersonSchema() {
   echo "Installing inetOrgPerson schema..."
-  cp -f /opt/zimbra/openldap/etc/openldap/schema/inetorgperson.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{2\}inetorgperson.ldif
+  cp -f /opt/zimbra/common/etc/openldap/schema/inetorgperson.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{2\}inetorgperson.ldif
   chown ${zimbra_user}:${zimbra_user} /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{2\}inetorgperson.ldif
   chmod 600 /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{2\}inetorgperson.ldif
   sed -i.orig -e '/^dn: cn=inetorgperson,/ s/dn: cn=inetorgperson,cn=schema,cn=config/dn: cn={2}inetorgperson/' -e '/^cn: inetorgperson/ s/cn: inetorgperson/cn: {2}inetorgperson/' \
@@ -71,7 +71,7 @@ installInetOrgPersonSchema() {
 
 installZimbraSchema() {
   echo "Installing zimbra schema..."
-  cp -f /opt/zimbra/openldap/etc/openldap/schema/zimbra.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{4\}zimbra.ldif
+  cp -f /opt/zimbra/common/etc/openldap/schema/zimbra.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{4\}zimbra.ldif
   chown ${zimbra_user}:${zimbra_user} /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{4\}zimbra.ldif
   chmod 600 /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{4\}zimbra.ldif
   sed -i.orig -e '/^dn: cn=zimbra,/ s/dn: cn=zimbra,cn=schema,cn=config/dn: cn={4}zimbra/' -e '/^cn: zimbra/ s/cn: zimbra/cn: {4}zimbra/' \
@@ -80,7 +80,7 @@ installZimbraSchema() {
 
 installAmavisSchema() {
   echo "Installing amavis schema..."
-  cp -f /opt/zimbra/openldap/etc/openldap/schema/amavisd.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{5\}amavisd.ldif
+  cp -f /opt/zimbra/common/etc/openldap/schema/amavisd.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{5\}amavisd.ldif
   chown ${zimbra_user}:${zimbra_user} /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{5\}amavisd.ldif
   chmod 600 /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{5\}amavisd.ldif
   sed -i.orig -e '/^dn: cn=amavisd,/ s/dn: cn=amavisd,cn=schema,cn=config/dn: cn={5}amavisd/' -e '/^cn: amavisd/ s/cn: amavisd/cn: {5}amavisd/' \
@@ -89,7 +89,7 @@ installAmavisSchema() {
 
 installDynlistSchema() {
   echo "Installing dyngroup schema..."
-  cp -f /opt/zimbra/openldap/etc/openldap/schema/dyngroup.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{3\}dyngroup.ldif
+  cp -f /opt/zimbra/common/etc/openldap/schema/dyngroup.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{3\}dyngroup.ldif
   chown ${zimbra_user}:${zimbra_user} /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{3\}dyngroup.ldif
   chmod 600 /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{3\}dyngroup.ldif
   sed -i.orig -e '/^dn: cn=dyngroup,/ s/dn: cn=dyngroup,cn=schema,cn=config/dn: cn={3}dyngroup/' -e '/^cn: dyngroup/ s/cn: dyngroup/cn: {3}dyngroup/' \
@@ -98,20 +98,11 @@ installDynlistSchema() {
 
 installOpenDKIMSchema() {
   echo "Installing OpenDKIM schema..."
-  cp -f /opt/zimbra/openldap/etc/openldap/schema/opendkim.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{6\}opendkim.ldif
+  cp -f /opt/zimbra/common/etc/openldap/schema/opendkim.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{6\}opendkim.ldif
   chown ${zimbra_user}:${zimbra_user} /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{6\}opendkim.ldif
   chmod 600 /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{6\}opendkim.ldif
   sed -i.orig -e '/^dn: cn=opendkim,/ s/dn: cn=opendkim,cn=schema,cn=config/dn: cn={6}opendkim/' -e '/^cn: opendkim/ s/cn: opendkim/cn: {6}opendkim/' \
     /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{6\}opendkim.ldif
-}
-
-installPGPSchema() {
-  echo "Installing PGP schema..."
-  cp -f /opt/zimbra/openldap/etc/openldap/schema/pgp-keyserver.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{7\}pgp-keyserver.ldif
-  chown ${zimbra_user}:${zimbra_user} /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{7\}pgp-keyserver.ldif
-  chmod 600 /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{7\}pgp-keyserver.ldif
-  sed -i.orig -e '/^dn: cn=pgp-keyserver,/ s/dn: cn=pgp-keyserver,cn=schema,cn=config/dn: cn={7}pgp-keyserver/' -e '/^cn: pgp-keyserver/ s/cn: pgp-keyserver/cn: {7}pgp-keyserver/' \
-    /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{7\}pgp-keyserver.ldif
 }
 
 cleanup() {
@@ -127,5 +118,4 @@ installZimbraSchema
 installAmavisSchema
 installDynlistSchema
 installOpenDKIMSchema
-installPGPSchema
 cleanup

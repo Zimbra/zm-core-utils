@@ -18,13 +18,13 @@
 ulimit -n 32768
 ulimit -c unlimited
 ulimit -v unlimited
-export LD_PRELOAD=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so
+export LD_PRELOAD=/opt/zimbra/common/lib/libtcmalloc_minimal.so
 
 umask 027
 source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars
 
-if [ ! -x /opt/zimbra/openldap/sbin/slapadd ]; then
+if [ ! -x /opt/zimbra/common/sbin/slapadd ]; then
 	exit 0
 fi
 
@@ -93,26 +93,26 @@ fi
 
 if [ x$CONFIG = "xyes" ]; then
 	if [ x$comp = "x0" ]; then
-		/opt/zimbra/openldap/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -n 0 -l $SRC
+		/opt/zimbra/common/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -n 0 -l $SRC
 		RETVAL=$?
 	else
-		$computil $SRC | /opt/zimbra/openldap/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -n 0
+		$computil $SRC | /opt/zimbra/common/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -n 0
 		RETVAL=$?
 	fi
 elif [ x$ALOG = "xyes" ]; then
 	if [ x$comp = "x0" ]; then
-		/opt/zimbra/openldap/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -b "cn=accesslog" -l $SRC
+		/opt/zimbra/common/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -b "cn=accesslog" -l $SRC
 		RETVAL=$?
 	else
-		$computil $SRC | /opt/zimbra/openldap/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -b "cn=accesslog"
+		$computil $SRC | /opt/zimbra/common/sbin/slapadd -q -F /opt/zimbra/data/ldap/config -b "cn=accesslog"
 		RETVAL=$?
 	fi
 else
 	if [ x$comp = "x0" ]; then
-		/opt/zimbra/openldap/sbin/slapadd -w -q -F /opt/zimbra/data/ldap/config -b "" -l $SRC
+		/opt/zimbra/common/sbin/slapadd -w -q -F /opt/zimbra/data/ldap/config -b "" -l $SRC
 		RETVAL=$?
 	else
-		$computil $SRC | /opt/zimbra/openldap/sbin/slapadd -w -q -F /opt/zimbra/data/ldap/config -b ""
+		$computil $SRC | /opt/zimbra/common/sbin/slapadd -w -q -F /opt/zimbra/data/ldap/config -b ""
 		RETVAL=$?
 	fi
 fi
