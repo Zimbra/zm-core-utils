@@ -70,7 +70,7 @@ case "$1" in
     if [ x$2 = "x" ]; then
       rewriteconfig
     fi
-    /opt/zimbra/cyrus-sasl/sbin/saslauthd -r -a zimbra 
+    /opt/zimbra/common/sbin/saslauthd -r -a zimbra 
     for ((i = 0; i < 30; i++)) do
       checkrunning
       if [ $running = 1 ]; then

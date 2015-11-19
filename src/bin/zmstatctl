@@ -17,7 +17,7 @@
 # 
 
 use strict;
-use lib "/opt/zimbra/zimbramon/lib";
+use lib "/opt/zimbra/common/lib/perl5";
 use File::Basename;
 use Zimbra::Mon::Zmstat;
 use POSIX qw(setsid);
@@ -157,7 +157,7 @@ if (defined($cmd)) {
         my $procs = getProcList();
         my $doNginx = $procs =~ /\bnginx\b/;
         my $doMysql = -x "/opt/zimbra/common/bin/mysqld" ? 1 : 0;
-        my $doMtaQueue = (-x "/opt/zimbra/postfix/sbin/postqueue" && $procs =~ /\bmta\b/) ? 1 : 0;
+        my $doMtaQueue = (-x "/opt/zimbra/common/sbin/postqueue" && $procs =~ /\bmta\b/) ? 1 : 0;
 	my $doLdap = -x "/opt/zimbra/common/libexec/slapd" ? 1 : 0;
         my $outfile = getZmstatRoot() . "/zmstat.out";
         my $scriptDir = dirname($0);

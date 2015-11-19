@@ -15,7 +15,7 @@
 # If not, see <http://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
 use strict;
-use lib '/opt/zimbra/zimbramon/lib';
+use lib '/opt/zimbra/common/lib/perl5';
 use Zimbra::Util::Common;
 
 use File::Path;

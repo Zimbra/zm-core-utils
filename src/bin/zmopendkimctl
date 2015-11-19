@@ -21,7 +21,7 @@ if [ x`whoami` != xzimbra ]; then
   exit 1
 fi
 
-if [ ! -L "/opt/zimbra/opendkim" ]; then
+if [ ! -x "/opt/zimbra/common/sbin/opendkim" ]; then
   exit 0
 fi
 
@@ -30,7 +30,7 @@ zmsetvars
 
 PID=""
 PIDFILE=${zimbra_log_directory}/opendkim.pid
-odk=/opt/zimbra/opendkim/sbin/opendkim
+odk=/opt/zimbra/common/sbin/opendkim
 config=/opt/zimbra/conf/opendkim.conf
 
 rewriteconfig() {

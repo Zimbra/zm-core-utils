@@ -17,7 +17,7 @@
 # 
 
 use strict;
-use lib "/opt/zimbra/zimbramon/lib";
+use lib "/opt/zimbra/common/lib/perl5";
 use Zimbra::Util::Common;
 use File::Grep qw (fgrep);
 use File::Path;

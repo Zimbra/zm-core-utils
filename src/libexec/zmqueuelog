@@ -18,7 +18,7 @@
 
 use strict;
 
-use lib "/opt/zimbra/zimbramon/lib";
+use lib "/opt/zimbra/common/lib/perl5";
 use Zimbra::Util::Common;
 use Zimbra::Mon::Logger;
 
@@ -65,7 +65,7 @@ sub clearPid {
 
 sub logQueue {
 	my @status = ();
-	open STATUS, "/opt/zimbra/postfix/sbin/postqueue -p |" or die "Can't get status: $!";
+	open STATUS, "/opt/zimbra/common/sbin/postqueue -p |" or die "Can't get status: $!";
 	@status = <STATUS>;
 	close STATUS;
 	my $kb = 0;

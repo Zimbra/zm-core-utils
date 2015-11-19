@@ -22,7 +22,7 @@ my $id = qx(id -u -n);
 chomp $id;
 if ($id ne "zimbra") {die "Run as the zimbra user!\n";}
 
-use lib "/opt/zimbra/zimbramon/lib";
+use lib "/opt/zimbra/common/lib/perl5";
 use Zimbra::Util::Common;
 use Zimbra::Mon::Logger;
 use Net::LDAP;
@@ -365,7 +365,7 @@ sub doShutdown {
 	foreach (sort {$stoporder{$b} <=> $stoporder{$a}} keys %allservices) {
 		Zimbra::Mon::Logger::Log ("info", "Stopping $_ via zmcontrol");
 		if ($_ eq "ldap" && !(-x "/opt/zimbra/common/libexec/slapd") ) { next; }
-		if ($_ eq "mta" && !(-d "/opt/zimbra/postfix/libexec") ) { next; }
+		if ($_ eq "mta" && !(-x "/opt/zimbra/common/sbin/postfix") ) { next; }
 		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
 		if ($_ eq "mailbox" && !(-d "/opt/zimbra/db/data") ) { next; }
 		if ($_ eq "convertd" && !(-l "/opt/zimbra/keyview") ) { next; }

@@ -15,7 +15,7 @@
 # If not, see <http://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
 use Getopt::Long;
-use lib "/opt/zimbra/zimbramon/lib";
+use lib "/opt/zimbra/common/lib/perl5";
 use IO::Compress::Gzip qw(gzip $GzipError);
 sub scanLogDirectory;
 sub getLocalConfigValue;

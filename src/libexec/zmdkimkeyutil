@@ -16,14 +16,14 @@
 # ***** END LICENSE BLOCK *****
 #
 use strict;
-use lib '/opt/zimbra/zimbramon/lib';
+use lib '/opt/zimbra/common/lib/perl5';
 use Net::LDAP;
 use Net::LDAP::Util qw ( ldap_error_name );
 use XML::Simple;
 use Getopt::Long qw(:config no_ignore_case);
 use Data::UUID;
 
-if ( ! -d "/opt/zimbra/opendkim" ) {
+if ( ! -x "/opt/zimbra/common/sbin/opendkim" ) {
   print "ERROR: opendkim does not appear to be installed - exiting\n";
   exit(1);
 }
@@ -82,7 +82,7 @@ chomp($zimbra_admin_password);
 my $ldap_starttls_supported = $localxml->{key}->{ldap_starttls_supported}->{value};
 my $zimbra_require_interprocess_security = $localxml->{key}->{zimbra_require_interprocess_security}->{value};
 
-my $keygen = "/opt/zimbra/opendkim/sbin/opendkim-genkey";
+my $keygen = "/opt/zimbra/common/sbin/opendkim-genkey";
 
 my $mesg;
 my @masters=split(/ /, $ldap_master_url);

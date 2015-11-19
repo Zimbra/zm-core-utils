@@ -20,7 +20,7 @@ zmsetvars
 
 BASE=/opt/zimbra
 
-if [ ! -L /opt/zimbra/postfix ]; then
+if [ ! -x /opt/zimbra/common/sbin/postfix ]; then
   echo "Error: postfix not installed"
   exit 1
 fi
@@ -40,11 +40,9 @@ fi
 
 rewriteconfig() {
   echo -n "Rewriting configuration files..."
-  if [ -L /opt/zimbra/postfix ]; then
-    if [ ! -f /opt/zimbra/postfix/conf/main.cf ]; then
-      touch /opt/zimbra/postfix/conf/main.cf
-      /opt/zimbra/bin/postconf -e mail_owner=${postfix_mail_owner} setgid_group=${postfix_setgid_group}
-    fi
+  if [ ! -f /opt/zimbra/common/conf/main.cf ]; then
+    touch /opt/zimbra/common/conf/main.cf
+    /opt/zimbra/bin/postconf -e mail_owner=${postfix_mail_owner} setgid_group=${postfix_setgid_group}
   fi
   /opt/zimbra/libexec/configrewrite antispam antivirus opendkim mta sasl  > /dev/null 2>&1
   if [ $? = 0 ]; then

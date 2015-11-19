@@ -20,14 +20,12 @@ progdir=`dirname $0`
 
 source `dirname $0`/zmshutil || exit 1
 
-if [ ! -L /opt/zimbra/postfix ]; then
+if [ ! -x /opt/zimbra/common/sbin/postfix ]; then
   echo "Error: postfix not installed"
   exit 1
 fi
 
 zmsetvars
-
-platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 rewritemtaconfig() {
     /opt/zimbra/libexec/zmmtainit
@@ -38,11 +36,9 @@ rewriteconfig() {
 }
 
 if [ "x$1" = "xstatus" -o "x$1" = "xstart" ]; then
-  if [ -L /opt/zimbra/postfix ]; then
-    if [ ! -f /opt/zimbra/postfix/conf/main.cf ]; then
-      touch /opt/zimbra/postfix/conf/main.cf
-      /opt/zimbra/postfix/sbin/postconf -e mail_owner=${postfix_mail_owner} setgid_group=${postfix_setgid_group}
-    fi
+  if [ ! -f /opt/zimbra/common/conf/main.cf ]; then
+    touch /opt/zimbra/common/conf/main.cf
+    /opt/zimbra/common/sbin/postconf -e mail_owner=${postfix_mail_owner} setgid_group=${postfix_setgid_group}
   fi
   sudo /opt/zimbra/libexec/zmmtastatus 2> /dev/null
 	R=$?
@@ -67,8 +63,8 @@ if [ "x$1" = "xstart" -o "x$1" = "xreload" -o "x$1" = "xrestart" ]; then
 fi
 
 if [ -f /etc/aliases ]; then
-  sudo /opt/zimbra/postfix/sbin/postalias /etc/aliases
+  sudo /opt/zimbra/common/sbin/postalias /etc/aliases
 fi
 
-sudo /opt/zimbra/postfix/sbin/postfix "$@"
+sudo /opt/zimbra/common/sbin/postfix "$@"
 

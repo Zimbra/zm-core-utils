@@ -16,5 +16,5 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-export LD_PRELOAD=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so
+export LD_PRELOAD=/opt/zimbra/common/lib/libtcmalloc_minimal.so
 exec /opt/zimbra/common/sbin/unbound "$@"

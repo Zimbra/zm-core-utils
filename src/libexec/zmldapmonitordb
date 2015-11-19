@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 use strict;
-use lib qw (/opt/zimbra/zimbramon/lib);
+use lib qw (/opt/zimbra/common/lib/perl5);
 use XML::Simple;
 use Getopt::Long;
 use Filesys::Df;

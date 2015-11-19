@@ -20,7 +20,7 @@
 
 use strict;
 use Getopt::Long;
-use lib "/opt/zimbra/zimbramon/lib";
+use lib "/opt/zimbra/common/lib/perl5";
 use Zimbra::Mon::Zmstat;
 use Zimbra::Mon::Logger;
 use vars qw($LOGFH $CONSOLE $LOGFILE $ROTATE_NOW $ROTATE_DEFER);

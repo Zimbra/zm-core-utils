@@ -40,7 +40,7 @@ then
 	exit 0
 fi
 
-if [ ! -d ${antispam_mysql_directory}/bin ]; then
+if [ ! -x /opt/zimbra/common/bin/mysql -a ! -x /opt/zimbra/common/sbin/amavisd ]; then
   exit 0
 fi
 
@@ -48,9 +48,8 @@ if [ ! -d ${zimbra_tmp_directory}/antispam-mysql ]; then
   mkdir -p ${zimbra_tmp_directory}/antispam-mysql > /dev/null 2>&1
 fi
 
-zmassert -d ${antispam_mysql_directory}
 zmassert -d ${zimbra_tmp_directory}
-zmassert -x ${antispam_mysql_directory}/bin/mysqld_safe
+zmassert -x /opt/zimbra/common/bin/mysqld_safe
 
 
 # innodb will open the database before binding and writing out the pid
@@ -110,14 +109,14 @@ case "$1" in
     fi
     # --defaults-file must be first argument
     echo -n "Starting mysqld for anti-spam..."
-    cd ${antispam_mysql_directory}; \
-      ${antispam_mysql_directory}/bin/mysqld_safe \
+    cd /opt/zimbra/common/bin/mysqld_safe \
+      --basedir=/opt/zimbra/common \
       --defaults-file=${antispam_mysql_mycnf} \
       --external-locking \
-      --malloc-lib=/opt/zimbra/tcmalloc/lib/libtcmalloc_minimal.so \
+      --malloc-lib=/opt/zimbra/common/lib/libtcmalloc_minimal.so \
       --datadir=${antispam_mysql_data_directory} \
       --log-error=${antispam_mysql_errlogfile} \
-      --ledir=${antispam_mysql_directory}/bin < /dev/null > /dev/null 2>&1 &
+      --ledir=/opt/zimbra/common/sbin < /dev/null > /dev/null 2>&1 &
     SQLSTARTED=0
     for ((i = 0; i < 60; i++))
     do
