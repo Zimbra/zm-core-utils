@@ -55,9 +55,9 @@ $DLOGDIR = "zmdiaglog-$ZMHOSTNAME."
   . $$;
 $DEFAULT_TIMEOUT                    = 120;
 $PID_FILE                           = '/opt/zimbra/log/zmmailboxd_java.pid';
-$JMAP                               = '/opt/zimbra/java/bin/jmap';
+$JMAP                               = '/opt/zimbra/common/bin/jmap';
 $JAVA                               = '/opt/zimbra/java/bin/java';
-$JINFO                              = '/opt/zimbra/java/bin/jinfo';
+$JINFO                              = '/opt/zimbra/common/lib/jvm/java/bin/jinfo';
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
 $VERSION                            = 0.1;
 $HAVE_GCORE                         = has_cmd('gcore');
