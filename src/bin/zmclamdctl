@@ -95,10 +95,10 @@ case "$1" in
     if [ $running = 1 ]; then
       echo "clamd is already running.";
     else
-      /opt/zimbra/clamav/sbin/clamd \
+      /opt/zimbra/common/sbin/clamd \
         --config-file=/opt/zimbra/conf/clamd.conf \
           >> ${zimbra_log_directory}/clamd.log 2>&1 &
-  
+
       for ((i = 0; i < 12; i++)); do
         checkrunning
         if [ $running = 1 ]; then
@@ -118,7 +118,7 @@ case "$1" in
       cpid=`cat /opt/zimbra/log/clamd.pid`
       kill -9 "$cpid" 2> /dev/null
     fi
-    pskillall -9 /opt/zimbra/clamav/sbin/clamd
+    pskillall -9 /opt/zimbra/common/sbin/clamd
     exit 0
    ;;
 
