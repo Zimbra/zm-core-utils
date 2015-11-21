@@ -55,7 +55,7 @@ if (!$rule_updates_enabled) {
 }
 
 
-my $sa="/opt/zimbra/zimbramon/bin/sa-update -v --allowplugins --refreshmirrors >/dev/null 2>&1";
+my $sa="/opt/zimbra/common/bin/sa-update -v --allowplugins --refreshmirrors >/dev/null 2>&1";
 my $restart="/opt/zimbra/bin/zmamavisdctl restart norewrite >/dev/null 2>&1";
 my $compile="/opt/zimbra/libexec/zmsacompile >/dev/null 2>&1";
 

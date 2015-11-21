@@ -25,8 +25,8 @@ fi
 
 NICE=`which nice`
 if [ x"$NICE" = "x" ]; then
-  /opt/zimbra/zimbramon/bin/sa-compile >/dev/null 2>&1
+  /opt/zimbra/common/bin/sa-compile >/dev/null 2>&1
 else
   NICED="$NICE -n 19"
-  $NICED /opt/zimbra/zimbramon/bin/sa-compile >/dev/null 2>&1
+  $NICED /opt/zimbra/common/bin/sa-compile >/dev/null 2>&1
 fi
