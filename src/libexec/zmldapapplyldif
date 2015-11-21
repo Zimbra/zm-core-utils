@@ -85,7 +85,7 @@ if ( -s $outfile ) {
 # Update zimbra.ldif
 unlink("${config_dir}/zimbra.ldif");
 
-$infile = "$source_config_dir/zimbra.ldif";
+$infile = "$source_config_dir/zimbra/zimbra.ldif";
 $outfile = "$config_dir/zimbra.ldif";
 my $ldifin = Net::LDAP::LDIF->new( "$infile", "r", onerror => 'undef' );
 my $ldifout = Net::LDAP::LDIF->new("$outfile", "w", onerror => 'undef' );

@@ -81,7 +81,7 @@ while ( not $ldifin->eof() ) {
     }
 }
 
-$infile = "$source_config_dir/zimbra_globalconfig.ldif";
+$infile = "$source_config_dir/zimbra/zimbra_globalconfig.ldif";
 $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
 while ( not $ldifin->eof() ) {
     my $entry = $ldifin->read_entry();
@@ -94,7 +94,7 @@ while ( not $ldifin->eof() ) {
     }
 }
 
-$infile = "$source_config_dir/zimbra_defaultcos.ldif";
+$infile = "$source_config_dir/zimbra/zimbra_defaultcos.ldif";
 $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
 while ( not $ldifin->eof() ) {
     my $entry = $ldifin->read_entry();
@@ -107,7 +107,7 @@ while ( not $ldifin->eof() ) {
     }
 }
 
-$infile = "$source_config_dir/zimbra_defaultexternalcos.ldif";
+$infile = "$source_config_dir/zimbra/zimbra_defaultexternalcos.ldif";
 $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
 while ( not $ldifin->eof() ) {
     my $entry = $ldifin->read_entry();
@@ -123,7 +123,7 @@ while ( not $ldifin->eof() ) {
 if (-f "/opt/zimbra/conf/ldap/zimbra_mimehandlers.ldif") {
   $infile = "/opt/zimbra/conf/ldap/zimbra_mimehandlers.ldif";
 } else {
-  $infile = "$source_config_dir/zimbra_mimehandlers.ldif";
+  $infile = "$source_config_dir/zimbra/zimbra_mimehandlers.ldif";
 }
 $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
 while ( not $ldifin->eof() ) {
