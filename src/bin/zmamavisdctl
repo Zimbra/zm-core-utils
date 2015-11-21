@@ -133,12 +133,6 @@ case "$1" in
       if [ x$2 = "x" ]; then
         rewriteconfig
       fi
-      if [ ! -f /opt/zimbra/data/amavisd/.spamassassin/bayes_toks ]; then
-        # Initial bayes seeding.
-        cp -f /opt/zimbra/amavisd/.spamassassin/init/* \
-          /opt/zimbra/data/amavisd/.spamassassin/
-        chmod 644 /opt/zimbra/data/amavisd/.spamassassin/bayes*
-      fi
       /opt/zimbra/common/sbin/amavisd -X no_conf_file_writable_check -c \
         /opt/zimbra/conf/amavisd.conf &
       for ((i=0; i < 30; i++)); do
