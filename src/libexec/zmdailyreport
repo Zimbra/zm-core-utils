@@ -32,7 +32,7 @@ zmdailyreport - report on email usage
 use warnings;
 use strict;
 use Pod::Usage qw(pod2usage);
-use lib "/opt/zimbra/common/lib/perl5";
+use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Util::Common;
 use Zimbra::Mon::Logger;
 use Getopt::Long qw(GetOptions);
@@ -126,7 +126,7 @@ if (fork()) {
 	$user_limit = 50 if $user_limit !~ /^\d+/;
 	$host_limit = 50 if $host_limit !~ /^\d+/;
     @ARGV = ('-u', $user_limit, '-h', $host_limit);
-    do '/opt/zimbra/common/bin/pflogsumm.pl';
+    do '/opt/zimbra/pflogsumm/bin/pflogsumm.pl';
     close(STDOUT);
 }
 

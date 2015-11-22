@@ -24,4 +24,4 @@ if [ x"$ID" != "xzimbra" ]; then
   exit 1
 fi
 
-sudo /opt/zimbra/common/sbin/qshape.pl "$@"
+sudo /opt/zimbra/postfix/sbin/qshape.pl "$@"

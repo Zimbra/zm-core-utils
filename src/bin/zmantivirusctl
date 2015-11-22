@@ -16,9 +16,10 @@
 # ***** END LICENSE BLOCK *****
 # 
 
+BASE=/opt/zimbra
 SCRIPTS="zmamavisdctl zmclamdctl zmfreshclamctl"
 
-if [ ! -x "/opt/zimbra/common/sbin/amavisd" ]; then
+if [ ! -L "/opt/zimbra/amavisd" ]; then
   exit 0
 fi
 

@@ -78,7 +78,7 @@ case "$1" in
       mkdir -p ${zimbra_tmp_directory} > /dev/null 2>&1
     fi
 
-    /opt/zimbra/common/bin/swatchdog --config-file=${configfile} \
+    /opt/zimbra/libexec/logswatch --config-file=${configfile} \
       --use-cpan-file-tail --pid-file=${pidfile} --daemon \
       --script-dir=${zimbra_tmp_directory} \
       --tail-file /var/log/zimbra-stats.log > $logfile 2>&1

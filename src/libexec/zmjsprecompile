@@ -21,7 +21,7 @@ if [ x`whoami` != xzimbra ]; then
     exit 1
 fi
 
-zimbra_java_home=/opt/zimbra/common/lib/jvm/java
+zimbra_java_home=/opt/zimbra/java
 jspc_src_dir=/opt/zimbra/mailboxd/webapps/zimbra
 jspc_build_dir=/opt/zimbra/mailboxd/work/zimbra/jsp
 jspc_class_path="/opt/zimbra/jetty/lib:/opt/zimbra/jetty/lib/apache-jsp:/opt/zimbra/jetty/lib/apache-jstl:/opt/zimbra/lib/jars-ant:/opt/zimbra/jetty/lib/ext:/opt/zimbra/jetty/lib/plus:/opt/zimbra/jetty/lib/naming:/opt/zimbra/lib/ext:/opt/zimbra/jetty/common/lib:/opt/zimbra/jetty/webapps/zimbra/WEB-INF/lib"

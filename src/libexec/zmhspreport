@@ -23,7 +23,7 @@ use Time::Local;
 use POSIX qw(strftime);
 use File::Basename;
 
-use lib "/opt/zimbra/common/lib/perl5";
+use lib "/opt/zimbra/zimbramon/lib";
 use Net::LDAP;
 use Net::LDAP::LDIF;
 use Net::LDAP::Entry;

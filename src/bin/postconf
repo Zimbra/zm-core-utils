@@ -18,9 +18,9 @@
 
 progdir=`dirname $0`
 
-if [ ! -x /opt/common/postfix/sbin/postconf ]; then
+if [ ! -L /opt/zimbra/postfix ]; then
   echo "Error: postfix not installed"
   exit 1
 fi
 
-sudo /opt/zimbra/common/sbin/postconf "$@"
+sudo /opt/zimbra/postfix/sbin/postconf "$@"

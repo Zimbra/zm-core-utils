@@ -17,7 +17,7 @@
 #
 use strict;
 
-use lib "/opt/zimbra/common/lib/perl5";
+use lib "/opt/zimbra/zimbramon/lib";
 use Zimbra::Util::Common;
 
 use Getopt::Long;
@@ -55,9 +55,9 @@ $DLOGDIR = "zmdiaglog-$ZMHOSTNAME."
   . $$;
 $DEFAULT_TIMEOUT                    = 120;
 $PID_FILE                           = '/opt/zimbra/log/zmmailboxd_java.pid';
-$JMAP                               = '/opt/zimbra/common/bin/jmap';
+$JMAP                               = '/opt/zimbra/java/bin/jmap';
 $JAVA                               = '/opt/zimbra/java/bin/java';
-$JINFO                              = '/opt/zimbra/common/lib/jvm/java/bin/jinfo';
+$JINFO                              = '/opt/zimbra/java/bin/jinfo';
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
 $VERSION                            = 0.1;
 $HAVE_GCORE                         = has_cmd('gcore');
@@ -595,8 +595,8 @@ sub run() {
         "/opt/zimbra/conf/cbpolicyd.conf",
         "/opt/zimbra/conf/localconfig.xml",
         "/opt/zimbra/conf/my.cnf",
-        "/opt/zimbra/common/conf/main.cf",
-        "/opt/zimbra/common/conf/master.cf",
+        "/opt/zimbra/postfix/conf/main.cf",
+        "/opt/zimbra/postfix/conf/master.cf",
         "/opt/zimbra/conf/zmconfigd.cf"
     );
     cp $_, "$destination/confs" for @conf_files;

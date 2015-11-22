@@ -21,9 +21,11 @@ if [ x`whoami` != xzimbra ]; then
   exit 1
 fi
 
-if [ ! -x "/opt/zimbra/common/sbin/clamd" ]; then
+if [ ! -L "/opt/zimbra/clamav" ]; then
   exit 0
 fi
+
+platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 source `dirname $0`/zmshutil || exit 1
 zmsetvars
@@ -78,6 +80,14 @@ pskillall() {
 #
 case "$1" in
   'start')
+
+    if [ ! -f /opt/zimbra/data/clamav/db/daily.cvd ]; then
+      # Start with the files we ship.
+      cp -f /opt/zimbra/clamav/db/daily.cvd.init \
+        /opt/zimbra/data/clamav/db/daily.cvd
+      cp -f /opt/zimbra/clamav/db/main.cvd.init \
+        /opt/zimbra/data/clamav/db/main.cvd
+    fi
     if [ x$2 = "x" ]; then
       rewriteconfig
     fi
@@ -87,10 +97,10 @@ case "$1" in
     if [ $running = 1 ]; then
       echo "clamd is already running.";
     else
-      /opt/zimbra/common/sbin/clamd \
+      /opt/zimbra/clamav/sbin/clamd \
         --config-file=/opt/zimbra/conf/clamd.conf \
           >> ${zimbra_log_directory}/clamd.log 2>&1 &
-
+  
       for ((i = 0; i < 12; i++)); do
         checkrunning
         if [ $running = 1 ]; then
@@ -110,7 +120,7 @@ case "$1" in
       cpid=`cat /opt/zimbra/log/clamd.pid`
       kill -9 "$cpid" 2> /dev/null
     fi
-    pskillall -9 /opt/zimbra/common/sbin/clamd
+    pskillall -9 /opt/zimbra/clamav/sbin/clamd
     exit 0
    ;;
 

@@ -116,8 +116,8 @@ print $outhandle "$msg";
 my $printing = 0;
 my $done = 0;
 
-if ( -x "/opt/zimbra/common/bin/jstack" ) {
-  $tail = open(TAIL, "/opt/zimbra/common/bin/jstack -l $pid|") || die "jstack: $!";
+if ( -x "/opt/zimbra/java/bin/jstack" ) {
+  $tail = open(TAIL, "/opt/zimbra/java/bin/jstack -l $pid|") || die "jstack: $!";
 } else {
   $tail = open(TAIL, "tail -F $log_file |") || die "$log_file: unable to tail: $!";
   if (!fork()) {

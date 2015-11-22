@@ -22,7 +22,7 @@
 # It finds all blobs which are present in the database but missing in fs.
 # It does not find blobs in fs and missing from database.
 
-use lib "/opt/zimbra/common/lib/perl5";
+use lib "/opt/zimbra/zimbramon/lib";
 
 use strict;
 use Getopt::Std;
