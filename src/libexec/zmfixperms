@@ -616,6 +616,7 @@ if [ -x /opt/zimbra/common/sbin/postfix ]; then
 
     chown -fR ${root_user}:${postfix_owner} /opt/zimbra/common/conf/main.cf
 
+    chgrp zimbra /opt/zimbra/common/conf
     chmod 775 /opt/zimbra/common/conf
 
     chmod -fR 644 /opt/zimbra/common/conf/* 2> /dev/null
