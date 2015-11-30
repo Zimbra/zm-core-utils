@@ -220,7 +220,7 @@ while ( not $ldifin->eof() ) {
   }
 }
 
-if -f ("$source_config_dir/zimbra/convertd_mimehandlers.ldif") {
+if (-f "$source_config_dir/zimbra/convertd_mimehandlers.ldif") {
   $infile = "$source_config_dir/zimbra/convertd_mimehandlers.ldif";
   $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
   while ( not $ldifin->eof() ) {
