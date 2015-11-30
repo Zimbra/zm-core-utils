@@ -163,10 +163,10 @@ sub processQ {
 	
 }
 
-$queue_directory = qx(/opt/zimbra/postfix/sbin/postconf -h queue_directory);
+$queue_directory = qx(/opt/zimbra/common/sbin/postconf -h queue_directory);
 chomp $queue_directory;
 
-$hash_queue_depth = qx(/opt/zimbra/postfix/sbin/postconf -h hash_queue_depth);
+$hash_queue_depth = qx(/opt/zimbra/common/sbin/postconf -h hash_queue_depth);
 chomp $hash_queue_depth;
 
 #$queue_directory="/opt/zimbra/data/postfix/spool";

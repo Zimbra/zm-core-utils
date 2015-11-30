@@ -50,7 +50,7 @@ cat<<EOF
 
 [mysqld]
 
-basedir        = ${antispam_mysql_directory}
+basedir        = /opt/zimbra/common
 datadir        = ${antispam_mysql_data_directory}
 socket         = ${antispam_mysql_socket}
 pid-file       = ${antispam_mysql_pidfile}
@@ -95,7 +95,7 @@ innodb_flush_log_at_trx_commit = 0
 
 [mysqld_safe]
 
-err-log      = ${zimbra_log_directory}/antispam-mysqld.log
+log-error    = ${zimbra_log_directory}/antispam-mysqld.log
 pid-file     = ${antispam_mysql_pidfile}
 
 

@@ -57,23 +57,7 @@ extended=no
 verbose=no
 
 components="\
-  amavisd \
-  bdb \
-  cbpolicyd \
-  clamav \
-  curl \
-  cyrus-sasl \
-  altermime \
-  dspam \
-  heimdal \
   keyview \
-  ldns \
-  libtool \
-  opendkim \
-  openssl \
-  pflogsumm \
-  tcmalloc \
-  zeromq \
   zimbramon/bin \
   zimbramon/crontabs \
   zimbramon/rrdtool \
@@ -411,15 +395,7 @@ if [ -d /opt/zimbra/db ]; then
   chmod 444 /opt/zimbra/db/*.sql /opt/zimbra/db/*.sql.in
 fi
 
-if [ -L /opt/zimbra/cbpolicyd ]; then
-  printMsg "Fixing ownership and permissions on /opt/zimbra/cbpolicyd"
-  chown -fR ${root_user}:${root_group} /opt/zimbra/cbpolicyd*
-  if [ -d /opt/zimbra/cbpolicyd/bin ]; then
-    for i in /opt/zimbra/cbpolicyd/bin/* /opt/zimbra/cbpolicyd/share/database/*tsql; do
-      chmod 755 ${i}
-    done
-  fi
-    
+if [ -d /opt/zimbra/common/share/database ]; then
   for i in data/cbpolicyd data/cbpolicyd/db; do
     if [ ! -d "/opt/zimbra/${i}" ]; then
       mkdir -p /opt/zimbra/${i}
@@ -428,13 +404,7 @@ if [ -L /opt/zimbra/cbpolicyd ]; then
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/cbpolicyd
 fi
 
-if [ -d /opt/zimbra/mta ]; then
-  printMsg "Fixing ownership and permissions on /opt/zimbra/mta"
-  chown -R ${root_user}:${root_group} /opt/zimbra/mta
-  chmod 755 /opt/zimbra/mta
-fi
-
-if [ -L /opt/zimbra/cyrus-sasl ]; then
+if [ -x /opt/zimbra/common/sbin/saslauthd ]; then
   printMsg "Fixing ownership and permissions on /opt/zimbra/data/sasl2/state"
   if [ ! -d /opt/zimbra/data/sasl2/state ]; then  
     mkdir -p /opt/zimbra/data/sasl2/state
@@ -443,21 +413,14 @@ if [ -L /opt/zimbra/cyrus-sasl ]; then
   chmod 755 /opt/zimbra/data/sasl2/state 
 fi
 
-if [ -L /opt/zimbra/dspam ]; then
-  if [ ! -d "/opt/zimbra/data/dspam" ]; then
-    mkdir -p /opt/zimbra/data/dspam
-  fi
-  chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/dspam
-fi
-
-if [ -L /opt/zimbra/altermime ]; then
+if [ -x /opt/zimbra/common/bin/altermime ]; then
   if [ ! -d "/opt/zimbra/data/altermime" ]; then
     mkdir -p /opt/zimbra/data/altermime
   fi
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/altermime
 fi
 
-if [ -L /opt/zimbra/amavisd ]; then
+if [ -x /opt/zimbra/common/sbin/amavisd ]; then
   printMsg "Fixing ownership and permissions on /opt/zimbra/data/amavisd"
   if [ ! -d "/opt/zimbra/data/amavisd" ]; then
     mkdir -p /opt/zimbra/data/amavisd/.spamassassin
@@ -604,11 +567,6 @@ if [ -d /opt/zimbra/logger/db ]; then
   chown ${zimbra_user}:${zimbra_group} /opt/zimbra/logger/db/data
 fi
 
-if [ -d /opt/zimbra/clamav/db ]; then
-  printMsg "Fixing ownership and permissions on /opt/zimbra/clamav/db"
-  chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/clamav/db
-fi
-
 if [ -d /opt/zimbra/data/clamav ]; then
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/clamav
 fi
@@ -626,55 +584,48 @@ if [ -d /opt/zimbra/zimbramon/lib ]; then
   chown -R ${root_user}:${root_group} /opt/zimbra/zimbramon/lib
 fi
 
-if [ -L /opt/zimbra/opendkim ]; then
-  if [ -d /opt/zimbra/data/opendkim ]; then
-    chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/opendkim
-  fi
-fi
+if [ -x /opt/zimbra/common/sbin/postfix ]; then
+  printMsg "Fixing postfix related permissions"
 
-if [ -L /opt/zimbra/postfix ]; then
-  printMsg "Fixing ownership and permissions on /opt/zimbra/postfix"
-  chown -fR ${root_user}:${root_group} /opt/zimbra/postfix* 2> /dev/null
-
-  if [ -e /opt/zimbra/postfix/conf ]; then
-    if [ ! -f /opt/zimbra/postfix/conf/main.cf ]; then
-      touch /opt/zimbra/postfix/conf/main.cf
+  if [ -e /opt/zimbra/common/conf ]; then
+    if [ ! -f /opt/zimbra/common/conf/main.cf ]; then
+      touch /opt/zimbra/common/conf/main.cf
     fi
 
-    chown -fR ${root_user}:${postfix_owner} /opt/zimbra/postfix/conf
+    chown -fR ${root_user}:${postfix_owner} /opt/zimbra/common/conf/main.cf
 
-    chmod 775 /opt/zimbra/postfix/conf
+    chmod 775 /opt/zimbra/common/conf
 
-    chmod -fR 644 /opt/zimbra/postfix/conf/* 2> /dev/null
-    if [ -f /opt/zimbra/postfix/conf/postfix-script ]; then
-      chmod -f 755 /opt/zimbra/postfix/conf/postfix-script
+    chmod -fR 644 /opt/zimbra/common/conf/* 2> /dev/null
+    if [ -f /opt/zimbra/common/libexec/postfix-script ]; then
+      chmod -f 755 /opt/zimbra/common/libexec/postfix-script
     fi
-    if [ -f /opt/zimbra/postfix/conf/post-install ]; then
-      chmod -f 755 /opt/zimbra/postfix/conf/post-install
+    if [ -f /opt/zimbra/common/libexec/post-install ]; then
+      chmod -f 755 /opt/zimbra/common/libexec/post-install
     fi
-    if [ -f /opt/zimbra/postfix/conf/master.cf.in ]; then
-      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/postfix/conf/master.cf.in
+    if [ -f /opt/zimbra/common/conf/master.cf.in ]; then
+      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/master.cf.in
     fi
-    if [ -f /opt/zimbra/postfix/conf/master.cf ]; then
-      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/postfix/conf/master.cf
+    if [ -f /opt/zimbra/common/conf/master.cf ]; then
+      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/master.cf
     fi
-    if [ -f /opt/zimbra/postfix/conf/main.cf ]; then
-      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/postfix/conf/main.cf
+    if [ -f /opt/zimbra/common/conf/main.cf ]; then
+      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/main.cf
     fi
-    if [ -f /opt/zimbra/postfix/conf/tag_as_foreign.re ]; then
-      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/postfix/conf/tag_as_foreign.re
+    if [ -f /opt/zimbra/common/conf/tag_as_foreign.re ]; then
+      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/tag_as_foreign.re
     fi
-    if [ -f /opt/zimbra/postfix/conf/tag_as_originating.re ]; then
-      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/postfix/conf/tag_as_originating.re
+    if [ -f /opt/zimbra/common/conf/tag_as_originating.re ]; then
+      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/tag_as_originating.re
     fi
   fi
 
   # Postfix specific permissions
-  if [ -d /opt/zimbra/postfix/sbin ]; then
-    chgrp -f ${postfix_suid_group} /opt/zimbra/postfix/sbin/postqueue
-    chgrp -f ${postfix_suid_group} /opt/zimbra/postfix/sbin/postdrop
-    chmod -f g+s /opt/zimbra/postfix/sbin/postqueue
-    chmod -f g+s /opt/zimbra/postfix/sbin/postdrop
+  if [ -x /opt/zimbra/common/sbin/postqueue ]; then
+    chgrp -f ${postfix_suid_group} /opt/zimbra/common/sbin/postqueue
+    chgrp -f ${postfix_suid_group} /opt/zimbra/common/sbin/postdrop
+    chmod -f g+s /opt/zimbra/common/sbin/postqueue
+    chmod -f g+s /opt/zimbra/common/sbin/postdrop
   fi
   if [ -f /opt/zimbra/bin/zmbackup ]; then
     mkdir -p /opt/zimbra/data/postfix-journal
@@ -730,11 +681,6 @@ fi
 if [ -d /opt/zimbra/store -a ${extended} = "yes" ]; then
   printMsg "Fixing ownership of /opt/zimbra/store"
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/store
-fi
-
-if [ -f /opt/zimbra/libexec/ZmSetup.app/Contents/MacOS/ZmSetup ]; then
-  chown ${root_user}:${root_group} /opt/zimbra/libexec/ZmSetup.app/Contents/MacOS/ZmSetup
-  chmod 544 /opt/zimbra/libexec/ZmSetup.app/Contents/MacOS/ZmSetup
 fi
 
 if [[ "x$PLAT" == "xRHEL7_64" && ! -d /opt/zimbra/.cache ]]; then

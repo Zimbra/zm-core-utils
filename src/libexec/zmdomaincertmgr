@@ -41,8 +41,8 @@ exp_thres_secs=$(($exp_thres_days*24*60*60))
 
 zimbra_domain_cert_directory=${zimbra_conf_directory}/domaincerts
 
-if [ -x "/opt/zimbra/openssl/bin/openssl" ]; then
-  openssl=/opt/zimbra/openssl/bin/openssl
+if [ -x "/opt/zimbra/common/bin/openssl" ]; then
+  openssl=/opt/zimbra/common/bin/openssl
 else
   openssl=openssl
 fi

@@ -17,7 +17,7 @@
 #
 use strict;
 
-use lib "/opt/zimbra/zimbramon/lib";
+use lib "/opt/zimbra/common/lib/perl5";
 use Zimbra::Util::Common;
 
 use Getopt::Long;
@@ -595,8 +595,8 @@ sub run() {
         "/opt/zimbra/conf/cbpolicyd.conf",
         "/opt/zimbra/conf/localconfig.xml",
         "/opt/zimbra/conf/my.cnf",
-        "/opt/zimbra/postfix/conf/main.cf",
-        "/opt/zimbra/postfix/conf/master.cf",
+        "/opt/zimbra/common/conf/main.cf",
+        "/opt/zimbra/common/conf/master.cf",
         "/opt/zimbra/conf/zmconfigd.cf"
     );
     cp $_, "$destination/confs" for @conf_files;

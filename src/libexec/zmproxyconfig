@@ -19,7 +19,7 @@
 # This script enables and disables proxy, and sets the default values for each case
 
 use strict;
-use lib "/opt/zimbra/zimbramon/lib";
+use lib "/opt/zimbra/common/lib/perl5";
 use Zimbra::Util::Common;
 use Getopt::Std;
 use IPC::Open3;

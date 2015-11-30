@@ -71,8 +71,8 @@ commercial_crt=${zimbra_comm_cert_directory}/commercial.crt
 commercial_csr=${zimbra_comm_cert_directory}/commercial.csr
 commercial_ca_crt=${zimbra_comm_cert_directory}/commercial_ca.crt
 
-if [ -x /opt/zimbra/openssl/bin/openssl ]; then
-  openssl=/opt/zimbra/openssl/bin/openssl
+if [ -x /opt/zimbra/common/bin/openssl ]; then
+  openssl=/opt/zimbra/common/bin/openssl
 else
   echo "ERROR: openssl is missing"
   exit 1

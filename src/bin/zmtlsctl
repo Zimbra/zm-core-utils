@@ -92,7 +92,7 @@ zmgetproxyforhost() {
     zmgetallproxies
 }
 
-sasl_conf_directory=/opt/zimbra/cyrus-sasl/etc
+sasl_conf_directory=/opt/zimbra/common/etc
 mailboxd_server=jetty
 mailboxd_conf_directory=${mailboxd_directory}/etc
 jetty_web_xml=/opt/zimbra/jetty/etc

@@ -16,7 +16,7 @@
 # ***** END LICENSE BLOCK *****
 # 
 use strict;
-use lib '/opt/zimbra/zimbramon/lib';
+use lib '/opt/zimbra/common/lib/perl5';
 use Net::LDAP;
 use XML::Simple;
 use Getopt::Std;

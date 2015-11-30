@@ -17,7 +17,7 @@
 # 
 
 use strict;
-use lib "/opt/zimbra/zimbramon/lib";
+use lib "/opt/zimbra/common/lib/perl5";
 use Zimbra::Mon::Logger;
 
 use FileHandle;
