@@ -58,10 +58,8 @@ verbose=no
 
 components="\
   keyview \
-  zimbramon/bin \
   zimbramon/crontabs \
-  zimbramon/rrdtool \
-  zimbramon/pylibs \
+  common/lib/jylibs \
 "
   
 
@@ -345,7 +343,7 @@ for i in ${components}; do
   elif [ -d /opt/zimbra/${i} ]; then
     printMsg "Fixing ownership and permissions on /opt/zimbra/${i}"
     chown -R ${root_user}:${root_group} /opt/zimbra/${i} 2> /dev/null
-    if [ x$i = "xzimbramon/pylibs" ]; then
+    if [ x$i = "xcommon/lib/jylibs" ]; then
       chmod a+r /opt/zimbra/${i}/*.class 2>/dev/null
     fi
   fi
@@ -576,12 +574,6 @@ if [ -d /opt/zimbra/zmstat ]; then
   for i in /opt/zimbra/zmstat/????-??-??; do
     chown -R ${zimbra_user}:${zimbra_group} ${i}
   done
-fi
-
-if [ -d /opt/zimbra/zimbramon/lib ]; then
-  printMsg "Fixing ownership and permissions on /opt/zimbra/zimbramon/lib"
-  chown ${root_user}:${root_group} /opt/zimbra/zimbramon
-  chown -R ${root_user}:${root_group} /opt/zimbra/zimbramon/lib
 fi
 
 if [ -x /opt/zimbra/common/sbin/postfix ]; then

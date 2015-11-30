@@ -247,14 +247,15 @@ fi
 ##################################################
 if [ -z "$JAVA_HOME" ]
 then
-   if [ -x /opt/zimbra/java/bin/java ]
+   if [ -x /opt/zimbra/common/lib/jvm/java/bin/java ]
    then
-      JAVA=/opt/zimbra/java/bin/java
+      JAVA=/opt/zimbra/common/lib/jvm/java/bin/java
    else
       JAVA=`which java`
    fi
 
    JAVA_HOME=`dirname $JAVA`
+   JAVA_HOME=`dirname $JAVA_HOME`
 
    echo "Found JAVA=$JAVA in JAVA_HOME=$JAVA_HOME"
 fi
@@ -277,7 +278,7 @@ fi
 
 if [ "$JAVA" = "" ]
 then
-    echo "Cannot find a JRE or JDK. Please set JAVA_HOME to a >=1.2 JRE" 2>&2
+    echo "Cannot find a JRE or JDK. Please set JAVA_HOME to a >=1.7 JRE" 2>&2
     exit 1
 fi
 

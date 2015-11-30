@@ -26,11 +26,11 @@ zmsetvars
 
 # These variables are not set if run via cron.  Make sure they are set prior to execution
 if [ x"$JYTHONPATH" = "x" ]; then
-  JAVA_HOME=/opt/zimbra/java
+  JAVA_HOME=/opt/zimbra/common/lib/jvm/java
   PATH=/opt/zimbra/bin:/opt/zimbra/common/bin:${JAVA_HOME}/bin:/usr/sbin:${PATH}
   export PATH
 
-  JYTHONPATH="/opt/zimbra/zimbramon/pylibs"
+  JYTHONPATH="/opt/zimbra/common/lib/jylibs"
   export JYTHONPATH
 fi
  
