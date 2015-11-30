@@ -210,6 +210,20 @@ if (-f "/opt/zimbra/conf/ldap/zimbra_mimehandlers.ldif") {
 }
 $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
 while ( not $ldifin->eof() ) {
+  my $entry = $ldifin->read_entry();
+  if ( $ldifin->error() ) {
+    print "Error msg: ", $ldifin->error ( ), "\n";
+    print "Error lines:\n", $ldifin->error_lines ( ), "\n";
+  } elsif ( $entry ) {
+    $entry->changetype("add");
+    $entry->update($ldap);
+  }
+}
+
+if -f ("$source_config_dir/zimbra/convertd_mimehandlers.ldif") {
+  $infile = "$source_config_dir/zimbra/convertd_mimehandlers.ldif";
+  $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
+  while ( not $ldifin->eof() ) {
     my $entry = $ldifin->read_entry();
     if ( $ldifin->error() ) {
       print "Error msg: ", $ldifin->error ( ), "\n";
@@ -218,26 +232,7 @@ while ( not $ldifin->eof() ) {
       $entry->changetype("add");
       $entry->update($ldap);
     }
-}
-
-if ( -d "/opt/zimbra/lib/conf/" ) {
-    opendir(DIR, "/opt/zimbra/lib/conf") || die "can't opendir /opt/zimbra/lib/conf: $!";
-    while (my $file = readdir(DIR)) {
-       next unless (-f "/opt/zimbra/lib/conf/$file");
-       next unless ( $file =~ m/ldif$/);
-       $infile = "/opt/zimbra/lib/conf/$file";
-       $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
-       while ( not $ldifin->eof() ) {
-            my $entry = $ldifin->read_entry();
-            if ( $ldifin->error() ) {
-              print "Error msg: ", $ldifin->error ( ), "\n";
-              print "Error lines:\n", $ldifin->error_lines ( ), "\n";
-            } elsif ( $entry ) {
-              $entry->update($ldap);
-            }
-       }
-    }
-    closedir DIR;
+  }
 }
 
 exit 0;
