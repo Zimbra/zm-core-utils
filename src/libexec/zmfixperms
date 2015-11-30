@@ -58,7 +58,7 @@ verbose=no
 
 components="\
   keyview \
-  zimbramon/crontabs \
+  conf/crontabs \
   common/lib/jylibs \
 "
   
