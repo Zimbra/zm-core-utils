@@ -78,6 +78,15 @@ pskillall() {
 #
 case "$1" in
   'start')
+   if [ ! -f /opt/zimbra/data/clamav/db/daily.cvd ]; then
+      # Start with the files we ship.
+      cp -f /opt/zimbra/data/clamav/init/daily.cvd.init \
+        /opt/zimbra/data/clamav/db/daily.cvd
+      cp -f /opt/zimbra/data/clamav/init/main.cvd.init \
+        /opt/zimbra/data/clamav/db/main.cvd
+      cp -f /opt/zimbra/data/clamav/init/bytecode.cvd.init \
+        /opt/zimbra/data/clamav/db/bytecode.cvd
+    fi
     if [ x$2 = "x" ]; then
       rewriteconfig
     fi
