@@ -26,16 +26,16 @@ platform=$(/opt/zimbra/libexec/get_plat_tag.sh 2> /dev/null := UNKNOWN)
 source `dirname $0`/zmshutil || exit 1
 zmsetvars -f
 
-export JAVA_HOME=/opt/zimbra/java
+export JAVA_HOME=/opt/zimbra/common/lib/jvm/java
 
-if [ ! -x /opt/zimbra/java/bin/java ]; then
+if [ ! -x /opt/zimbra/common/bin/java ]; then
   echo "ERROR: Zimbra java is missing"
   exit 1
 fi
 
 DIGEST=${ssl_default_digest}
 
-java_version=$(/opt/zimbra/java/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
+java_version=$(/opt/zimbra/common/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
 if [ x"$java_version" = "x1.6.0" ]; then
   java_options="-XX:ErrorFile=/opt/zimbra/log"
 else
@@ -90,11 +90,7 @@ validation_days=1825
 #OUTPUT_PREFIX="##### OUTPUT:"
 ERROR_PREFIX="XXXXX ERROR:"
 
-if [ -f "/opt/zimbra/java/lib/security/cacerts" ]; then
-  CACERTS=/opt/zimbra/java/lib/security/cacerts
-else
-  CACERTS=/opt/zimbra/java/jre/lib/security/cacerts
-fi
+CACERTS=/opt/zimbra/common/lib/jvm/java/jre/lib/security/cacerts
 
 checkDigest() {
   if [ x"$DIGEST" != "xmd4" -a x"$DIGEST" != "xmd5" -a \
@@ -345,7 +341,7 @@ createKeystore () {
 
   # clean up the previous settings first
   if [ -f "${mailboxd_keystore}" ]; then
-    /opt/zimbra/java/bin/keytool -delete -alias ${mailboxd_server} \
+    /opt/zimbra/common/bin/keytool -delete -alias ${mailboxd_server} \
       -keystore ${mailboxd_keystore} -storepass ${mailboxd_keystore_password} > /dev/null 2>&1
   fi
 
@@ -379,7 +375,7 @@ createKeystore () {
   fi
 
   echo -n "** Creating keystore file ${mailboxd_keystore}..."
-  /opt/zimbra/java/bin/java ${java_options} -classpath /opt/zimbra/lib/ext/com_zimbra_cert_manager/com_zimbra_cert_manager.jar com.zimbra.cert.MyPKCS12Import ${zimbra_ssl_directory}/${mailboxd_server}.pkcs12 ${mailboxd_keystore} ${mailboxd_keystore_password} ${mailboxd_keystore_password} > ${tmpfile} 2>&1
+  /opt/zimbra/common/bin/java ${java_options} -classpath /opt/zimbra/lib/ext/com_zimbra_cert_manager/com_zimbra_cert_manager.jar com.zimbra.cert.MyPKCS12Import ${zimbra_ssl_directory}/${mailboxd_server}.pkcs12 ${mailboxd_keystore} ${mailboxd_keystore_password} ${mailboxd_keystore_password} > ${tmpfile} 2>&1
   if [ $? != 0 ]; then
     echo "failed."
     echo
@@ -411,8 +407,8 @@ addCACERT() {
 
   echo -n "** Importing certificate ${crt} to CACERTS as $alias..."
   tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
-  /opt/zimbra/java/bin/keytool -delete -alias ${alias} -keystore ${CACERTS} -storepass ${mailboxd_truststore_password} > /dev/null 2>&1
-  /opt/zimbra/java/bin/keytool -import -noprompt -keystore ${CACERTS} -file ${crt} -alias ${alias} -storepass ${mailboxd_truststore_password} > ${tmpfile} 2>&1
+  /opt/zimbra/common/bin/keytool -delete -alias ${alias} -keystore ${CACERTS} -storepass ${mailboxd_truststore_password} > /dev/null 2>&1
+  /opt/zimbra/common/bin/keytool -import -noprompt -keystore ${CACERTS} -file ${crt} -alias ${alias} -storepass ${mailboxd_truststore_password} > ${tmpfile} 2>&1
   if [ $? != 0 ]; then
     echo "failed."
     echo "${ERROR_PREFIX} failed to import certficate."
@@ -433,8 +429,8 @@ updateCACERTS() {
 
   echo -n "** Importing CA ${zimbra_ca_crt} into CACERTS..."
   tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
-  /opt/zimbra/java/bin/keytool -delete -alias my_ca -keystore ${CACERTS} -storepass ${mailboxd_truststore_password} > /dev/null 2>&1
-  /opt/zimbra/java/bin/keytool -import -noprompt -keystore ${CACERTS} -file ${zimbra_ca_crt} -alias my_ca -storepass ${mailboxd_truststore_password} > ${tmpfile} 2>&1
+  /opt/zimbra/common/bin/keytool -delete -alias my_ca -keystore ${CACERTS} -storepass ${mailboxd_truststore_password} > /dev/null 2>&1
+  /opt/zimbra/common/bin/keytool -import -noprompt -keystore ${CACERTS} -file ${zimbra_ca_crt} -alias my_ca -storepass ${mailboxd_truststore_password} > ${tmpfile} 2>&1
   if [ $? != 0 ]; then
     echo "failed."
     echo
@@ -1196,7 +1192,7 @@ checkCertExpiration() {
     if [ -f ${mailboxd_keystore} -a -d "/opt/zimbra/mailboxd" ]; then
     #echo "::service mailboxd::"
       tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "${ERROR_PREFIX} Failed to create tmpfile"; exit 1; }
-      /opt/zimbra/java/bin/keytool -export -file ${service_der} -alias ${mailboxd_server} \
+      /opt/zimbra/common/bin/keytool -export -file ${service_der} -alias ${mailboxd_server} \
         -keystore ${mailboxd_keystore} -storepass ${mailboxd_keystore_password} > ${tmpfile} 2>&1
       if [ $? != 0 ]; then
         echo "${ERROR_PREFIX} failed to export ${service_crt} from keystore."
@@ -1275,7 +1271,7 @@ viewdeployedcrt() {
     if [ -f ${mailboxd_keystore} -a -d "/opt/zimbra/mailboxd" ]; then
       echo "::service mailboxd::"
       tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "${ERROR_PREFIX} Failed to create tmpfile"; exit 1; }
-      /opt/zimbra/java/bin/keytool -export -file ${service_der} -alias ${mailboxd_server} \
+      /opt/zimbra/common/bin/keytool -export -file ${service_der} -alias ${mailboxd_server} \
         -keystore ${mailboxd_keystore} -storepass ${mailboxd_keystore_password} > ${tmpfile} 2>&1
       if [ $? != 0 ]; then
         echo "${ERROR_PREFIX} failed to export ${service_crt} from keystore."
