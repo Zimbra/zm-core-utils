@@ -245,20 +245,17 @@ fi
 ##################################################
 # Check for JAVA_HOME
 ##################################################
-if [ -z "$JAVA_HOME" ]
+if [ -x /opt/zimbra/common/lib/jvm/java/bin/java ]
 then
-   if [ -x /opt/zimbra/common/lib/jvm/java/bin/java ]
-   then
-      JAVA=/opt/zimbra/common/lib/jvm/java/bin/java
-   else
-      JAVA=`which java`
-   fi
-
-   JAVA_HOME=`dirname $JAVA`
-   JAVA_HOME=`dirname $JAVA_HOME`
-
-   echo "Found JAVA=$JAVA in JAVA_HOME=$JAVA_HOME"
+   JAVA=/opt/zimbra/common/lib/jvm/java/bin/java
+else
+   JAVA=`which java`
 fi
+
+JAVA_HOME=`dirname $JAVA`
+JAVA_HOME=`dirname $JAVA_HOME`
+
+echo "Found JAVA=$JAVA in JAVA_HOME=$JAVA_HOME"
 
 
 ##################################################
