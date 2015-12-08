@@ -32,10 +32,30 @@ my $THIRD_PARTY_BUILDS_DIR = "//depot/zimbra/$ARGV[0]/ThirdPartyBuilds/";
 my $GET_PLAT_TAG = dirname($0) . "/../../../ZimbraBuild/rpmconf/Build/get_plat_tag.sh";
 my $COMMON_DEFS = dirname($0) . "/../../../ZimbraBuild/defs/plat_common.def";
 my $P4_ROOT = $THIRD_PARTY_BUILDS_DIR . getPlatformDirName();
+my $PLATFORM_DIR_NAME = getPlatformDirName();
 my $JETTY_P4_PATH = "//depot/zimbra/$ARGV[0]/ThirdParty/jetty";
+my $SOLR_P4_PATH = "//depot/zimbra/$ARGV[0]/ThirdParty/solr/binary";
+
 my %BINARIES = (
+    "curl" => "7.38.0",
+    "cyrus-sasl" => "2.1.26.2z",
+    "heimdal" => "1.5.2",
+    "libtool" => "2.2.6b",
+    "openldap" => "2.4.39.2z",
+    "openldap-libs" => "2.4.39.2z",
+    "openssl" => "1.0.1i",
+    "rsync" => "3.1.1",
+    "tcmalloc" => "2.2",
     "jetty" => "distribution-9.3.5.v20151012",
+    "solr" => "5.2.0"
 );
+
+if (index($PLATFORM_DIR_NAME, "MACOSX") != -1) {
+    $BINARIES{"rsync"} = "3.0.9";
+    $BINARIES{"curl"} = "7.36.0";
+    $BINARIES{"openssl"} = "1.0.1h";
+}
+
 my $P4_CMD = "p4";
 
 if (! -d $CACHE_DIR) {
@@ -61,8 +81,15 @@ if ($^O ne 'darwin') {
             my ($binary, $version) = split(/_VERSION :?= /, $line);
             $binary = lc $binary;
 
-            if ($binary eq 'jetty') {
+            if ($binary eq 'sasl') {
+                $BINARIES{'cyrus-sasl'} = $version;
+            } elsif ($binary eq 'ldap') {
+                $BINARIES{'openldap'} = $version;
+                $BINARIES{'openldap-libs'} = $version;
+            } elsif ($binary eq 'jetty') {
                 $BINARIES{'jetty'} = 'distribution-' . $version;
+            } elsif ($BINARIES{$binary}) {
+                $BINARIES{$binary} = $version;
             }
         }
     }
@@ -82,8 +109,14 @@ for my $binaryName (keys %BINARIES) {
     my $cmd;
     my $p4Path;
 
-    if ($binaryName eq "jetty") {
+    if ($binaryName eq "openldap-libs") {
+        $p4Path = "$P4_ROOT/openldap/openldap-libs-$version.tgz";
+    } elsif ($binaryName eq "jetty") {
         $p4Path = "$JETTY_P4_PATH/jetty-$version.tar.gz";
+    } elsif ($binaryName eq "solr") { 
+    	$p4Path = "$SOLR_P4_PATH/$binaryName-$version.tgz";
+    } else {
+        $p4Path = "$P4_ROOT/$binaryName/$binaryName-$version.tgz";
     }
 
     # Copy tarball to the third party cache directory if necessary.
