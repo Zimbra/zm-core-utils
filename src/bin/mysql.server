@@ -28,6 +28,10 @@ if [ ! -x /opt/zimbra/common/bin/mysqld_safe ]; then
   exit 0
 fi
 
+if [ ! -d ${mailboxd_directory} ]; then
+  exit 0
+fi
+
 if [ ! -d ${zimbra_tmp_directory}/mysql ]; then
   mkdir -p ${zimbra_tmp_directory}/mysql > /dev/null 2>&1
 fi
