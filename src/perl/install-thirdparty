@@ -37,15 +37,15 @@ my $JETTY_P4_PATH = "//depot/zimbra/$ARGV[0]/ThirdParty/jetty";
 my $SOLR_P4_PATH = "//depot/zimbra/$ARGV[0]/ThirdParty/solr/binary";
 
 my %BINARIES = (
-    "curl" => "7.38.0",
-    "cyrus-sasl" => "2.1.26.2z",
-    "heimdal" => "1.5.2",
-    "libtool" => "2.2.6b",
-    "openldap" => "2.4.39.2z",
-    "openldap-libs" => "2.4.39.2z",
-    "openssl" => "1.0.1i",
-    "rsync" => "3.1.1",
-    "tcmalloc" => "2.2",
+#    "curl" => "7.38.0",
+#    "cyrus-sasl" => "2.1.26.2z",
+#    "heimdal" => "1.5.2",
+#    "libtool" => "2.2.6b",
+#    "openldap" => "2.4.39.2z",
+#    "openldap-libs" => "2.4.39.2z",
+#    "openssl" => "1.0.1i",
+#    "rsync" => "3.1.1",
+#    "tcmalloc" => "2.2",
     "jetty" => "distribution-9.3.5.v20151012",
     "solr" => "5.2.0"
 );
