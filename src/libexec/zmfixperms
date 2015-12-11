@@ -33,14 +33,8 @@ else
   root_group=root
 fi
 
-if [ "X$PLAT" = "XMACOSXx86_10.5" -o "X$PLAT" = "XMACOSXx86_10.6" -o "X$PLAT" = "XMACOSXx86_10.7" ]; then
-  root_group=wheel
-  postfix_owner=_postfix
-  postfix_suid_group=_postdrop
-else
-  postfix_owner=postfix
-  postfix_suid_group=postdrop
-fi
+postfix_owner=postfix
+postfix_suid_group=postdrop
 
 if [ "X$PLAT" = "XUBUNTU10_64" -o "X$PLAT" = "XUBUNTU12_64" -o "X$PLAT" = "XUBUNTU14_64" ]; then
   syslog_user=syslog
@@ -644,12 +638,6 @@ if [ -x /opt/zimbra/common/sbin/postfix ]; then
   fi
 
   # Postfix specific permissions
-  if [ -x /opt/zimbra/common/sbin/postqueue ]; then
-    chgrp -f ${postfix_suid_group} /opt/zimbra/common/sbin/postqueue
-    chgrp -f ${postfix_suid_group} /opt/zimbra/common/sbin/postdrop
-    chmod -f g+s /opt/zimbra/common/sbin/postqueue
-    chmod -f g+s /opt/zimbra/common/sbin/postdrop
-  fi
   if [ -f /opt/zimbra/bin/zmbackup ]; then
     mkdir -p /opt/zimbra/data/postfix-journal
     chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/postfix-journal
