@@ -604,30 +604,8 @@ if [ -x /opt/zimbra/common/sbin/postfix ]; then
   printMsg "Fixing postfix related permissions"
 
   if [ -e /opt/zimbra/common/conf ]; then
-    if [ ! -f /opt/zimbra/common/conf/main.cf ]; then
-      touch /opt/zimbra/common/conf/main.cf
-    fi
-
-    chown -fR ${root_user}:${postfix_owner} /opt/zimbra/common/conf/main.cf
-
-    chgrp zimbra /opt/zimbra/common/conf
-    chmod 775 /opt/zimbra/common/conf
-
-    chmod -fR 644 /opt/zimbra/common/conf/* 2> /dev/null
-    if [ -f /opt/zimbra/common/libexec/postfix-script ]; then
-      chmod -f 755 /opt/zimbra/common/libexec/postfix-script
-    fi
-    if [ -f /opt/zimbra/common/libexec/post-install ]; then
-      chmod -f 755 /opt/zimbra/common/libexec/post-install
-    fi
     if [ -f /opt/zimbra/common/conf/master.cf.in ]; then
       chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/master.cf.in
-    fi
-    if [ -f /opt/zimbra/common/conf/master.cf ]; then
-      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/master.cf
-    fi
-    if [ -f /opt/zimbra/common/conf/main.cf ]; then
-      chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/main.cf
     fi
     if [ -f /opt/zimbra/common/conf/tag_as_foreign.re ]; then
       chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/tag_as_foreign.re
@@ -637,7 +615,7 @@ if [ -x /opt/zimbra/common/sbin/postfix ]; then
     fi
   fi
 
-  # Postfix specific permissions
+  # Postjournal specific permissions
   if [ -f /opt/zimbra/bin/zmbackup ]; then
     mkdir -p /opt/zimbra/data/postfix-journal
     chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/postfix-journal
