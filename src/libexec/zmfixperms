@@ -343,18 +343,6 @@ for i in ${components}; do
   fi
 done
 
-for i in /opt/zimbra/jdk*; do
-  printMsg "Fixing ownership and permissions on ${i}"
-  chown -R ${root_user}:${root_group} ${i}
-  chmod 755 ${i}
-done
-
-for i in /opt/zimbra/j2sdk*; do
-  printMsg "Fixing ownership and permissions on ${i}"
-  chown -R ${root_user}:${root_group} ${i}
-  chmod 755 ${i}
-done
-
 if [ -d /opt/zimbra/lib ]; then
   printMsg "Fixing ownership and permissions on /opt/zimbra/lib"
   for i in /opt/zimbra/lib/lib*so*; do
