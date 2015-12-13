@@ -26,8 +26,6 @@ setsid;
 
 zmstatInit();
 
-my $isMac = isMac();
-
 sub arrayContains($$) {
     my ($arrayRef, $val) = @_;
     foreach my $elem (@$arrayRef) {
@@ -121,12 +119,11 @@ my @TOOL_ALL = (
     'zmstat-vm',
     'zmstat-io -x',
     'zmstat-df',
+    'zmstat-io',
+    'zmstat-fd',
+    'zmstat-allprocs',
 );
-if (!$isMac) {
-    push(@TOOL_ALL, 'zmstat-io');
-    push(@TOOL_ALL, 'zmstat-fd');
-    push(@TOOL_ALL, 'zmstat-allprocs');
-}
+
 my $TOOL_MYSQL = 'zmstat-mysql';
 my $TOOL_CONVERTD = 'zmstat-convertd';
 my $TOOL_NGINX = 'zmstat-nginx';
@@ -156,7 +153,7 @@ if (defined($cmd)) {
     if ($cmd eq 'start' || $cmd eq 'restart') {
         my $procs = getProcList();
         my $doNginx = $procs =~ /\bnginx\b/;
-        my $doMysql = -x "/opt/zimbra/common/sbin/mysqld" ? 1 : 0;
+        my $doMysql = (-x "/opt/zimbra/common/sbin/mysqld" && -L "/opt/zimbra/mailboxd") ? 1 : 0;
         my $doMtaQueue = (-x "/opt/zimbra/common/sbin/postqueue" && $procs =~ /\bmta\b/) ? 1 : 0;
 	my $doLdap = -x "/opt/zimbra/common/libexec/slapd" ? 1 : 0;
         my $outfile = getZmstatRoot() . "/zmstat.out";
@@ -175,14 +172,12 @@ if (defined($cmd)) {
               print "Invoking: $cmd\n";
               system("$cmd >> $outfile 2>&1 &");
           }
-          if (!$isMac) {
-              # if "convertd" is not in proc list (not an enabled service), don't try starting zmstat-convertd
-              if ($procs =~ /convertd/) {
-                  # doMysql implies that convertd is also on the system
-                  $cmd = "$toolpath/$TOOL_CONVERTD";
-                  print "Invoking: $cmd\n";
-                  system("$cmd >> $outfile 2>&1 &");
-              }
+          # if "convertd" is not in proc list (not an enabled service), don't try starting zmstat-convertd
+          if ($procs =~ /convertd/) {
+              # doMysql implies that convertd is also on the system
+              $cmd = "$toolpath/$TOOL_CONVERTD";
+              print "Invoking: $cmd\n";
+              system("$cmd >> $outfile 2>&1 &");
           }
           if ($doMtaQueue) {
               my $cmd = "$toolpath/$TOOL_MTAQUEUE";
@@ -228,15 +223,13 @@ if (defined($cmd)) {
               my $cmd = "$toolpath/$TOOL_MYSQL";
               print "Invoking: $cmd\n";
               system("$cmd >> $outfile 2>&1 &");
-           }              
-           if (!$isMac) {
-              # if "convertd" is not in proc list (not an enabled service), don't try starting zmstat-convertd
-              if ($procs =~ /convertd/ && !$procs{"zmstat-convertd"}) {
-                # doMysql implies that convertd is also on the system
-                $cmd = "$toolpath/$TOOL_CONVERTD";
-                print "Invoking: $cmd\n";
-                system("$cmd >> $outfile 2>&1 &");
-              }
+          }              
+          # if "convertd" is not in proc list (not an enabled service), don't try starting zmstat-convertd
+          if ($procs =~ /convertd/ && !$procs{"zmstat-convertd"}) {
+              # doMysql implies that convertd is also on the system
+              $cmd = "$toolpath/$TOOL_CONVERTD";
+              print "Invoking: $cmd\n";
+              system("$cmd >> $outfile 2>&1 &");
           }
           if ($doMtaQueue && !$procs{"zmstat-mtaqueue"}) {
               my $cmd = "$toolpath/$TOOL_MTAQUEUE";
