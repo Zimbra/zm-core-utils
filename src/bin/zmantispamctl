@@ -21,32 +21,46 @@ SCRIPTS="zmamavisdctl antispam-mysql.server"
 
 source /opt/zimbra/.bashrc
 
+ENABLED=1
+/opt/zimbra/bin/zmprov -l gs `/opt/zimbra/bin/zmhostname` zimbraServiceEnabled | grep -qw antispam
+if [ $? = 1 ]; then
+  ENABLED=0
+fi
+
 case "$1" in 
 	start)
-		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i start $2
-		done
+		if [ $ENABLED = 1 ]; then
+			for i in $SCRIPTS; do
+				/opt/zimbra/bin/$i start $2
+			done
+		fi
 	;;
 	stop)
-		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i stop
-		done
+		if [ $ENABLED = 1 ]; then
+			for i in $SCRIPTS; do
+				/opt/zimbra/bin/$i stop
+			done
+		fi
 	;;
 	reload|restart)
-		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i $1
-		done
+		if [ $ENABLED = 1 ]; then
+			for i in $SCRIPTS; do
+				/opt/zimbra/bin/$i $1
+			done
+		fi
 	;;
 	status)
 		STATUS=0
-		for i in $SCRIPTS; do
-			/opt/zimbra/bin/$i status > /dev/null 2>&1
-			R=$?
-			if [ $R -ne "0" ]; then
-				echo "$i is not running"
-				STATUS=$R
-			fi
-		done
+		if [ $ENABLED = 1 ]; then
+			for i in $SCRIPTS; do
+				/opt/zimbra/bin/$i status > /dev/null 2>&1
+				R=$?
+				if [ $R -ne "0" ]; then
+					echo "$i is not running"
+					STATUS=$R
+				fi
+			done
+		fi
 		exit $STATUS
 	;;
 	*)
