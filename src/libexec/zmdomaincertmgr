@@ -16,8 +16,8 @@
 # ***** END LICENSE BLOCK *****
 #
 
-if [ x`whoami` != "xzimbra" ]; then
-  echo "$0 must be run as user zimbra"
+if [ x`whoami` != "xroot" ]; then
+  echo "$0 must be run as user root"
   exit 1
 fi
 umask 027
@@ -27,6 +27,13 @@ source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars -f
 
 export JAVA_HOME=${zimbra_java_home}
+
+java_version=$(${zimbra_java_home}/bin/java -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
+if [ x"$java_version" = "x1.6.0" ]; then
+  java_options="-XX:ErrorFile=/opt/zimbra/log"
+else
+  java_options=""
+fi
 
 zimbra_conf_directory=/opt/zimbra/conf
 exp_thres_days=${zimbra_zmcertmgr_expiration_threshold:=30}
@@ -43,6 +50,7 @@ fi
 # this avoid "unable to write 'random state' errors from openssl
 export RANDFILE=/opt/zimbra/ssl/.rnd
 
+#OUTPUT_PREFIX="##### OUTPUT:"
 ERROR_PREFIX="XXXXX ERROR:"
 
 if [ -f "${zimbra_java_home}/lib/security/cacerts" ]; then
@@ -52,8 +60,10 @@ else
 fi
 
 isLdapRunning() {
-  /opt/zimbra/bin/ldap status > /dev/null 2>&1
+
+  su - zimbra -c "/opt/zimbra/bin/ldap status > /dev/null 2>&1"
   LDAP_IS_RUNNING=$?
+
 }
 
 saveConfigKey() {
@@ -74,7 +84,7 @@ saveConfigKey() {
   fi
 
   echo -n "** Saving $location config key $key..."
-  /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} "${key}" "$content" 2> /dev/null
+  su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} \"$content\" 2> /dev/null"
   if [ $? = 0 ]; then
     echo "done."
   else
@@ -103,10 +113,12 @@ loadConfigKey() {
   fi
   TMPDIR=${zimbra_tmp_directory}
   local tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
+  chown ${zimbra_uid} ${tmpfile}
   if [ ! -s ${file} ]; then
     echo -n "** Retrieving $location config key $key..."
-    /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} "${key}" | sed  -e "s/^${key}: //" > ${tmpfile} 2> /dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
+    su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} ${key} | sed  -e 's/^${key}: //' > ${tmpfile} 2> /dev/null" 2>/dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
     if [ $? = 0 -a -s "${file}" ]; then
+      chown ${zimbra_uid} ${file} 2> /dev/null
       chmod 400 ${file} 2> /dev/null
       echo "done."
     else
@@ -122,7 +134,7 @@ deployCerts() {
     rm -rf ${zimbra_domain_cert_directory} > /dev/null 2>&1
   fi
 
-  DOMAINS=$(/opt/zimbra/bin/zmprov -m -l -- garpd | awk '{print $1}')
+  DOMAINS=$(su - zimbra -c "/opt/zimbra/bin/zmprov -m -l -- garpd | awk '{print \$1}'")
   if [ $? != 0 ]; then
     echo "Unable to retrieve list of domains with SSL certificates";
     exit 1
@@ -167,8 +179,10 @@ getDomainCertFromLdap() {
     echo "$ERROR_PREFIX Domain must be specified"
   fi
   if [ ! -d ${zimbra_domain_cert_directory} ]; then
-    mkdir -m 755 -p ${zimbra_domain_cert_directory}
+    mkdir -p ${zimbra_domain_cert_directory}
   fi
+  chown ${zimbra_uid}:${zimbra_gid} ${zimbra_domain_cert_directory} 2> /dev/null
+  chmod 755 ${zimbra_domain_cert_directory} 2> /dev/null
   current_crt=${zimbra_domain_cert_directory}/${domain}.crt
   current_key=${zimbra_domain_cert_directory}/${domain}.key
 
@@ -490,3 +504,4 @@ else
 fi
 
 exit 0
+
