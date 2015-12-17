@@ -18,9 +18,7 @@
 
 # Notes:
 # - no longer running as root
-# - removed chmod/chown calls
-# - sets a proper umask instead
-# - no need to set java_options="-XX:ErrorFile=/opt/zimbra/log"
+# - removed chmod/chown calls and sets a proper umask
 # Potential Issues:
 # - Openssl bug/feature ignores $ENV{RANDFILE}
 #   TODO?: override RANDFILE in zmssl.cnf.in?
@@ -34,6 +32,18 @@
 #  chmod 640 /opt/zimbra/mailboxd/etc/{keystore,mailboxd.der,mailboxd.pem}
 # * zmcertmgr deployca
 #  chown zimbra:zimbra /opt/zimbra/java/jre/lib/security/cacerts
+
+# Testing in an *new* install like scenario:
+# 1. Run these on a fresh install with LDAP *down*:
+#   /opt/zimbra/bin/zmcertmgr createca -new
+#   /opt/zimbra/bin/zmcertmgr deployca -localonly
+#   /opt/zimbra/bin/zmcertmgr createcrt -new
+#   /opt/zimbra/bin/zmcertmgr deploycrt self
+#  - can cleanup/retest by removing files via:
+#   rm -rf /opt/zimbra/ssl/zimbra/*
+# 2. Bring up LDAP and run these:
+#   /opt/zimbra/bin/zmcertmgr deployca
+#   /opt/zimbra/bin/zmcertmgr savecrt self
 
 =head1 NAME
 
@@ -568,15 +578,18 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my ($self) = @_;
         warn("DEBUG: createca\n") if $self->Debug;
 
-        $self->initSSLDirs or return undef;
-
-        # only allow '-new' to create a CA on the ldap master
+        # desired: allow '-new' to create a CA on a ldap master only, however:
+        # - when bootstrapping a new install ldap_is_master is false
+        # - so test ldap_host eq zimbra_server_hostname to allow -new
         my $ismaster = lc( $self->lc->get("ldap_is_master") || "" );
         if ( $self->New and $ismaster eq "false" ) {
-            warn("DEBUG: createca '-new' is ignored on non-ldap master\n")
-              if $self->Debug;
-            $self->New(undef);
+            my $hostname = lc( $self->lc->get("zimbra_server_hostname") || "" );
+            my $ldaphost = lc( $self->lc->get("ldap_host") || "" );
+            return $self->error("'-new' is only allowed on an ldap master\n")
+              if ( $hostname ne $ldaphost );
         }
+
+        $self->initSSLDirs or return undef;
 
         my $file = $self->sslFiles("ssl_conf_ca");
         if ( $self->New or !-f $file ) {
@@ -612,8 +625,9 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                     next;
                 }
 
-                print("** Retrieving $dat->{desc} from LDAP\n");
+                print("** Retrieving $dat->{desc} from LDAP... ");
                 my $k = $self->getConfKey( $dat->{key}, $dat->{loc} );
+                print( defined($k) ? "ok" : "failed", "\n" );
                 next unless ($k);
 
                 # deal with concatenated data if necessary
@@ -807,13 +821,14 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         $self->backupSSLDirs or return undef;
         $self->initSSLDirs   or return undef;
 
-        # COMPAT: do not force a new CA
+        # COMPAT: do not force a new CA and ignore errors if ldap is down
         my $onew = $self->New;
         $self->New(0);
-        $self->createca or return undef;
+        $self->createca;
         $self->New($onew);
 
-        $self->createServerCertReq($type) or return undef;
+        # when ldap is down saveConfKey fails but we ignore that
+        $self->createServerCertReq($type);
 
         if ( $type eq "comm" and $self->sslFiles("download_csr") ) {
             $file = $self->sslFiles("download_csr");
@@ -991,8 +1006,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my $keyf = $self->sslFiles( $type . "_key" );   # private key
 
         if ( $type eq "self" ) {
-            if ( !-s $self->sslFiles("self_csr") ) {
-                $self->createcsr($type) or return undef;
+            if ( !-s $crtf ) {
+                $self->createcrt or return undef;
             }
         }
         else {                                          # "comm"
@@ -1005,8 +1020,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             else {
                 $self->getcrt($type) or return undef;
 
-                $ca_pem ||= $self->sslFiles( $type . "_ca_crt" )
-                  ;    # PEM format  # cli_ca_chain
+                # PEM format (was old cli_ca_chain)
+                $ca_pem ||= $self->sslFiles( $type . "_ca_crt" );
             }
             $self->_checkFiles( $keyf, $crtf, $ca_pem ) or return undef;
 
@@ -1033,15 +1048,15 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             $ca_pem = $dest;
         }
 
+        # COMPAT: ignore savecrt errors
+        my $err = 0;
         if ( !$self->Localonly ) {
-            $self->savecrt($type)
-              or return undef;
+            $self->savecrt($type) or $err++;
         }
 
         # ldap_crt, ldap_key, mta_crt, mta_key, ...
         if ( $self->Deploy ) {
             my %svc = map { $self->_getServiceInfo($_) } $self->Deploy;
-            my $err = 0;
             foreach my $name ( sort keys %svc ) {
                 if ( $name eq "mailboxd" ) {
                     $self->createkeystore($type)
@@ -1071,21 +1086,27 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 $svr = lc($svr);
                 next if $svr eq $myname;
                 my $zmrc = "/opt/zimbra/libexec/zmrc $svr";
-                my @out  = $self->run(
-qq(echo "HOST:$svr zmcertmgr getcrt $type -allserver" | $zmrc)
-                );
-                return $self->error( "zmrc: zmcertmgr getcrt failed(",
-                    $? >> 8, "):\n", @out )
-                  if ( $? != 0 );
+                my $cmd  = "zmcertmgr getcrt $type -allserver";
+                my @out  = $self->run(qq(echo "HOST:$svr $cmd" | $zmrc));
 
-                $self->run(
-                    qq(echo "HOST:$svr zmcertmgr deploycrt $type" | $zmrc));
-                return $self->error(
-                    "zmrc: zmcertmgr deploycrt '$type' failed(",
-                    $? >> 8, "):\n", @out )
-                  if ( $? != 0 );
+                # COMPAT: try next host on error
+                if ( $? != 0 ) {
+                    my $rc = $? >> 8;
+                    $self->error( "zmrc: $cmd failed($rc):\n", @out );
+                    $err++;
+                    next;
+                }
+
+                $cmd = "zmcertmgr deploycrt $type";
+                @out = $self->run(qq(echo "HOST:$svr $cmd" | $zmrc));
+                if ( $? != 0 ) {
+                    my $rc = $? >> 8;
+                    $self->error( "zmrc: $cmd failed($rc):\n", @out );
+                    $err++;
+                }
             }
         }
+        return $err ? undef : 1;
     }
 
     # fix any dos newlines and ensure the last line has a newline
@@ -1205,9 +1226,9 @@ qq(echo "HOST:$svr zmcertmgr getcrt $type -allserver" | $zmrc)
         }
 
         warn("DEBUG: getting '$key' via zmprov @args\n") if $self->Debug;
-        my @out = $self->run( $self->Zmprov, qw(-m -l), @args, $key );
-        die( "ERROR: zmprov @args failed(", $? >> 8, "):\n", @out )
-          if ( $? != 0 );
+        my @err = $self->Debug ? () : "2>/dev/null";
+        my @out = $self->run( $self->Zmprov, qw(-m -l), @args, $key, @err );
+        return undef unless ( $? == 0 );
 
         my $val = "";
         foreach my $line (@out) {
@@ -1231,12 +1252,14 @@ qq(echo "HOST:$svr zmcertmgr getcrt $type -allserver" | $zmrc)
             push( @args, "modifyServer", $loc );
         }
 
-        print("** Saving config key '$key' via zmprov @args\n");
+        print("** Saving config key '$key' via zmprov @args...");
         my $content = $self->_slurp($file);
-        my @out = $self->run( $self->Zmprov, qw(-m -l), @args, $key, $content );
-        die( "ERROR: zmprov @args failed(", $? >> 8, "):\n", @out )
-          if ( $? != 0 );
-        return 1;
+        my @err = $self->Debug ? () : "2>/dev/null";
+        my @out =
+          $self->run( $self->Zmprov, qw(-m -l), @args, $key, $content, @err );
+        my $rc = $? >> 8;
+        print( $rc == 0 ? "ok" : "failed (rc=$rc)", "\n" );
+        return $rc == 0 ? 1 : undef;
     }
 
     # saveCertToLdap <self|comm> [-allservers]
@@ -1248,9 +1271,14 @@ qq(echo "HOST:$svr zmcertmgr getcrt $type -allserver" | $zmrc)
         my $keyf = $self->sslFiles( $type . "_key" );
         my $crtf = $self->sslFiles( $type . "_crt" );
         my $loc  = $self->Allservers ? "global" : "server";
+
+        # COMPAT: old zmcertmgr ignored errors...
         $self->saveConfKey( "zimbraSSLCertificate", $loc, $crtf )
           or return undef;
-        return $self->saveConfKey( "zimbraSSLPrivateKey", $loc, $keyf );
+        $self->saveConfKey( "zimbraSSLPrivateKey", $loc, $keyf )
+          or return undef;
+
+        return 1;
     }
 
     # getCertFromLdap <self|comm> [-allservers]
@@ -1684,7 +1712,7 @@ qq(echo "HOST:$svr zmcertmgr getcrt $type -allserver" | $zmrc)
             return undef;
         }
 
-        return 1;    # TRUE
+        return 1;
     }
 
     sub addcacert {
