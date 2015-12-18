@@ -1822,11 +1822,11 @@ qq(echo "HOST:$svr zmcertmgr getcrt $type -allserver" | $zmrc)
                 return undef;
             }
 
-   # look for unreadable files like:
-   #  /opt/zimbra/ssl/zimbra/ca/{ca.srl,index.txt,index.txt.attr,newcerts/*.pem}
+            # look for unreadable files like:
+            #   /opt/zimbra/ssl/zimbra/ca/{ca.srl,index.txt*,newcerts/*.pem}
             my @noread;
             File::Find::find(
-                sub { push( @noread, $File$dir );
+                sub { push( @noread, $File::Find::name ) unless -r; }, $dir );
             if (@noread) {
                 $self->error("backup unable to read files: @noread\n");
                 return undef;
