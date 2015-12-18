@@ -516,11 +516,23 @@ if [ -L /opt/zimbra/jetty ]; then
   chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/mailboxd
   chmod 755 /opt/zimbra/data/mailboxd
 
+  for i in keystore mailboxd.der mailboxd.pem; do
+    if [ -f /opt/zimbra/data/mailboxd/etc/${i} ]; then
+      chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/mailboxd/etc/${i}
+      chmod 640 /opt/zimbra/data/mailboxd/etc/${i}
+    fi
+  done
+
   if [ ! -d /opt/zimbra/data/mailboxd/spnego ]; then
     mkdir -p /opt/zimbra/data/mailboxd/spnego
   fi
   chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/mailboxd/spnego
   chmod 755 /opt/zimbra/data/mailboxd/spnego
+
+  if [ -f /opt/zimbra/common/lib/jvm/java/jre/lib/security/cacerts ]; then
+    chown zimbra:zimbra /opt/zimbra/common/lib/jvm/java/jre/lib/security/cacerts
+    chmod 644 /opt/zimbra/common/lib/jvm/java/jre/lib/security/cacerts
+  fi
 
 fi
 
