@@ -526,16 +526,7 @@ sub displayVersion {
 	my $platform = qx(/opt/zimbra/libexec/get_plat_tag.sh);
 	chomp $platform;
 	my $string = "";
-	if ($platform =~ /MACOSX/) {
-		my $release;
-		if (-x "/usr/sbin/pkgutil") {
-			$release=qx(/usr/sbin/pkgutil --pkg-info com.zimbra.zcs.core  2> /dev/null | grep ^version | awk '{print \$NF}');
-		} else {
-			$release=qx(grep -C1 CFBundleGetInfoString /Library/Receipts/zimbra-core.pkg/Contents/Info.plist | tail -1 | sed -e 's/\<[^>]*\>//g' -e 's/^ *//g' | awk -F, '{print $1}');
-		}
-		chomp($release);
-		$string = "Release $release $platform";
-	} elsif ($platform =~ /DEBIAN/ || $platform =~ /UBUNTU/) {
+	if ($platform =~ /DEBIAN/ || $platform =~ /UBUNTU/) {
 		my $release = qx(dpkg -s zimbra-core | egrep '^Version:' | sed -e 's/Version: //');
 		chomp $release;
 		if ( -x "/opt/vmware/bin/vamicli") {
@@ -614,10 +605,8 @@ sub hasAvailableSpace() {
     return undef unless (-e "$dir");
   $freeMbytes = getLocalConfig("zimbra_disk_threshold") || 100
     unless $freeMbytes;
-  my $platform=qx(/opt/zimbra/libexec/get_plat_tag.sh);
-  chomp $platform;
-
-  my $DFCMD = ($platform =~ /MACOSX/ ? "df -ml " : "df -mlP ");
+  
+  my $DFCMD = "df -mlP ";
 
   open DF, "$DFCMD $dir | tail -1 |" or die "Can't open $DFCMD: $!";
   my @df = <DF>;
