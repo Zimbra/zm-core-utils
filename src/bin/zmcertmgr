@@ -1015,7 +1015,10 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 die("certfile and ca_chain_file must both be specified\n")
                   unless ( defined($crtf) and defined($ca_pem) );
 
-                $self->_fixNewline( $crtf, $ca_pem );
+                $self->_fixNewline( $crtf, $ca_pem ) or return undef;
+
+                # just in case we are working on commercial.crt directly
+                $self->_keepFirstCert($crtf) or return undef;
             }
             else {
                 $self->getcrt($type) or return undef;
@@ -1110,31 +1113,64 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         return $err ? undef : 1;
     }
 
+    # server crt file should have only a single certificate
+    sub _keepFirstCert {
+        my ( $self, $file ) = ( shift, @_ );
+
+        open( my $fh, "<", $file )
+          or return $self->error("open input '$file' failed: $!\n");
+
+        my $found = 0;
+        while (<$fh>) {
+            /^-----BEGIN CERTIFICATE-----\s*$/ and ++$found;
+            if ( $found > 1 ) {
+                close($fh);
+                last;
+            }
+        }
+        return 1 unless ( $found > 1 );
+
+        # perlfaq5: use -i from within a program
+        print("** Keeping first certificate in '$file'\n");
+        local ( $^I, @ARGV ) = ( '.orig', $file );
+        my $match = 0;
+        while (<>) {
+            print unless $match;
+            /^-----END CERTIFICATE-----\s*$/ and ++$match;
+            close ARGV if eof;
+        }
+        return 1;
+    }
+
     # fix any dos newlines and ensure the last line has a newline
     sub _fixNewline {
         my ( $self, @files ) = ( shift, @_ );
 
         print("** Checking line endings: @files\n") if $self->Debug;
         foreach my $f (@files) {
+            open( my $fh, "<", $f )
+              or return $self->error("open input '$f' failed: $!\n");
+
             my $fixit = 0;
-            {
-                local @ARGV = ($f);
-                while (<>) {
-                    /\015\012$/ and ++$fixit and last;
-                    !/\012$/    and ++$fixit and last;
-                }
+            while (<$fh>) {
+                /\015\012$/ and ++$fixit and last;
+                !/\012$/    and ++$fixit and last;
             }
+            close($fh);
             next unless $fixit;
 
             # perlfaq5: use -i from within a program
             print("** Fixing newlines in '$f'\n");
-            local ( $^I, @ARGV ) = ( '.bak', $f );
-            while (<>) {
-                s/\015?\012?$/\012/;
-                print;
+            {
+                local ( $^I, @ARGV ) = ( '.bak', $f );
+                while (<>) {
+                    s/\015?\012?$/\012/;
+                    print;
+                    close ARGV if eof;
+                }
             }
-            close ARGV if eof;
         }
+        return 1;
     }
 
     sub _append {
@@ -1150,8 +1186,9 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         open( my $ifh, "<", $from )
           or return $self->error("open input '$to' failed: $!\n");
-        open( my $ofh, ">", $to )
+        open( my $ofh, ">>", $to )
           or return $self->error("open output '$to' failed: $!\n");
+
         while ( my $l = <$ifh> ) {
             $l =~ s/\015?\012?$/\012/;
             print {$ofh} $l;
