@@ -1050,7 +1050,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         # COMPAT: ignore savecrt errors
         my $err = 0;
-        if ( !$self->Localonly ) {
+        my $ismaster = lc( $self->lc->get("ldap_is_master") || "" );
+        if ( !$self->Localonly and $ismaster eq "true" ) {
             $self->savecrt($type) or $err++;
         }
 
