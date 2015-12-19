@@ -2009,8 +2009,11 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             # this should only happen on store nodes
             my $mbdir = $self->Home . "/mailboxd/webapps/zimbraAdmin";
             my $mbtmp = "$mbdir/tmp";    # csr_download_directory
-            $self->{sslDirs}->{csr_download_directory} = $mbtmp
-              if ( -d $mbdir );
+            if ( -d $mbdir ) {
+              $self->{sslDirs}->{csr_download_directory} = $mbtmp;
+            } else {
+              $self->{sslDirs}->{csr_download_directory} = "/opt/zimbra/data/tmp";
+            }
         }
 
         Carp::confess("sslDirs: no match for key '@dirs'\n")
