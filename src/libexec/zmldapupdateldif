@@ -68,7 +68,7 @@ if ($ldap_master_url !~ /^ldaps/i) {
 
 $mesg = $ldap->bind("cn=config", password=>"$ldap_root_password");
 
-my $infile = "$config_dir/zimbra/zimbra.ldif";
+my $infile = "$source_config_dir/zimbra/zimbra.ldif";
 my $ldifin = Net::LDAP::LDIF->new("$infile", "r", onerror => 'undef' );
 while ( not $ldifin->eof() ) {
     my $entry = $ldifin->read_entry();
