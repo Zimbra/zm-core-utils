@@ -1711,7 +1711,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my @cmd = ( "-delete", "-alias", $server );
         if ( -f $keystore ) {
             @out = $self->runMailboxKeytool(@cmd);
-            if ( $? != 0 ) {
+            if ( $? != 0 and !grep { /does not exist/ } @out ) {
                 $self->error( "mailboxd keytool(@cmd) returned non-zero(",
                     $? >> 8, "):\n", @out );
             }
@@ -1767,7 +1767,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         my @cmd = ( "-delete", "-alias", $alias );
         my @out = $self->runCacertsKeytool(@cmd);
-        if ( $? != 0 ) {
+        if ( $? != 0 and !grep { /does not exist/ } @out ) {
             $self->error( "cacerts keytool(@cmd) returned non-zero(",
                 $? >> 8, "):\n", @out );
         }
@@ -2006,14 +2006,9 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             $self->{sslDirs}->{ca_conf_dir} = "$confd/ca"    # was hardcoded
               if ( $self->Command =~ /^deploy/ );
 
-            # this should only happen on store nodes
             my $mbdir = $self->Home . "/mailboxd/webapps/zimbraAdmin";
-            my $mbtmp = "$mbdir/tmp";    # csr_download_directory
-            if ( -d $mbdir ) {
-              $self->{sslDirs}->{csr_download_directory} = $mbtmp;
-            } else {
-              $self->{sslDirs}->{csr_download_directory} = "/opt/zimbra/data/tmp";
-            }
+            my $dldir = -d $mbdir ? $mbdir : $self->Home . "/data";
+            $self->{sslDirs}->{csr_download_directory} = $dldir . "/tmp";
         }
 
         Carp::confess("sslDirs: no match for key '@dirs'\n")

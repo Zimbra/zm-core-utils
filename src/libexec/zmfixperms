@@ -295,10 +295,10 @@ if [ -d /opt/zimbra ]; then
     chown -R ${zimbra_user}:${zimbra_group} ${i}
   done
 
-  for i in /opt/zimbra/conf/*.key; do
+  for i in /opt/zimbra/conf/*.crt /opt/zimbra/conf/*.key /opt/zimbra/conf/zmssl.cnf; do
     printMsg "Fixing permissions and ownership on ${i}"
-    chown ${zimbra_user}:${zimbra_group} $i
-    chmod 640 $i
+    chown ${zimbra_user}:${zimbra_group} "$i"
+    chmod 640 "$i"
   done
 
   if [ ! -d /opt/zimbra/data ]; then
@@ -460,37 +460,18 @@ if [ -L /opt/zimbra/jetty ]; then
     chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/tmp/libreoffice
   fi
   chown  ${root_user}:${root_group} /opt/zimbra/jetty-* 2> /dev/null
-  if [ -f /opt/zimbra/jetty/etc/keystore ]; then
-    chmod 444 /opt/zimbra/jetty/etc/keystore
-    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/jetty/etc/keystore
-  fi
+  for i in \
+    keystore mailboxd.{der,pem} jetty.xml{,.in} service.web.xml.in \
+    zimbra.web.xml.in zimbraAdmin.web.xml.in zimlet.web.xml.in
+  do
+    if [ -f /opt/zimbra/jetty/etc/${i} ]; then
+      chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/mailboxd/etc/${i}
+      chmod 640 /opt/zimbra/jetty/etc/${i}
+    fi
+  done
   if [ -f /opt/zimbra/jetty/webapps/zimbraAdmin/tmp/current.csr ]; then
     chown ${zimbra_user}:${zimbra_group} /opt/zimbra/jetty/webapps/zimbraAdmin/tmp/current.csr
-    chmod 444 /opt/zimbra/jetty/webapps/zimbraAdmin/tmp/current.csr
-  fi
-  if [ -f /opt/zimbra/jetty/etc/jetty.xml.in ]; then
-    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/jetty/etc/jetty.xml.in
-    chmod 640 /opt/zimbra/jetty/etc/jetty.xml.in
-  fi
-  if [ -f /opt/zimbra/jetty/etc/jetty.xml ]; then
-    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/jetty/etc/jetty.xml
-    chmod 640 /opt/zimbra/jetty/etc/jetty.xml
-  fi
-  if [ -f /opt/zimbra/jetty/etc/service.web.xml.in ]; then
-    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/jetty/etc/service.web.xml.in
-    chmod 640 /opt/zimbra/jetty/etc/service.web.xml.in
-  fi
-  if [ -f /opt/zimbra/jetty/etc/zimbra.web.xml.in ]; then
-    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/jetty/etc/zimbra.web.xml.in
-    chmod 640 /opt/zimbra/jetty/etc/zimbra.web.xml.in
-  fi
-  if [ -f /opt/zimbra/jetty/etc/zimbraAdmin.web.xml.in ]; then
-    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/jetty/etc/zimbraAdmin.web.xml.in
-    chmod 640 /opt/zimbra/jetty/etc/zimbraAdmin.web.xml.in
-  fi
-  if [ -f /opt/zimbra/jetty/etc/zimlet.web.xml.in ]; then
-    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/jetty/etc/zimlet.web.xml.in
-    chmod 640 /opt/zimbra/jetty/etc/zimlet.web.xml.in
+    chmod 644 /opt/zimbra/jetty/webapps/zimbraAdmin/tmp/current.csr
   fi
 
   if [ ! -d /opt/zimbra/jetty/webapps/zimlet/WEB-INF ]; then
@@ -545,13 +526,6 @@ if [ -L /opt/zimbra/jetty ]; then
   fi
   chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/mailboxd
   chmod 755 /opt/zimbra/data/mailboxd
-
-  for i in keystore mailboxd.der mailboxd.pem; do
-    if [ -f /opt/zimbra/data/mailboxd/etc/${i} ]; then
-      chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/mailboxd/etc/${i}
-      chmod 640 /opt/zimbra/data/mailboxd/etc/${i}
-    fi
-  done
 
   if [ ! -d /opt/zimbra/data/mailboxd/spnego ]; then
     mkdir -p /opt/zimbra/data/mailboxd/spnego
