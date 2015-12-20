@@ -329,6 +329,11 @@ fi
 if [ ! -d /opt/zimbra/data/tmp ]; then
   mkdir -p /opt/zimbra/data/tmp
 fi
+if [ -f /opt/zimbra/data/tmp/current.csr ]; then
+  chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/tmp/current.csr
+  chmod 644 /opt/zimbra/data/tmp/current.csr
+fi
+
 # Handle nginx path problems bug#42156
 if [ ! -d /opt/zimbra/data/tmp/nginx ]; then
   mkdir -p /opt/zimbra/data/tmp/nginx/client
@@ -465,7 +470,7 @@ if [ -L /opt/zimbra/jetty ]; then
     zimbra.web.xml.in zimbraAdmin.web.xml.in zimlet.web.xml.in
   do
     if [ -f /opt/zimbra/jetty/etc/${i} ]; then
-      chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/mailboxd/etc/${i}
+      chown ${zimbra_user}:${zimbra_group} /opt/zimbra/jetty/etc/${i}
       chmod 640 /opt/zimbra/jetty/etc/${i}
     fi
   done
