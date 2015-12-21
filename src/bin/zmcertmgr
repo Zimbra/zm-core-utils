@@ -1062,9 +1062,19 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         if ( $self->Deploy ) {
             my %svc = map { $self->_getServiceInfo($_) } $self->Deploy;
             foreach my $name ( sort keys %svc ) {
+
                 if ( $name eq "mailboxd" ) {
-                    $self->createkeystore($type)
-                      or return undef;
+
+                    # only create a keystore on a mailbox server
+                    if ( $self->lc->get("mailboxd_server") ) {
+                        $self->createkeystore($type)
+                          or return undef;
+                    }
+                    else {
+                        warn(
+                            "DEBUG: skip createkeystore on non-mailbox server\n"
+                        ) if $self->Debug;
+                    }
                 }
                 else {
                     my $dcrt = $svc{$name};
@@ -1146,7 +1156,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     sub _fixNewline {
         my ( $self, @files ) = ( shift, @_ );
 
-        print("** Checking line endings: @files\n") if $self->Debug;
+        warn("DEBUG: Checking line endings: @files\n") if $self->Debug;
         foreach my $f (@files) {
             open( my $fh, "<", $f )
               or return $self->error("open input '$f' failed: $!\n");
@@ -1597,11 +1607,12 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my $derf   = $self->sslFiles("mbs_der");
         my $crtf   = $self->sslFiles("mailboxd_crt");
         my $name   = "mailboxd";
+        my $msvr   = $self->lc->get("mailboxd_server")
+          or Carp::confess("error: local config 'mailboxd_server' not set");
 
         my @out =
           $self->runMailboxKeytool( "-export", "-file", $derf,
-            "-alias", $self->lc->get("mailboxd_server"),
-          );
+            "-alias", $msvr, );
         if ( $? != 0 or !-f $derf ) {
             $self->error( "$name: export to '$derf' failed(",
                 $? >> 8, "):\n", @out );
@@ -2447,14 +2458,13 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         return $self;
     }
 
+    # an empty/undefined value is ok/expected for localconfig
     sub get {
         my ( $self, @attrs ) = @_;
 
         my @vals;
         foreach my $attr (@attrs) {
             my $val = $self->{_data}->{$attr};
-            Carp::confess("error: no value for '$attr' in localconfig")
-              unless ( defined $val and $val ne "" );
             push( @vals, $val );
         }
 
