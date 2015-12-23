@@ -451,15 +451,19 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                   if $self->{Debug};
                 $self->$key($val);
             };
-            Carp::confess("new: $key($val) failed: $@") if $@;
+            if ($@) {
+                chomp($@);
+                die("new: $key($val) failed: $@\n");
+            }
             return $self->error("new: $key($val) failed\n")
               unless defined($rc);
         }
 
         # localconfig
         if ( !$self->Localconfig ) {
-            $self->Localconfig( LocalConfig->new )
-              or Carp::confess("new: unable to load localconfig data\n");
+            my $rc = eval { $self->Localconfig( LocalConfig->new ); };
+            die( "new: " . ( $@ || "unable to get localconfig" ) )
+              unless $rc;
         }
 
         # Days: default depends upon operation being performed!
@@ -2109,7 +2113,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my ( $self, $dig ) = @_;
         if ( $dig !~ /^(?:md4|md5|ripemd160|sha(?:|1|224|256|384|512))/ ) {
             $dig |= "";
-            Carp::confess("unknown digest method '$dig'\n");
+            return $self->error("unknown digest method '$dig'\n");
         }
         return $dig;
     }
@@ -2124,7 +2128,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     sub Debug {
         my ( $self, $val ) = @_;
         if ( @_ > 1 ) {
-            Carp::confess("Debug '$val' must be numeric\n")
+            die("Debug '$val' must be numeric (>=0)\n")
               unless ( defined $val and $val =~ /^\d+$/ );
             $self->{Debug} = $val;
         }
@@ -2181,7 +2185,10 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
     sub Digest {
         my ( $self, $dig ) = @_;
-        $self->{Digest} = $dig if ( @_ > 1 and $self->validDigest($dig) );
+        if ( @_ > 1 ) {
+            return undef unless $self->validDigest($dig);
+            $self->{Digest} = $dig;
+        }
         $self->{Digest};
     }
 
@@ -2390,16 +2397,18 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             }
         }
 
-        GetOptions( \%opt, @$opts, "help", "man", "debug:1" )
-          or pod2usage( -exitval => 1, -verbose => 0 );
+        unless (@err) {
+            GetOptions( \%opt, @$opts, "help", "man", "debug:1" )
+              or pod2usage( -exitval => 1, -verbose => 0 );
 
-        pod2usage( -verbose => 1 ) if ( $opt{help} );
-        pod2usage( -verbose => 2 ) if ( $opt{man} );
+            pod2usage( -verbose => 1 ) if ( $opt{help} );
+            pod2usage( -verbose => 2 ) if ( $opt{man} );
 
-        unless ( grep { $_ eq scalar @ARGV } @$xargs ) {
-            warn("DEBUG: xargs(@$xargs) #ARGV($#ARGV)\n") if $opt{debug};
-            push( @err, "$cmd $xinfo" ) if $xinfo;
-            push( @err, "some unexpected arguments: @ARGV" ) if @ARGV;
+            unless ( grep { $_ eq scalar @ARGV } @$xargs ) {
+                warn("DEBUG: xargs(@$xargs) #ARGV($#ARGV)\n") if $opt{debug};
+                push( @err, "$cmd $xinfo" ) if $xinfo;
+                push( @err, "some unexpected arguments: @ARGV" ) if @ARGV;
+            }
         }
 
         pod2usage(
@@ -2432,9 +2441,12 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     sub new {
         my ( $class, @attrs ) = @_;
 
-        my @cmd = qw(/opt/zimbra/bin/zmlocalconfig -s -q -m shell);
+        my $lc = "/opt/zimbra/bin/zmlocalconfig";
+        die("unable to execute '$lc': $!\n") unless ( -x $lc );
+
+        my @cmd = qw($lc -s -q -m shell);
         open( my $fh, "-|", @cmd )
-          or Carp::confess("new: open localconfig failed: $!\n");
+          or die("open localconfig failed: $!\n");
 
         my $self = bless( {}, ref($class) || $class );
         my %conf;
