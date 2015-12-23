@@ -70,10 +70,9 @@ if [ "x$pid" != "x" ]; then
 fi
 # --defaults-file must be first argument
 echo -n '*' Starting antispam mysql server ...
-cd ${antispam_mysql_directory}; \
 /opt/zimbra/common/bin/mysqld_safe \
     --defaults-file=${antispam_mysql_mycnf} \
-    --basedir=${antispam_mysql_directory} \
+    --basedir=/opt/zimbra/common \
     --datadir=${antispam_mysql_data_directory} \
     --external-locking \
     --log-error=${antispam_mysql_errlogfile} \
