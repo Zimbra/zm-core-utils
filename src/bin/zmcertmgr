@@ -2444,7 +2444,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my $lc = "/opt/zimbra/bin/zmlocalconfig";
         die("unable to execute '$lc': $!\n") unless ( -x $lc );
 
-        my @cmd = qw($lc -s -q -m shell);
+        my @cmd = ( $lc, qw(-s -q -m shell) );
         open( my $fh, "-|", @cmd )
           or die("open localconfig failed: $!\n");
 
