@@ -296,9 +296,11 @@ if [ -d /opt/zimbra ]; then
   done
 
   for i in /opt/zimbra/conf/*.crt /opt/zimbra/conf/*.key /opt/zimbra/conf/zmssl.cnf; do
-    printMsg "Fixing permissions and ownership on ${i}"
-    chown ${zimbra_user}:${zimbra_group} "$i"
-    chmod 640 "$i"
+    if [ -f ${i} ]; then
+      printMsg "Fixing permissions and ownership on ${i}"
+      chown ${zimbra_user}:${zimbra_group} "$i"
+      chmod 640 "$i"
+    fi
   done
 
   if [ ! -d /opt/zimbra/data ]; then
