@@ -21,7 +21,7 @@ if [ x`whoami` != xzimbra ]; then
   exit 1
 fi
 
-if [ ! -d /opt/zimbra/common/lib/policyd-2.1 ]; then
+if [ ! -x /opt/zimbra/common/bin/cbpolicyd ]; then
   echo "Error: cluebringer not installed"
   exit 1
 fi

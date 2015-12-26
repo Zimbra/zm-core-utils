@@ -62,7 +62,7 @@ checkrunning() {
 #
 case "$1" in
   'start')
-    if [ ! -L /opt/zimbra/cbpolicyd ]; then
+    if [ ! -x /opt/zimbra/common/bin/cbpolicyd ]; then
       echo "cbpolicyd not installed, skipping."
       exit 0
     fi
@@ -86,7 +86,7 @@ case "$1" in
       if [ x$2 = "x" ]; then
         rewriteconfig
       fi
-      /opt/zimbra/cbpolicyd/bin/cbpolicyd --config /opt/zimbra/conf/cbpolicyd.conf 2> /dev/null
+      /opt/zimbra/common/bin/cbpolicyd --config /opt/zimbra/conf/cbpolicyd.conf 2> /dev/null
       for ((i=0; i < 30; i++)); do
         sleep 1
         checkrunning
