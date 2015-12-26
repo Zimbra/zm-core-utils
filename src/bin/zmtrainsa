@@ -82,7 +82,7 @@ if [ x`whoami` != xzimbra ]; then
   exit 1
 fi
 
-if [ ! -h "/opt/zimbra/amavisd" ]; then
+if [ ! -x "/opt/zimbra/common/sbin/amavisd" ]; then
     echo "Error: SpamAssassin not installed"
     exit 1
 fi

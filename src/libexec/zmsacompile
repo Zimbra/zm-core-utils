@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ ! -d /opt/zimbra/amavisd/sbin ]; then
+if [ ! -x /opt/zimbra/common/sbin/amavisd ]; then
   echo "Error: Must be run on an MTA"
   exit 1
 fi
