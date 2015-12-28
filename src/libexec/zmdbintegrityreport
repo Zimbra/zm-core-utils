@@ -31,6 +31,7 @@ my $report = [];
 my $dbCheck = '';
 my $status = 0;
 unless ( GetOptions ("mailReport" => \$options{m},
+                     "optimize"   => \$options{o},
                      "repair"     => \$options{r},
                      "verbose"    => \$options{v},
                      "debug"      => \$options{d},
@@ -65,10 +66,11 @@ exit $status;
 #-------------
 
 sub usage {
-	print STDERR "Usage: $0 [-m] [-v] [-h] [-r]\n";
+	print STDERR "Usage: $0 [-m] [-o] [-r] [-v] [-h]\n";
   print STDERR "-m emails report to admin account, otherwise report is presented on stdout\n";
-  print STDERR "-v verbose output\n";
+  print STDERR" -o attempt auto optimization of tables\n";
   print STDERR "-r attempt auto repair of tables\n";
+  print STDERR "-v verbose output\n";
   print STDERR "-h help\n";
 
 	exit (1);
@@ -93,6 +95,7 @@ sub checkDbs() {
   $cmd .= " -s" unless $debug;
   $cmd .= " -u root";
   $cmd .= " --auto-repair" if $options{r};
+  $cmd .= " --optimize" if $options{o};
   unless (open(CMD, "$cmd --password=${mysql_root_passwd} |")) {
     addToReport("can't run $cmd: $!\n"); 
     if(!$options{m}) {
