@@ -27,15 +27,15 @@ autoTrainSystem() {
   timestampit "Finished extracting spam/ham from system accounts."
 
   timestampit "Starting spamassassin training."
-  /opt/zimbra/libexec/sa-learn \
+  /opt/zimbra/common/bin/sa-learn \
     --dbpath=${db_path} -L --no-sync \
     --spam ${spamdir}
 
-  /opt/zimbra/libexec/sa-learn \
+  /opt/zimbra/common/bin/sa-learn \
     --dbpath=${db_path} -L --no-sync \
     --ham ${hamdir}
 
-  /opt/zimbra/libexec/sa-learn \
+  /opt/zimbra/common/bin/sa-learn \
     --dbpath=${db_path} --sync
   timestampit "Finished spamassassin training."
 
@@ -55,11 +55,11 @@ trainAccountFolder() {
   timestampit  "Starting spamassassin $MODE training for $USER using folder $FOLDER"
   /opt/zimbra/libexec/zmspamextract -r -m $USER -o ${tempdir} -q in:${FOLDER}
 
-  /opt/zimbra/libexec/sa-learn \
+  /opt/zimbra/common/bin/sa-learn \
     --dbpath=${db_path} -L --no-sync \
     --${MODE} ${tempdir}
 
-  /opt/zimbra/libexec/sa-learn \
+  /opt/zimbra/common/bin/sa-learn \
     --dbpath=${db_path} --sync
   timestampit  "Finished spamassassin $MODE training for $USER using folder $FOLDER"
 
