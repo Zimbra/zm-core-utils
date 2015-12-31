@@ -111,7 +111,7 @@ The digest algorithm to be used.  The following are all valid:
 
 =item B<-keysize> I<keysize>
 
-The RSA keysize in bits, for example "-keysize 2048".  Recommended
+The RSA keysize in bits, for example "-keysize 4096".  Minimum
 keysize is 2048.
 
 =item B<-localonly>
@@ -455,8 +455,13 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 chomp($@);
                 die("new: $key($val) failed: $@\n");
             }
-            return $self->error("new: $key($val) failed\n")
-              unless defined($rc);
+            if ( !defined $rc ) {
+                my @einfo =
+                    ( $key =~ /^(?:Days|Digest|Keysize)$/ )
+                  ? ()
+                  : ("new: $key($val) failed\n");
+                return $self->error(@einfo);
+            }
         }
 
         # localconfig
@@ -497,7 +502,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
     sub error {
         my $self = shift;
-        print( "ERROR: ", @_ );
+        print( "ERROR: ", @_ ) if @_;
         return undef;
     }
 
@@ -2202,7 +2207,13 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
     # validation_days
     sub Days {
-        ( @_ > 1 ) ? $_[0]->{Days} = $_[1] : $_[0]->{Days};
+        my ( $self, $days ) = @_;
+        if ( @_ > 1 ) {
+            return $self->error("invalid days '$days': must be > 0\n")
+              unless ( $days and $days > 0 );
+            $self->{Days} = $days;
+        }
+        $self->{Days};
     }
 
     sub Deploy {
@@ -2219,7 +2230,13 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     }
 
     sub Keysize {
-        ( @_ > 1 ) ? $_[0]->{Keysize} = $_[1] : $_[0]->{Keysize};
+        my ( $self, $size ) = @_;
+        if ( @_ > 1 ) {
+            return $self->error("invalid keysize '$size': must be >= 2048\n")
+              unless ( $size and $size >= 2048 );
+            $self->{Keysize} = $size;
+        }
+        $self->{Keysize};
     }
 
     sub lc { shift->Localconfig(@_); }
@@ -2369,7 +2386,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         # first arg is the "command"
         my ( $cmd, $opts, $xargs, $xinfo ) = ( "", [], [0], "" );
-        if ( !@ARGV ) {
+        if ( !@ARGV or $ARGV[0] =~ /^-/ ) {
             push( @err, "a command must be specified" );
         }
         elsif ( !exists $commands{ $ARGV[0] } ) {
@@ -2413,7 +2430,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         pod2usage(
             -verbose => 1,
-            -message => join( "", map( "$prog: $_\n", @err ) )
+            -message => join( "\n", map( "$prog: $_", @err ) )
         ) if (@err);
 
         # turn any CSV names into separate values
