@@ -68,7 +68,7 @@ exit $status;
 sub usage {
 	print STDERR "Usage: $0 [-m] [-o] [-r] [-v] [-h]\n";
   print STDERR "-m emails report to admin account, otherwise report is presented on stdout\n";
-  print STDERR" -o attempt auto optimization of tables\n";
+  print STDERR "-o attempt auto optimization of tables\n";
   print STDERR "-r attempt auto repair of tables\n";
   print STDERR "-v verbose output\n";
   print STDERR "-h help\n";
