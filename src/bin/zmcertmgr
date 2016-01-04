@@ -51,7 +51,7 @@ zmcertmgr - certificate management tool for ZCS
 
 =head1 SYNOPSIS
 
-zmcertmgr [command] [options] [-help|-man] [-debug [#]]
+zmcertmgr <command> [options] [-help|-man] [-debug [#]]
 
 Where valid command/option combinations are:
 
@@ -92,11 +92,11 @@ This tool should be run as user 'zimbra' now instead of 'root'.
 
 =head2 Shared Options
 
+=over 4
+
 =item B<-allservers>
 
 See the specific command for the meaning of this argument.
-
-=over4
 
 =item B<-days> I<days>
 
@@ -187,6 +187,8 @@ deployment (zmprov gas).
 =back
 
 =head2 Self-Signed and Commercial Certificate Options
+
+=over 4
 
 =item B<addcacert>
 
@@ -2389,10 +2391,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         if ( !@ARGV or $ARGV[0] =~ /^-/ ) {
             push( @err, "a command must be specified" );
         }
-        elsif ( !exists $commands{ $ARGV[0] } ) {
-            push( @err, "unknown command '$ARGV[0]' specified" );
-        }
-        else {
+        elsif ( exists $commands{ $ARGV[0] } ) {
             $cmd = $opt{command} = shift @ARGV;
             $opts  = $commands{$cmd}->{opts}  if ( $commands{$cmd}->{opts} );
             $xargs = $commands{$cmd}->{xargs} if ( $commands{$cmd}->{xargs} );
@@ -2414,18 +2413,16 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             }
         }
 
-        unless (@err) {
-            GetOptions( \%opt, @$opts, "help", "man", "debug:1" )
-              or pod2usage( -exitval => 1, -verbose => 0 );
+        # else could push( @err, "unknown command '$ARGV[0]'" );
+        my $rc = GetOptions( \%opt, @$opts, "help", "man", "debug:1" );
+        pod2usage( -exitval => 0, -verbose => 1 ) if ( $opt{help} );
+        pod2usage( -exitval => 0, -verbose => 2 ) if ( $opt{man} );
+        pod2usage( -exitval => 1, -verbose => 0 ) if ( !$rc );
 
-            pod2usage( -verbose => 1 ) if ( $opt{help} );
-            pod2usage( -verbose => 2 ) if ( $opt{man} );
-
-            unless ( grep { $_ eq scalar @ARGV } @$xargs ) {
-                warn("DEBUG: xargs(@$xargs) #ARGV($#ARGV)\n") if $opt{debug};
-                push( @err, "$cmd $xinfo" ) if $xinfo;
-                push( @err, "some unexpected arguments: @ARGV" ) if @ARGV;
-            }
+        unless ( grep { $_ eq scalar @ARGV } @$xargs ) {
+            warn("DEBUG: xargs(@$xargs) #ARGV($#ARGV)\n") if $opt{debug};
+            push( @err, "$cmd $xinfo" ) if $xinfo;
+            push( @err, "unexpected argument(s): @ARGV" ) if @ARGV;
         }
 
         pod2usage(
