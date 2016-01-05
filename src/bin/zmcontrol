@@ -71,6 +71,7 @@ my %startorder = (
 	"zimbra"	=> 180,
 	"zimbraAdmin"	=> 190,
 	"zimlet"	=> 200,
+	"solr"		=> 210,
 	"vmware-ha"	=> 250,  # this should remain last
 );
 
@@ -96,7 +97,8 @@ my %stoporder = (
 	"zimbra"	=> 170,
 	"zimbraAdmin"	=> 180,
 	"zimlet"	=> 190,
-	"zmconfigd"	=> 200,
+	"solr"		=> 200,
+	"zmconfigd"	=> 210,
 	"vmware-ha"	=> 250,
 );
 
@@ -114,6 +116,7 @@ my %allservices = (
 	"zimbra" => "/opt/zimbra/bin/zmstorectl",
 	"zimbraAdmin" => "/opt/zimbra/bin/zmstorectl",
 	"zimlet" => "/opt/zimbra/bin/zmstorectl",
+	"solr" => "/opt/zimbra/bin/zmstorectl",
 	"logger" => "/opt/zimbra/bin/zmloggerctl", 
 	"snmp" => "/opt/zimbra/bin/zmswatchctl", 
 	"ldap" => "/opt/zimbra/bin/ldap",
@@ -234,7 +237,7 @@ sub doStatus {
 			$status = 1 if ($serviceStatusList{$_});
 		}
 		my $stat;
-		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
+		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet" || $_ eq "solr") {
 			my $bit = "$_ webapp";
 			$stat = sprintf "\t%-20s %10s\n",$bit,($rc)?"Stopped":"Running";
 		} else {
@@ -330,7 +333,7 @@ sub doStartup {
 		}
 		checkAvailableServiceSpace($_);
 		Zimbra::Mon::Logger::Log ("info", "Starting $_ via zmcontrol");
-		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
+		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet" || $_ eq "solr") {
 			print "\tStarting $_ webapp...";
 		} else {
 			print "\tStarting $_...";
@@ -367,7 +370,7 @@ sub doShutdown {
 		if ($_ eq "mailbox" && !(-d "/opt/zimbra/db/data") ) { next; }
 		if ($_ eq "convertd" && !(-l "/opt/zimbra/keyview") ) { next; }
                 if ($_ eq "vmware-ha" && !(-x "/opt/zimbra/bin/zmhactl") ) { next; }
-		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
+		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet" || $_ eq "solr") {
 			print "\tStopping $_ webapp...";
 		} else {
 			print "\tStopping $_...";
