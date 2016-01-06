@@ -448,7 +448,7 @@ if [ -x /opt/zimbra/common/sbin/amavisd ]; then
   fi
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/amavisd
   if [ -d /opt/zimbra/data/amavisd/.spamassassin ]; then
-    chown -R ${root_user}:${root_group} /opt/zimbra/data/amavisd/.spamassassin
+    chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/amavisd/.spamassassin
   fi
   if [ -d /opt/zimbra/data/spamassassin ]; then
     chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/spamassassin
