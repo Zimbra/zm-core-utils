@@ -5,6 +5,7 @@
     create 0644 USER GROUP
     postrotate
       kill -HUP `cat /var/run/syslog*.pid 2> /dev/null` 2> /dev/null || true
+      su - zimbra -c "/opt/zimbra/bin/zmconfigdctl restart" > /dev/null 2>&1 || true
     endscript
     compress
 }
@@ -42,19 +43,6 @@
     rotate 7
     #su zimbra zimbra
 } 
-
-/opt/zimbra/log/zmconfigd.log {
-    daily
-    missingok
-    copytruncate
-    notifempty
-    create 0660 zimbra zimbra
-    postrotate
-      su - zimbra -c "/opt/zimbra/bin/zmconfigdctl restart" > /dev/null 2>&1 || true
-    endscript
-    rotate 30
-    #su zimbra zimbra
-}
 
 /opt/zimbra/log/clamd.log {
     daily
