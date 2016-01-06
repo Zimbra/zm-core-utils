@@ -55,15 +55,15 @@ zmcertmgr <command> [options] [-help|-man] [-debug [#]]
 
 Where valid command/option combinations are:
 
-  createca  [-new] [-keysize <keysize>] [-digest <digest>] [-subject subject]
-  createcrt [-new] [-keysize <keysize>] [-digest <digest>] [-subject subject] [-days <days>] [-subjectAltNames host1,host2] [-allservers]
+  createca  [-new] [-keysize keysize] [-digest digest] [-subject subject]
+  createcrt [-new] [-keysize keysize] [-digest digest] [-subject subject] [-days days] [-subjectAltNames host1,host2] [-allservers] [-noDefaultSubjectAltName]
   deployca  [-localonly]
 
-  createcsr     <self|comm> [-new] [-keysize <keysize>] [-digest <digest>] [-subject subject] [-subjectAltNames host1,host2]
-  deploycrt   <<self>|<comm [<certfile> <ca_chain_file>]>> [-allservers] [-localonly] [[-deploy $services] ...]
+  createcsr     <self|comm> [-new] [-keysize keysize] [-digest digest] [-subject subject] [-subjectAltNames host1,host2] [-noDefaultSubjectAltName]
+  deploycrt   <<self>|<comm [certfile ca_chain_file]>> [-allservers] [-localonly] [[-deploy $services] ...]
   getcrt        <self|comm> [-allservers]
   savecrt       <self|comm> [-allservers]
-  viewcsr       <self|comm> [<csr_file>]
+  viewcsr       <self|comm> [csr_file]
   viewstagedcrt <self|comm> [certfile]
   verifycrt     <self|comm> [[[priv_key] [certfile]] [ca_chain_file]]
 
@@ -71,24 +71,15 @@ Where valid command/option combinations are:
   verifycrtkey  <key_file> <certfile>
 
   viewdeployedcrt    [all|ldap|mailboxd|mta|proxy]
-  checkcrtexpiration [all|ldap|mailboxd|mta|proxy] [-days 30]
+  checkcrtexpiration [all|ldap|mailboxd|mta|proxy] [-days days]
   addcacert <certfile>
   migrate
 
-Defaults:
-
- <keysize> 2048 (bits for a RSA key)
- <digest> sha256 (OK: md4,md5,ripemd160,sha,sha1,sha224,sha384,sha512)
- <days> 1825 (~5 years; Note: checkcrtexpiration uses 30 days)
- <subject>
-   "/C=US/ST=N\/A/L=N\/A/O=Zimbra Collaboration Server/OU=Zimbra Collaboration Server/CN=`zmhostname`"
- <certfile> <csr_file> <priv_key>
+ <certfile> <csr_file> <priv_key> are stored by "type" as follows:
    self       /opt/zimbra/ssl/zimbra/server/server.{crt,csr,key}
    commercial /opt/zimbra/ssl/zimbra/commercial/commercial.{crt,csr,key}
 
-=head1 COMMANDS and OPTIONS
-
-This tool should be run as user 'zimbra' now instead of 'root'.
+=head1 OPTIONS
 
 =head2 Shared Options
 
@@ -96,23 +87,24 @@ This tool should be run as user 'zimbra' now instead of 'root'.
 
 =item B<-allservers>
 
-See the specific command for the meaning of this argument.
+The effect of this option varies depending on the command.  Reference
+a specific command to determine the purpose of this argument.
 
 =item B<-days> I<days>
 
 The number of days to certify a certificate for, except when used with
-the B<checkcrtexpiration> command.
+the B<checkcrtexpiration> command.  Default is 1825 days (~5 years).
+For B<checkcrtexpiration> a default of 30 days is used.
 
 =item B<-digest> I<algorithm>
 
-The digest algorithm to be used.  The following are all valid:
-
-  md4,md5,ripemd160,sha,sha1,sha224,sha256,sha384,sha512
+The digest algorithm to be used.  Default is sha256.  The following
+are valid: ripemd160,sha,sha1,sha224,sha256,sha384,sha512.
 
 =item B<-keysize> I<keysize>
 
-The RSA keysize in bits, for example "-keysize 4096".  Minimum
-keysize is 2048.
+The RSA keysize in bits, for example "-keysize 4096".  Minimum keysize
+is 2048.  Default keysize is 2048.
 
 =item B<-localonly>
 
@@ -122,15 +114,20 @@ Avoids updating any certificate related settings in LDAP.
 
 Force the generation of a new CA/Cert/CSR, overwriting existing data.
 
+=item B<-noDefaultSubjectAltName>
+
+Disable the (default) inclusion of the current zmhostname in the
+subjectAltNames of a Cert/CSR.
+
 =item B<services>
 
 =item B<-deploy> I<services>
 
 The set of services to be used for a request. The service names can be
 specified as comma separate values or the B<-deploy> argument can be
-used multiple times.  Valid services are 'all' or any of:
+used multiple times.
 
-  ldap,mailboxd,mta,proxy
+Valid services are 'all' or any of: ldap,mailboxd,mta,proxy.
 
 =item B<-subject> I<subject>
 
@@ -169,16 +166,14 @@ Generates a Certificate Authority (CA).
 
 =item B<deployca>
 
-  deployca [-localonly]
-
-Deploys a CA.
+Deploys a Certificate Authority (CA).
 
 =item B<createcrt>
 
-  createcrt [-new] [-days days] [-keysize keysize] [-digest <digest>] [-subject subject] [-subjectAltNames host1,host2] [-allservers]
-
 Creates a self-signed certificate based on a CSR generated using
-B<createcsr>.
+B<createcsr>.  By default the certificate subjectAltNames contains the
+current zmhostname unless the B<-noDefaultSubjectAltName> argument is
+used.
 
 For B<createcrt>, the use of B<-allservers> will set the CR
 SubjectAltNames to contain the names of all servers in the ZCS
@@ -198,15 +193,14 @@ external data sources.
 
 =item B<checkcrtexpiration>
 
-  checkcrtexpiration [-days 30] [all|ldap|mailboxd|mta|proxy]
-
-Check if certificates for I<X> (all) services expire within B<-days>
-I<Y> (30) days.
+Check if certificate(s) expire within B<-days> I<days>.
 
 =item B<createcsr>
 
 Creates a certificate signing request (CSR) for either a self or
-commercially signed certificate authority.
+commercially signed certificate authority.  By default the CSR
+subjectAltNames contains the current zmhostname unless the
+B<-noDefaultSubjectAltName> argument is used.
 
 =item B<getcrt>
 
@@ -220,11 +214,6 @@ instead of as a per-server setting (getServer/modifyServer).
 =item B<deploycrt>
 
 Deploys a certificate.
-
-Syntax:
-
- deploycrt <self> {-allservers} {-deploy all|ldap|mailboxd|mta|proxy}
- deploycrt <comm> [<certfile> <ca_chain_file>]
 
 For B<deploycrt>, the use of B<-allservers> will cause zmcertmgr to
 iterate through all servers in the ZCS deployment (zmprov gas, minus
@@ -267,12 +256,6 @@ are ready to deploy a certificate.
 =item B<migrate>
 
 Moves certs and keys from ZCS installs prior to version 5.0.x.
-
-=back
-
-=head2 OPTIONS
-
-=over 4
 
 =back
 
@@ -338,7 +321,7 @@ days with either wild-card or subject altnames.
 
 Deploy the certificate to all nodes in the deployment.
 
- $ zmcertmgr deploycrt self -allserver
+ $ zmcertmgr deploycrt self -allservers
 
 =item 4.
 
@@ -347,6 +330,10 @@ To finish, verify the certificate was deployed.
  $ zmcertmgr viewdeployedcrt
 
 =back
+
+=head1 CAVEATS
+
+As of ZCS 8.7, this tool must be run as user 'zimbra' not 'root'.
 
 =cut
 
@@ -436,7 +423,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my %args    = @_;
         my %default = (
             Debug => $args{debug} || 0,
-            Keysize => $class->_defaultKeysize,
+            Defaultsubjectaltname => 1,
+            Keysize               => $class->_defaultKeysize,
         );
 
         my $self = bless( {%default}, ref($class) || $class );
@@ -578,7 +566,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         return @cert;
     }
 
-    # createca [-new] [-keysize <keysize>] [-digest <digest>] [-subject subject]
+    # createca [-new] [-keysize keysize] [-digest digest] [-subject subject]
     # -new allow the scripts to overwrite the existing csr
     # -subjectAltNames / $subject_alt_names not allowed for createca
     # Notes:
@@ -726,8 +714,9 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         print {$ofh} "$ser\n";
     }
 
-    # createcrt [-new] [-days days] [-keysize keysize] [-digest <digest>]
+    # createcrt [-new] [-days days] [-keysize keysize] [-digest digest]
     #   [-subject subject] [-subjectAltNames host1,host2] -allservers
+    #   [-noDefaultSubjectAltName]
     sub createcrt {
         my ($self) = @_;
         warn("DEBUG: createcrt\n") if $self->Debug;
@@ -740,8 +729,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         # BUG?: this happens in other places like createcsr too...
         # OLD tool always rewrote the config so we do too
         my $file = $self->sslFiles("ssl_conf_cert");
-        $self->createConf( $file, $self->lc->get("zimbra_server_hostname"),
-            $self->Subjectaltnames );
+        $self->createConf( $file, $self->defAltName, $self->Subjectaltnames );
 
         # do not recreate valid self-signed certs (e.g. on upgrade?)
         my $crtf = $self->sslFiles("self_crt");
@@ -811,7 +799,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
           : $self->error( "openssl ca failed(", $? >> 8, "):\n", @out );
     }
 
-    # <self|comm> [-new] [-keys #] [-dig dig] [-subj subj] [-subjectAltN h1,h2]
+    # createcsr <self|comm> [-new] [-keys #] [-dig dig] [-subj subj]
+    #   [-subjectAltName h1,h2] [-noDefaultSubjectAltName]
     sub createcsr {
         my ( $self, $type ) = ( shift, @_ );
         Carp::confess("createcsr: no type argument specified\n")
@@ -826,8 +815,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
           if ( -f $csrf and !$self->New );
 
         my $file = $self->sslFiles("ssl_conf_cert");
-        $self->createConf( $file, $self->lc->get("zimbra_server_hostname"),
-            $self->Subjectaltnames );
+        $self->createConf( $file, $self->defAltName, $self->Subjectaltnames );
 
         $self->backupSSLDirs or return undef;
         $self->initSSLDirs   or return undef;
@@ -867,8 +855,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my $csrf = $self->sslFiles( $type . "_csr" );    # CSR
 
         my $file = $self->sslFiles("ssl_conf_cert");
-        $self->createConf( $file, $self->lc->get("zimbra_server_hostname"),
-            $self->Subjectaltnames );
+        $self->createConf( $file, $self->defAltName, $self->Subjectaltnames );
 
         my $info =
           join( " ", "keysize=" . $self->Keysize, "digest=" . $self->Digest );
@@ -998,7 +985,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     # TBD: rename _ca_crt to _ca_chain?
     # see also ZimbraAdminExt/CertificateMgr/.../cert/InstallCert.java
     # deploycrt <self> {-allservers}
-    # deploycrt <comm> [<certfile> <ca_chain_file>]
+    # deploycrt <comm> [certfile ca_chain_file]
     # BUG?: OLD code would default to self if !$type
     sub deploycrt {
         my ( $self, $type, $crtf, $ca_pem ) = ( shift, @_ );
@@ -1111,7 +1098,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 $svr = lc($svr);
                 next if $svr eq $myname;
                 my $zmrc = "/opt/zimbra/libexec/zmrc $svr";
-                my $cmd  = "zmcertmgr getcrt $type -allserver";
+                my $cmd  = "zmcertmgr getcrt $type -allservers";
                 my @out  = $self->run(qq(echo "HOST:$svr $cmd" | $zmrc));
 
                 # COMPAT: try next host on error
@@ -1850,7 +1837,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
           if $self->Debug;
 
         # memoize-ish to avoid recreating the same config over and over
-        return 1 if $self->{__createConfCache}->{ join( " ", @_ ) }++;
+        return 1 if $self->{__createConf} and $self->{__createConf} eq "@_";
+        $self->{__createConf} = "@_";
 
         # return in order from caller w/o dups, should we sort?
         my $svrname = $self->lc->get("zimbra_server_hostname");
@@ -1858,14 +1846,13 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         foreach my $name (@altnames) {
             my $lcname = lc($name);
-            next if ( $lcname eq lc($svrname) );
             next if ( $seen{$lcname}++ > 0 );
             push( @names, $name );
         }
 
         my @san =
           @names
-          ? ( "subjectAltName = DNS:$svrname", map( "DNS:$_", @names ) )
+          ? ( "subjectAltName = " . join( ",", map( "DNS:$_", @names ) ) )
           : ();
         my @subst = (
             [ '@@HOSTNAME@@'           => $svrname ],
@@ -2118,7 +2105,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     # digest - now fatal if invalid
     sub validDigest {
         my ( $self, $dig ) = @_;
-        if ( $dig !~ /^(?:md4|md5|ripemd160|sha(?:|1|224|256|384|512))/ ) {
+        if ( $dig !~ /^(?:ripemd160|sha(?:|1|224|256|384|512))/ ) {
             $dig |= "";
             return $self->error("unknown digest method '$dig'\n");
         }
@@ -2263,6 +2250,20 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         ( @_ > 1 ) ? $_[0]->{Subject} = $_[1] : $_[0]->{Subject};
     }
 
+    # do not force zmhostname in SAN when using -noDefaultSubjectAltName
+    sub defAltName {
+        my ($self) = @_;
+        return $self->Defaultsubjectaltname
+          ? ( $self->lc->get("zimbra_server_hostname") )
+          : ();
+    }
+
+    sub Defaultsubjectaltname {
+        ( @_ > 1 )
+          ? $_[0]->{Defaultsubjectaltname} = $_[1]
+          : $_[0]->{Defaultsubjectaltname};
+    }
+
     sub Subjectaltnames {
         my ( $self, @names ) = @_;
         if ( @_ > 1 ) {
@@ -2334,11 +2335,16 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             # COMPAT: createcsr: OLD default type="self" via fall through
             "createcsr" => {
                 need_type => undef,
-                opts      => [ @create_opts, 'subjectaltnames=s@' ],
+                opts      => [
+                    @create_opts, 'subjectaltnames=s@',
+                    'defaultsubjectaltname!'
+                ],
             },
             "createcrt" => {
                 opts => [
-                    @create_opts, 'subjectaltnames=s@', 'days=i', 'allservers'
+                    @create_opts, 'subjectaltnames=s@',
+                    'days=i',     'allservers',
+                    'defaultsubjectaltname!'
                 ]
             },
             "deployca" => { opts => ['localonly'], },
@@ -2349,7 +2355,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 opts      => [ 'allservers', 'deploy=s@', 'localonly' ],
                 xargs => [ 0, 2 ],
                 xinfo =>
-"<<self>|<comm [<certfile> <ca_chain_file>]>> [-localonly] [-allservers] [[-deploy $services] ...]",
+"<<self>|<comm [certfile ca_chain_file]>> [-localonly] [-allservers] [[-deploy $services] ...]",
             },
 
             # COMPAT: getcrt: OLD default type="comm" via fall through
