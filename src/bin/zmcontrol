@@ -457,7 +457,7 @@ sub getEnabledServices {
   my $require_tls=getLocalConfig("zimbra_require_interprocess_security");
   my $ldap_starttls_supported=getLocalConfig("ldap_starttls_supported");
 
-  
+
   my %s = ();
   $s{"zmconfigd"} = "zmconfigd";
 
@@ -479,7 +479,7 @@ sub getEnabledServices {
        );
     if ($result->code) {
       warn "Unable to start TLS: ". $result->error . " when connecting to ldap master.\n";
-      return 1;
+      return ();
     }
   }
   unless ($result = $ldap->bind($ldap_dn, password => $ldap_pass)) {
