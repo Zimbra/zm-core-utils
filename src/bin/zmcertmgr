@@ -53,6 +53,9 @@ zmcertmgr - certificate management tool for ZCS
 
 zmcertmgr <command> [options] [-help|-man] [-debug [#]]
 
+  -help     displays a usage synopsis with information about options
+  -man      displays the complete documentation
+
 Where valid command/option combinations are:
 
   createca  [-new] [-keysize keysize] [-digest digest] [-subject subject]
@@ -148,11 +151,11 @@ optional (integer) debug level.  Often useful for troubleshooting.
 
 =item B<-help>
 
-Display a brief help message and exit.
+Display a usage synopsis with information about options and exit.
 
 =item B<-man>
 
-Display the complete manual page and exit.
+Display the complete documentation and exit.
 
 =back
 
