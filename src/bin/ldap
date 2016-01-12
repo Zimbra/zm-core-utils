@@ -14,12 +14,10 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see <http://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
-# 
+#
 
 PID=""
-PIDFILE="/opt/zimbra/openldap/var/run/slapd.pid"
-
-mkdir -p "/opt/zimbra/openldap/var/run/"
+PIDFILE="/opt/zimbra/common/var/run/slapd.pid"
 
 getpid()
 {
