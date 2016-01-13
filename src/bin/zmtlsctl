@@ -39,37 +39,25 @@ chk_command $ldapsearch $zmhostname $zmlocalconfig $zmprov
 
 hostname=$($zmhostname)
 
-validate_setting=1
-zmvalidatehost() {
-    hosts=$(${zmprov} garpb | awk '/server/ {split($2,parts,":"); print parts[1]}')
-    for h in ${hosts[@]}; do
-        if [ "$hostname" = "$h" ]; then
-            return
-        fi
-    done
-    echo "Warning: $hostname is not in the list of reverse proxy backends. No validation will be performed."
-    validate_setting=0
-}
-zmvalidatehost
-
-
 # NOTE: ldap_url may be multi-valued
 if ! eval $(${zmlocalconfig} -q -m export ldap_url zimbra_ldap_userdn zimbra_ldap_password); then
     echo "Error: executing: ${zmlocalconfig} -q -m export"
     exit 1
 fi
 
+zmgetallproxies_cache="unknown"
 zmgetallproxies() {
-    ldap_urls=($ldap_url)
-    proxies=
-    search=$(${ldapsearch} -LL -H "$ldap_urls" -D "$zimbra_ldap_userdn" -w "$zimbra_ldap_password" \
-        -b 'cn=servers,cn=zimbra' '(&(objectClass=zimbraServer)(zimbraServiceEnabled=proxy))' cn 2>/dev/null)
-    if [ $? -eq 0 ]; then
-        proxies=$(echo "$search" | awk '/cn:/ {print $2}')
-        echo "$proxies"
-        return
+    if [ $zmgetallproxies_cache = "unknown" ]; then
+        ldap_urls=($ldap_url)
+        search=$(${ldapsearch} -LL -H "$ldap_urls" -D "$zimbra_ldap_userdn" -w "$zimbra_ldap_password" \
+            -b 'cn=servers,cn=zimbra' '(&(objectClass=zimbraServer)(zimbraServiceEnabled=proxy))' cn 2>/dev/null)
+        if [ $? -eq 0 ]; then
+            zmgetallproxies_cache=$(echo "$search" | awk '/cn:/ {print $2}')
+        else
+            zmgetallproxies_cache=""
+        fi
     fi
-    echo ""
+    echo "$zmgetallproxies_cache"
 }
 
 zmgetproxyforhost() {
@@ -91,6 +79,30 @@ zmgetproxyforhost() {
     # If not, just return the list of all proxies and we will use the first one that works
     zmgetallproxies
 }
+
+validate_setting=1
+zmvalidatehost() {
+    foundhost=0
+    hosts=$(${zmprov} garpb | awk '/server/ {split($2,parts,":"); print parts[1]}')
+    for h in ${hosts[@]}; do
+        if [ "$hostname" = "$h" ]; then
+            foundhost=1
+            break
+        fi
+    done
+    if [ $foundhost -eq 1 ]; then
+        allproxies=$(zmgetallproxies)
+        if [ x"$allproxies" != "x" ]; then
+            return
+        else
+            echo "Warning: No proxy servers were detected. No validation will be performed."
+        fi
+    else
+        echo "Warning: $hostname is not in the list of reverse proxy backends. No validation will be performed."
+    fi
+    validate_setting=0
+}
+zmvalidatehost
 
 sasl_conf_directory=/opt/zimbra/common/etc
 mailboxd_server=jetty
