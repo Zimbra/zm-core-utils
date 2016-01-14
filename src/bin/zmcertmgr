@@ -1065,16 +1065,13 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             foreach my $name ( sort keys %svc ) {
 
                 if ( $name eq "mailboxd" ) {
-
-                    # only create a keystore on a mailbox server
-                    if ( $self->lc->get("mailboxd_server") ) {
-                        $self->createkeystore($type)
-                          or return undef;
+                    if ( !$self->lc->get("mailboxd_server") ) {
+                        warn("DEBUG: deploycrt: skip non $name server)\n")
+                          if $self->Debug;
                     }
                     else {
-                        warn(
-                            "DEBUG: skip createkeystore on non-mailbox server\n"
-                        ) if $self->Debug;
+                        $self->createkeystore($type)
+                          or return undef;
                     }
                 }
                 else {
@@ -1566,10 +1563,19 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         foreach my $name ( sort keys %svc ) {
             my $crtf = $svc{$name};
 
-            if ( $name eq "mailboxd" and -f $self->sslFiles("keystore") ) {
-                unless ( $self->_keystoreToPEM ) {
-                    $err++;
-                    next;
+            if ( $name eq "mailboxd" ) {
+                my $ks = $self->sslFiles("keystore");
+                if ( !$self->lc->get("mailboxd_server") ) {
+                    warn("NOTE: possibly stale keystore: $ks\n") if ( -f $ks );
+                    warn("DEBUG: viewdeployedcrt: skip non $name server\n")
+                      if $self->Debug;
+                    next unless ( -f $crtf );
+                }
+                elsif ( -f $ks ) {
+                    unless ( $self->_keystoreToPEM ) {
+                        $err++;
+                        next;
+                    }
                 }
             }
 
@@ -1655,10 +1661,19 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         foreach my $name ( sort keys %svc ) {
             my $crtf = $svc{$name};
 
-            if ( $name eq "mailboxd" and -f $self->sslFiles("keystore") ) {
-                unless ( $self->_keystoreToPEM ) {
-                    $err++;
-                    next;
+            if ( $name eq "mailboxd" ) {
+                my $ks = $self->sslFiles("keystore");
+                if ( !$self->lc->get("mailboxd_server") ) {
+                    warn("NOTE: possibly stale keystore: $ks\n") if ( -f $ks );
+                    warn("DEBUG: checkcrtexpiration: skip non $name server\n")
+                      if $self->Debug;
+                    next unless ( -f $crtf );
+                }
+                elsif ( -f $ks ) {
+                    unless ( $self->_keystoreToPEM ) {
+                        $err++;
+                        next;
+                    }
                 }
             }
 
