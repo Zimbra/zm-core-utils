@@ -58,7 +58,7 @@ zmcertmgr <command> [options] [-help|-man] [-debug [#]]
 
 Where valid command/option combinations are:
 
-  createca  [-new] [-keysize keysize] [-digest digest] [-subject subject]
+  createca  [-new [-newkey]] [-keysize keysize] [-digest digest] [-subject subject]
   createcrt [-new] [-keysize keysize] [-digest digest] [-subject subject] [-days days] [-subjectAltNames host1,host2] [-allservers] [-noDefaultSubjectAltName]
   deployca  [-localonly]
 
@@ -116,6 +116,15 @@ Avoids updating any certificate related settings in LDAP.
 =item B<-new>
 
 Force the generation of a new CA/Cert/CSR, overwriting existing data.
+
+For B<createca>, the additional argument of B<-newkey> can be used to
+force the creation of a new private key for the CA.  If the B<-newkey>
+option is used on an existing install, it will break the established
+trust of the existing CA.  Once the existing CA is replaced by a new
+CA, via B<deployca>, TLS communications will fail due to the broken
+trust relationship between existing certificates and the replaced CA.
+A temporary workaround to this situation is to set
+B<ssl_allow_untrusted_certs>=I<true> via B<zmlocalconfig>.
 
 =item B<-noDefaultSubjectAltName>
 
@@ -569,13 +578,14 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         return @cert;
     }
 
-    # createca [-new] [-keysize keysize] [-digest digest] [-subject subject]
-    # -new allow the scripts to overwrite the existing csr
+    # createca
+    #   [-new [-newkey]] [-keysize keysize] [-digest digest] [-subject subject]
+    # -new allow the scripts to overwrite the existing ca
+    # -newkey allow the scripts to replace an existing ca key (can break trust)
     # -subjectAltNames / $subject_alt_names not allowed for createca
     # Notes:
     # - a self signed CA is only created on an LDAP master
-    # - however, the CAs are deployed to all nodes
-
+    # - CA may be deployed to any node (and can become stale over time)
     sub createca {
         my ($self) = @_;
         warn("DEBUG: createca\n") if $self->Debug;
@@ -618,10 +628,17 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             },
         );
 
-        if ( !$self->New ) {
+        # reuse an existing CA key unless -newkey is used to preserve trust
+        # - check !$self->Newkey as local CA could be stale in MMR
+        if ( !$self->Newkey ) {
             foreach my $key ( sort keys %files ) {
                 my $file = $self->sslFiles($key);
                 my $dat  = $files{$key};
+                if ( $key ne "ca_key" and $self->New ) {
+                    warn("DEBUG: createca skipping $dat->{desc}\n")
+                      if $self->Debug;
+                    next;
+                }
                 if ( -s $file ) {
                     print("** Using $dat->{desc} in '$file'\n");
                     next;
@@ -647,32 +664,24 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             }
         }
 
-        # create key/crt if it didn't exist in LDAP
+        # reuse existing key when possible
+        # - new key if Newkey or (New and no existing keyfile)
         $file = $self->sslFiles("ca_key");
-        if ( $self->New or !-s $file ) {
-            $self->createcakey or return undef;
+        if ( $self->Newkey ) {
+            return $self->docreateca(1);
+        }
+        elsif ( $self->New ) {
+            return $self->docreateca( !-s $file );
         }
         else {
-            open( my $ifh, "<", $file )
-              or Carp::confess("createca: read '$file' failed: $!\n");
-            my $ispriv = 0;
-            while ( my $l = <$ifh> ) {
-                if ( $l =~ /PRIVATE KEY/ ) {
-                    $ispriv = 1;
-                    last;
-                }
-            }
-            unless ($ispriv) {
-                $self->createcakey or return undef;
-            }
+            return $self->_is_private_key($file);
         }
-        return 1;
     }
 
     # an internal method
-    sub createcakey {
-        my ($self) = @_;
-        warn("DEBUG: createcakey\n") if $self->Debug;
+    sub docreateca {
+        my ( $self, $newkey ) = @_;
+        warn("DEBUG: docreateca\n") if $self->Debug;
 
         my $fconf = $self->sslFiles("ssl_conf_ca");
         if ( !-f $fconf ) {
@@ -684,24 +693,41 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         my $keyf = $self->sslFiles("ca_key");
         my $crtf = $self->sslFiles("ca_crt");
+        my @keya = $newkey ? ( "-newkey", "rsa:" . $self->Keysize ) : ();
+        push( @keya, $newkey ? "-keyout" : "-key", $keyf );
 
         # TBD: capture/process stderr?
-        print("** Creating CA private key $keyf\n");
+        printf( "** Creating CA with %sprivate key $keyf\n",
+            $newkey ? "new " : "existing " );
         my @out = $self->run(
-            $self->Openssl,      qw(req -batch),
-            "-subj",             $self->Subject,
-            "-" . $self->Digest, "-days",
-            $self->Days,         "-config",
-            $fconf,              "-new",
-            "-newkey",           "rsa:" . $self->Keysize,
-            "-nodes",            "-out",
-            $crtf,               qw(-extensions v3_ca -x509),
-            "-keyout",           $keyf
+            $self->Openssl, qw(req -batch -nodes),
+            "-new",         "-" . $self->Digest,
+            "-subj",        $self->Subject,
+            "-days",        $self->Days,
+            "-config",      $fconf,
+            "-out",         $crtf,
+            @keya,          qw(-extensions v3_ca -x509),
         );
 
         return $self->error( "openssl req failed(", $? >> 8, "):\n", @out )
           if ( $? != 0 );
         return 1;
+    }
+
+    sub _is_private_key {
+        my ( $self, $file ) = @_;
+        return $self->error("createca: empty key '$file'\n")
+          unless ( -s $file );
+        open( my $ifh, "<", $file )
+          or return $self->error("createca: read '$file' failed: $!\n");
+        my $ispriv = 0;
+        while ( my $l = <$ifh> ) {
+            if ( $l =~ /PRIVATE KEY/ ) {
+                $ispriv = 1;
+                last;
+            }
+        }
+        return $ispriv;
     }
 
     sub createCASerial {
@@ -784,17 +810,16 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         }
 
         my @out = $self->run(
-            $self->Openssl,                 "ca",
-            "-out",                         $self->sslFiles("self_crt"),
-            "-notext",                      "-config",
-            $self->sslFiles("ssl_conf_ca"), "-days",
-            $self->Days,                    "-md",
-            $self->Digest,                  "-in",
-            $self->sslFiles("self_csr"),    "-keyfile",
-            $self->sslFiles("ca_key"),      qw(-extensions v3_req),
-            "-extfile",                     $self->sslFiles("ssl_conf_ca"),
-            "-cert",                        $self->sslFiles("ca_crt"),
-            "-batch",                       "2>&1"
+            $self->Openssl,         qw(ca -batch -notext),
+            "-days",                $self->Days,
+            "-md",                  $self->Digest,
+            "-config",              $self->sslFiles("ssl_conf_ca"),
+            "-in",                  $self->sslFiles("self_csr"),
+            "-out",                 $self->sslFiles("self_crt"),
+            "-cert",                $self->sslFiles("ca_crt"),
+            "-keyfile",             $self->sslFiles("ca_key"),
+            "-extfile",             $self->sslFiles("ssl_conf_ca"),
+            qw(-extensions v3_req), "2>&1"
         );
 
         return ( $? == 0 )
@@ -864,14 +889,13 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
           join( " ", "keysize=" . $self->Keysize, "digest=" . $self->Digest );
         print("** Creating server cert request $csrf with $info\n");
         my @out = $self->run(
-            $self->Openssl,          "req",
-            "-new",                  "-" . $self->Digest,
-            "-nodes",                "-out",
-            $csrf,                   "-keyout",
-            $keyf,                   "-newkey",
-            "rsa:" . $self->Keysize, "-config",
-            $file,                   "-subj",
-            $self->Subject,          "-batch",
+            $self->Openssl, qw(req -batch -nodes),
+            "-new",         "-" . $self->Digest,
+            "-subj",        $self->Subject,
+            "-config",      $file,
+            "-out",         $csrf,
+            "-newkey",      "rsa:" . $self->Keysize,
+            "-keyout",      $keyf,
             "2>&1",
         );
         my $rc = $?;
@@ -2260,6 +2284,10 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         ( @_ > 1 ) ? $_[0]->{New} = $_[1] : $_[0]->{New};
     }
 
+    sub Newkey {
+        ( @_ > 1 ) ? $_[0]->{Newkey} = $_[1] : $_[0]->{Newkey};
+    }
+
     sub Owner {
         ( @_ > 1 ) ? $_[0]->{Owner} = $_[1] : $_[0]->{Owner};
     }
@@ -2343,7 +2371,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 xargs => [1],
                 xinfo => "<certfile>",
             },
-            "createca" => { opts => [ @create_opts, 'subjectaltnames=s@' ] },
+            "createca" =>
+              { opts => [ @create_opts, 'newkey', 'subjectaltnames=s@' ] },
             "checkcrtexpiration" => {
                 opts  => ['days=i'],
                 xargs => [ 0, 1 ],
@@ -2448,6 +2477,9 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             push( @err, "$cmd $xinfo" ) if $xinfo;
             push( @err, "unexpected argument(s): @ARGV" ) if @ARGV;
         }
+
+        push( @err, "$cmd: -newkey can only be used with -new" )
+          if ( $opt{newkey} and !$opt{new} );
 
         pod2usage(
             -verbose => 1,
