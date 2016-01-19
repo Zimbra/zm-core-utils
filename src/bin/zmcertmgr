@@ -248,7 +248,7 @@ Shows a certificate signing request (CSR).
 
 =item B<verifycrt>
 
-Compares openssl md5 <priv_key> and <certfile> signatures.
+Compares openssl sha256 <priv_key> and <certfile> modulus digests.
 
 =item B<verifycrtchain>
 
@@ -550,7 +550,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         warn( "DEBUG: run(rc=$?) results(#=",
             scalar @r, ")", @r ? ":\n@r" : "", "\n" )
           if $self->Debug > 2;
-        return @r;
+        return wantarray ? @r : "@r";
     }
 
     sub getFromConcatData {
@@ -1468,16 +1468,16 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         print("** Verifying '$crtf' against '$keyf'\n");
         $self->_checkFiles(@_) or return undef;
 
-        my $openssl = $self->Openssl;
-        my $key_md5 =
-          $self->run("$openssl rsa -noout -modulus -in '$keyf' | $openssl md5");
-        my $crt_md5 = $self->run(
-            "$openssl x509 -noout -modulus -in '$crtf' | $openssl md5");
+        my $ssl = $self->Openssl;
+        my $keydg =
+          $self->run("$ssl rsa -noout -modulus -in '$keyf' | $ssl sha256");
+        my $crtdg =
+          $self->run("$ssl x509 -noout -modulus -in '$crtf' | $ssl sha256");
 
         # set @err unless hashes match
         my $info = "Certificate '$crtf' and private key '$keyf'";
         my @err =
-            ( $key_md5 and $crt_md5 and $key_md5 eq $crt_md5 )
+            ( $keydg and $crtdg and $keydg eq $crtdg )
           ? ()
           : ("do not");
         $info = join( " ", $info, @err, "match.\n" );
