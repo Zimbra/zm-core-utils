@@ -105,6 +105,15 @@ sub checkDbs() {
     return undef;
   }
   my @output = <CMD>;
+  if ($options{o}) {
+    for (my $i=$#output; $i >=0; $i--) {
+      local $_ = $output[$i];
+      if (/note     : Table does not support optimize/) {
+        splice(@output, $i-1, 2);
+        $i-=1;
+      }
+    }
+  }
   for (my $i=0; $i <= $#output; ++$i) {
     local $_ = $output[$i];
     if (/mysql.general_log/) {
