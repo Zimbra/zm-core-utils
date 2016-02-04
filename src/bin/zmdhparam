@@ -1,0 +1,671 @@
+#!/usr/bin/perl
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2016 Zimbra, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <http://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+
+=head1 NAME
+
+zmdhparam - Diffie-Hellman parameter manipulation and generation for ZCS
+
+=head1 SYNOPSIS
+
+zmdhparam <get|set> [options] [-help|-man] [-debug [#]]
+
+Where valid command/option combinations are:
+
+  get [-in <file>] [-out <file>]
+   :: read PEM format DH params from <LDAP|-in> to <-out|STDOUT>
+
+  set <-new [<numbits>]|-in <file>> [-out <file>]
+   :: write PEM format DH params from <openssl|-in> to <LDAP|-out>
+
+  -new <numbits>   generate DH params of size n bits (default 2048)
+  -in  <file>      read PEM format DH params from a file
+  -out <file>      save PEM format DH params to a file
+  -help            this help message
+  -man             the complete documentation
+  -debug [#]       enable verbose output
+
+  zimbraSSLDHParam
+   :: LDAP attribute used to store the PEM format DH params
+
+=head2 NOTES
+
+DH parameters read via B<-in> the contents are then checked by
+B<openssl> for validity, however strength of the parameters are not
+checked.
+
+Once B<zimbraSSLDHParam> is updated, B<zmconfigd> is responsible for
+watching for the changed value and then subsequently writing out the
+new value to I</opt/zimbra/conf/dhparam.pem>.
+
+New DH parameters will only take affect once the services that use
+them (Proxy/MTA/LDAP) are restarted.
+
+=cut
+
+# main
+{
+    use strict;
+    use warnings;
+    use IO::Handle ();
+
+    STDOUT->autoflush(1);
+    my $opts = Opts->new;
+    my %args = $opts->data;
+
+    my $prog = Zmdhparam->new(%args)
+      or Opts->usage( -exitval => 1, -verbose => 0 );
+
+    my $cmd = $prog->Command;
+    my $rc = eval { $prog->$cmd(@ARGV); };
+    chomp($@);
+    die("$prog: ERROR $cmd(@ARGV) failed:\n $@\n") if $@;
+
+    # method rc is non-zero on success -> exit(0) is success
+    exit( $rc ? 0 : 1 );
+}
+
+{
+
+    package Zmdhparam;
+
+    use strict;
+    use warnings;
+    use Carp         ();
+    use File::Copy   ();
+    use File::Temp   ();
+    use IO::Handle   ();
+    use MIME::Base64 ();
+
+    sub Command {
+        ( @_ > 1 ) ? $_[0]->{Command} = $_[1] : $_[0]->{Command};
+    }
+
+    sub Debug {
+        my ( $self, $val ) = @_;
+        if ( @_ > 1 ) {
+            die("Debug '$val' must be numeric (>=0)\n")
+              unless ( defined $val and $val =~ /^\d+$/ );
+            $self->{Debug} = $val;
+        }
+        $self->{Debug};
+    }
+
+    sub Prog { ( @_ > 1 ) ? $_[0]->{Prog} = $_[1] : $_[0]->{Prog} || ""; }
+
+    # new parameter should be generated of size numbits
+    sub DefaultNew { return "2048"; }
+    sub DHParamKey { return "zimbraSSLDHParam"; }
+    sub Global     { return "global"; }
+
+    sub New {
+        my ( $self, $size ) = @_;
+        my $nbits = $self->DefaultNew;
+        if ( @_ > 1 ) {
+            if ( !$size ) {
+                $size = $nbits;
+                $self->out("defaulting numbits to '$size'\n");
+            }
+            elsif ( $size < $nbits ) {
+                return $self->error("numbits '$size' must be >= $nbits\n");
+            }
+            $self->{New} = $size;
+        }
+        $self->{New} || $nbits;
+    }
+
+    sub Home {
+        my ( $self, $dir ) = @_;
+        if ( @_ > 1 ) {
+            Carp::confess("Home '$dir' does not exist\n")
+              unless ( defined $dir and -d $dir );
+            $self->{Home} = $dir;
+        }
+        $self->{Home};
+    }
+
+    sub In {
+        my ( $self, $file ) = @_;
+        if ( @_ > 1 ) {
+            return $self->error("In '$file': unable to read file\n")
+              unless ( defined $file and ( $file eq "-" or -r $file ) );
+            $self->{In} = $file;
+        }
+        $self->{In};
+    }
+
+    sub Out {
+        my ( $self, $file ) = @_;
+        if ( @_ > 1 ) {
+            _dpr("Out '$file' already exists\n")
+              if (  defined $file
+                and $file ne "-"
+                and -f $file
+                and $self->Debug );
+            $self->{Out} = $file;
+        }
+        $self->{Out};
+    }
+
+    sub Openssl {
+        my ( $self, @try ) = @_;
+        $self->{Openssl} = $self->verifyExe(@try) if ( @_ > 1 );
+        $self->{Openssl};
+    }
+
+    sub Zmprov {
+        my ( $self, @try ) = @_;
+        $self->{Zmprov} = $self->verifyExe(@try) if ( @_ > 1 );
+        $self->{Zmprov};
+    }
+
+    sub _dpr { warn( "DEBUG: ", @_ ); }
+
+    sub out {
+        my ( $self, @rest ) = @_;
+        print( $self->Prog, ": ", @rest );
+    }
+
+    sub error {
+        my $self = shift;
+        warn( $self->Prog, ": ", "ERROR: ", @_ ) if @_;
+        return undef;
+    }
+
+    sub new {
+        my ($class) = shift;
+        Carp::confess("new: invalid arguments\n") if ( @_ % 2 );
+
+        # set Debug as early as possible!
+        my %args    = @_;
+        my %default = (
+            Debug => delete $args{debug} || 0,
+            Prog => delete $args{prog},
+        );
+
+        my $self = bless( {%default}, ref($class) || $class );
+        my @args = @_;
+
+        # hardcoded defaults
+        my $home = $self->Home("/opt/zimbra");
+        my $ozcb = "$home/common/bin";
+
+        $self->Openssl( "$ozcb/openssl", "$home/openssl/bin/openssl" );
+        $self->Zmprov("$home/bin/zmprov");
+
+        # avoid openssl "unable to write random state"
+        $ENV{RANDFILE} ||= "$home/ssl/.rnd";
+
+        for ( my $i = 0 ; $i < $#args ; $i += 2 ) {
+            my ( $key, $val ) = ( $args[$i], $args[ $i + 1 ] );
+            Carp::confess("new: invalid argument '$key'")
+              if ( !$key or $key =~ /[A-Z]/ );
+            $key = ucfirst($key);
+            my $rc = eval {
+                _dpr( ref $self, "->$key", ref $val ? "[@$val]" : "($val)",
+                    "\n" )
+                  if $self->{Debug} > 1;
+                $self->$key($val);
+            };
+            if ($@) {
+                chomp($@);
+                die("new: $key($val) failed: $@\n");
+            }
+            if ( !defined $rc ) {
+                my @einfo =
+                    ( $key =~ /^(?:Debug|In|New)$/ )
+                  ? ()
+                  : ("new: $key($val) failed\n");
+                return $self->error(@einfo);
+            }
+        }
+        return $self;
+    }
+
+    # get [-in <file>] [-out <file>]
+    # :: read PEM format DH params from <LDAP|-in> to <-out|STDOUT>
+    sub get {
+        my ($self) = @_;
+        _dpr( __PACKAGE__, "::get(@_)\n" ) if $self->Debug > 1;
+
+        my $inf =
+            defined $self->In  ? $self->In
+          : defined $self->Out ? $self->Out
+          :   File::Temp->new( UNLINK => 1, SUFFIX => ".pem" );
+        my $src = defined $self->In ? "'$inf'" : "LDAP";
+
+        # create inf from ldap unless using -in
+        my $desc = defined $self->In ? "DH parameters" : $self->DHParamKey;
+        my $dhp;
+        if ( !defined $self->In ) {
+            $dhp = $self->getConfKey( $self->DHParamKey, $self->Global )
+              or return $self->error("no $desc in $src\n");
+            return $self->error("create $inf failed: $!\n")
+              unless $self->saveToFile( $inf, $dhp );
+        }
+
+        return $self->error("no $desc in $src\n")
+          unless -s $inf;
+
+        return $self->error("check $desc in $src failed\n")
+          unless $self->checkDHParam($inf);
+
+        # save now if we didn't earlier
+        if ( !defined $self->Out or $self->Out eq "-" ) {
+            return undef unless print( $self->getFromFile($inf) );
+        }
+        elsif ( defined $self->In and defined $self->Out ) {
+            return $self->error( "create '", $self->Out, "' failed: $!\n" )
+              unless $self->copyFile( $self->In, $self->Out );
+        }
+
+        return 1;
+    }
+
+    # set <-new [<numbits>]|-in <file>> [-out <file>]
+    # :: write PEM format DH params from <openssl|-in> to <LDAP|-out>
+    sub set {
+        my ($self) = @_;
+        _dpr( __PACKAGE__, "::set(@_)\n" ) if $self->Debug > 1;
+
+        my $inf =
+            defined $self->In  ? $self->In
+          : defined $self->Out ? $self->Out
+          :   File::Temp->new( UNLINK => 1, SUFFIX => ".pem" );
+        my $src = defined $self->In ? "'$inf'" : "openssl";
+
+        $self->getNewDHParam($inf) if ( !defined $self->In );
+
+        my $desc = defined $self->In ? "DH parameters" : $self->DHParamKey;
+        return $self->error("no $desc in $src\n")
+          unless -s $inf;
+
+        return $self->error("check $desc from $src failed\n")
+          if ( defined $self->In and !$self->checkDHParam($inf) );
+
+        if ( !defined $self->Out ) {
+            $self->saveConfKey( $self->DHParamKey, $self->Global, $inf )
+              or return $self->error("save to LDAP failed\n");
+        }
+
+        return 1;
+    }
+
+    # if copy fails and $! is not set, the files are the same
+    sub copyFile {
+        my ( $self, $from, $to ) = @_;
+        my $rc = File::Copy::copy( $from, $to );
+        return $self->error("copy '$from' to '$to' failed: $!\n")
+          if ( !$rc and $! );
+        warn("DEBUG: rc($rc) copy($from,$to)\n") if ( $self->Debug and !$rc );
+        return 1;
+    }
+
+    # saves to a file (or STDOUT)
+    sub saveToFile {
+        my ( $self, $file, $dhp ) = @_;
+        _dpr("saveToFile($file)\n") if $self->Debug;
+        Carp::confess("file not set") unless defined $file;
+
+        $self->out(
+            ( -w $file ? "(over)" : "" ) . "writing params to '$file'\n" )
+          if ( $file ne "-" and not ref($file) );
+
+        my $ofh;
+        if ( ref($file) ) {
+            $file->autoflush(1);
+            $ofh = $file;
+        }
+        else {
+            ( $file eq "-" )
+              ? open( $ofh, ">-" )
+              : open( $ofh, ">", $file );
+        }
+
+        return print {$ofh} $dhp;
+    }
+
+    # gets from a file (or STDIN)
+    sub getFromFile {
+        my ( $self, $file ) = @_;
+        _dpr("getFromFile(@_)\n") if $self->Debug;
+
+        my $ifh;
+        ( $file eq "-" )
+          ? open( $ifh, "<-" )
+          : open( $ifh, "<", $file );
+        return $self->error("getFromFile: read '$file' failed: $!\n")
+          unless $ifh;
+
+        my ( $data, $indhp ) = ( "", 0 );
+        while ( my $l = <$ifh> ) {
+            $l =~ s/\r?\n?$/\n/;
+            ++$indhp if ( $l =~ /BEGIN DH PARAMETERS/ );
+            $data .= $l if ($indhp);
+            last if ( $l =~ /END DH PARAMETERS/ );
+        }
+        _dpr("getFromFile: data:\n$data\n") if $self->Debug > 1;
+        return $data;
+    }
+
+    # have openssl dhparam parse data and check for errors
+    sub checkDHParam {
+        my ( $self, $file ) = @_;
+        Carp::confess("no DH param data\n") unless $file;
+
+        my @arg = $self->Debug ? ("-text") : ( "-check", ">/dev/null" );
+        my @out =
+          $self->run( $self->Openssl, "dhparam", "-in", $file, "-noout", @arg );
+        my $rc = $? >> 8;
+
+        $self->out(@out) if @out;
+        return $rc == 0 ? 1 : undef;
+    }
+
+    # generate DH parameters
+    sub getNewDHParam {
+        my ( $self, $file ) = @_;
+        return join( "",
+            $self->run( $self->Openssl, "dhparam", $self->New, "-out", $file )
+        );
+    }
+
+    sub run {
+        my ( $self, @command ) = @_;
+        if ( @command > 1 ) {
+            foreach (@command) {
+                next if ( $_ eq "2>&1" );           # allow
+                next if ( $_ eq ">/dev/null" );     # allow
+                next if ( $_ eq "2>/dev/null" );    # allow
+                if ( $_ =~ /[\'\`\?\*\$\\]/ ) {
+                    $_ = quotemeta;
+                }
+                elsif ( $_ =~ /\s/ ) {
+                    $_ = qq('$_');
+                }
+            }
+        }
+
+        my $cmd = join( " ", @command );
+        _dpr("run command: $cmd\n") if $self->Debug > 1;
+        my @r = qx($cmd);
+        _dpr( "run(rc=$?) results(#=", scalar @r, ")", @r ? ":\n@r" : "", "\n" )
+          if $self->Debug > 2;
+        return wantarray ? @r : "@r";
+    }
+
+    # args: $key global|server|$zimbra_server
+    sub getConfKey {
+        my ( $self, $key, $loc ) = @_;
+
+        my @args;
+        if ( $loc eq $self->Global ) {
+            push( @args, "getConfig" );
+        }
+        else {
+            $loc = $self->lc->get("zimbra_server_hostname")
+              if ( $loc eq "server" );
+            push( @args, "getServer", $loc );
+        }
+
+        _dpr("getting '$key' via zmprov @args\n") if $self->Debug;
+        my @err = $self->Debug ? () : "2>/dev/null";
+        my @out = $self->run( $self->Zmprov, @args, $key, @err );
+        return undef unless ( $? == 0 );
+
+        # base64, binary attr if type == "::"
+        my ( $val, $type ) = ( "", "" );
+        foreach my $line (@out) {
+            if ( $line =~ s/^$key(::?)\s+// ) {
+                $type = $1;
+            }
+            chomp($line) if ( $type eq "::" );
+            $val .= $line;
+        }
+
+        $val = MIME::Base64::decode_base64($val)
+          if ( $type eq "::" );
+
+        if ( defined $val ) {
+            my $ofh;
+        }
+        return $val;
+    }
+
+    sub saveConfKey {
+        my ( $self, $key, $loc, $file ) = @_;
+
+        my @args;
+        if ( $loc eq "global" ) {
+            push( @args, "modifyConfig" );
+        }
+        else {
+            $loc = $self->lc->get("zimbra_server_hostname")
+              if ( $loc eq "server" );
+            push( @args, "modifyServer", $loc );
+        }
+
+        $self->out("saving '$key' via zmprov @args\n");
+        my @err = $self->Debug ? () : "2>/dev/null";
+        my @out = $self->run( $self->Zmprov, @args, $key, $file, @err );
+        my $rc = $? >> 8;
+        return $rc == 0 ? 1 : undef;
+    }
+
+    # check executables
+    sub verifyExe {
+        my ( $self, @try ) = @_;
+        my $want = $try[0];
+        foreach my $exe (@try) {
+            if ( -x $exe ) {
+                $want = $exe;
+                last;
+            }
+        }
+        my $err = !-f $want ? $! : !-x $want ? "not executable" : undef;
+        die("verify executable '$want' failed: $err\n")
+          if ($err);
+        return $want;
+    }
+
+    1;
+}
+
+{
+
+    package Opts;
+
+    use strict;
+    use warnings;
+    use Cwd ();
+    use File::Basename qw(basename);
+    use Getopt::Long qw(GetOptions);
+    use Pod::Usage qw(pod2usage);
+
+    my $Prog;
+
+    sub new {
+        my ($class) = shift;
+        my $self = bless( {}, ref($class) || $class );
+        $self->{_data} = $self->_process_options(@_);
+        return $self;
+    }
+
+    sub data {
+        my ( $self, $key ) = @_;
+        if ($key) {
+            return $self->{_data}->{$key} if $self->{_data};
+            return undef;
+        }
+        return %{ $self->{_data} || {} };
+    }
+
+    sub usage {
+        my ( $self, @args ) = @_;
+        pod2usage(@_);
+    }
+
+    sub prog {
+        $Prog ||= basename($0);
+        return $Prog;
+    }
+
+    # get [-in <file>] [-out <file>]
+    # set <-new [<numbits>]|-in <file>> [-out <file>]
+    sub _process_options {
+        my ($self) = @_;
+        my ( %opt, @err );
+        my ( $cmd, $opts, @opts ) = ( "", [], "in=s", "out=s", "ldap" );
+        my %commands = (
+            "get" => { opts => \@opts },
+            "set" => { opts => [ @opts, "new:i" ] },
+        );
+
+        if ( !@ARGV or $ARGV[0] =~ /^-/ ) {
+            push( @err, "a command must be specified" );
+        }
+        elsif ( exists $commands{ $ARGV[0] } ) {
+            $cmd = $opt{command} = shift @ARGV;
+            $opts = $commands{$cmd}->{opts} if ( $commands{$cmd}->{opts} );
+        }
+
+        my $rc = GetOptions( \%opt, @$opts, "help", "man", "debug:1" );
+        usage( -exitval => 0, -verbose => 2 ) if ( $opt{man} );
+        usage( -exitval => 0, -verbose => 1 ) if ( $opt{help} );
+        usage( -exitval => 1, -verbose => 0 ) if ( !$rc );
+        push( @err, "unexpected argument(s): @ARGV" ) if @ARGV;
+
+        if (    defined $opt{in}
+            and defined $opt{out}
+            and !( $opt{in} eq "-" or $opt{out} eq "-" ) )
+        {
+            push( @err, "-in and -out can not match" )
+              if ( Cwd::abs_path( $opt{in} ) eq Cwd::abs_path( $opt{out} ) );
+        }
+
+        if ( $cmd eq "set" ) {
+            if ( defined $opt{new} and defined $opt{in} ) {
+                push( @err, "-new and -in are exclusive arguments" );
+            }
+            elsif ( !defined $opt{new} and !defined $opt{in} ) {
+                push( @err, "-new or -in must be specified" );
+            }
+        }
+
+        usage(
+            -verbose => 1,
+            -message => join( "\n", map( prog() . ": $_", @err ) )
+        ) if (@err);
+
+        $opt{prog} = $self->prog;
+        return \%opt;
+    }
+
+    1;
+}
+
+{
+
+    package LocalConfig;
+
+    use strict;
+    use warnings;
+    use Carp ();
+
+    sub new {
+        my ( $class, @attrs ) = @_;
+
+        my $lc = "/opt/zimbra/bin/zmlocalconfig";
+        die("unable to execute '$lc': $!\n") unless ( -x $lc );
+
+        my @cmd = ( $lc, qw(-s -q -m shell) );
+        open( my $fh, "-|", @cmd )
+          or die("open localconfig failed: $!\n");
+
+        my $self = bless( {}, ref($class) || $class );
+        my %conf;
+        @conf{@attrs} = undef if (@attrs);
+
+        while (<$fh>) {
+            chomp;
+            my ( $key, $val ) = split( /=/, $_, 2 );
+            $val =~ s/';$//;
+            $val =~ s/^'//;
+            if (@attrs) {
+                $conf{$key} = $val if ( exists $conf{$key} );
+            }
+            else {
+                $conf{$key} = $val;
+            }
+        }
+        Carp::confess("error: no data returned from local config")
+          unless ( keys %conf );
+        $self->{_data} = \%conf;
+        return $self;
+    }
+
+    # an empty/undefined value is ok/expected for localconfig
+    sub get {
+        my ( $self, @attrs ) = @_;
+
+        my @vals;
+        foreach my $attr (@attrs) {
+            my $val = $self->{_data}->{$attr};
+            push( @vals, $val );
+        }
+
+        return $vals[0] if ( @attrs == 1 );
+        return wantarray ? @vals : \@vals;
+    }
+
+    1;
+}
+
+=head1 SEE ALSO
+
+The following references may be useful when deciding on the number of
+bits to use for Diffie Hellman parameters.
+
+=over 4
+
+=item *
+
+L<https://bugzilla.zimbra.com/show_bug.cgi?id=99558>
+
+=item *
+
+L<https://www.openssl.org/docs/manmaster/apps/dhparam.html>
+
+=item *
+
+L<https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange>
+
+=item *
+
+L<https://wiki.mozilla.org/Security/Server_Side_TLS#Forward_Secrecy>
+
+=item *
+
+L<https://bettercrypto.org/>
+
+=item *
+
+L<http://www.keylength.com/>
+
+=back
+
+=cut
