@@ -16,22 +16,9 @@
 # ***** END LICENSE BLOCK *****
 #
 
-# Notes:
-# - no longer running as root
-# - removed chmod/chown calls and sets a proper umask
 # Potential Issues:
 # - Openssl bug/feature ignores $ENV{RANDFILE}
 #   TODO?: override RANDFILE in zmssl.cnf.in?
-#
-# Fixup for old perms...
-# * backupSSLDirs:
-#  chown -hR zimbra:zimbra /opt/zimbra/ssl/*
-#  chmod -R o-rwx /opt/zimbra/ssl
-# * zmcertmgr viewdeployedcrt
-#  chown zimbra:zimbra /opt/zimbra/mailboxd/etc/{keystore,mailboxd.der,mailboxd.pem}
-#  chmod 640 /opt/zimbra/mailboxd/etc/{keystore,mailboxd.der,mailboxd.pem}
-# * zmcertmgr deployca
-#  chown zimbra:zimbra /opt/zimbra/java/jre/lib/security/cacerts
 
 # Testing in an *new* install like scenario:
 # 1. Run these on a fresh install with LDAP *down*:
@@ -143,9 +130,28 @@ Valid services are 'all' or any of: ldap,mailboxd,mta,proxy.
 
 =item B<-subject> I<subject>
 
-The X.500 distinguished name (DN). See also RFC 2459.  The default is:
+The X.500 distinguished name (DN). The default is:
 
-  /C=US/ST=N\/A/L=N\/A/O=Zimbra Collaboration Server/OU=Zimbra Collaboration Server/CN=`zmhostname`
+  /OU=Zimbra Collaboration Server/CN=`zmhostname`
+
+This argument is passed as the '-subj' argument to I<openssl req> and
+thus must be formatted as /type0=value0/type1=value1/type2=...,
+characters may be escaped by \ (backslash), no spaces are skipped.
+
+Commonly used attributes include:
+
+  String X.500 AttributeType
+  ------ -------------------
+  C      countryName
+  ST     stateOrProvinceName
+  L      localityName
+  O      organizationName
+  OU     organizationalUnitName
+  CN     commonName
+
+For example:
+
+  /C=US/ST=NC/L=Mayberry/O=Sales/OU=Example, Inc./CN=www.example.com
 
 =item B<-subjectAltNames> I<subjectAltNames>
 
@@ -326,7 +332,7 @@ Then generate a certificate, signed by the CA, that expires in 1825
 days with either wild-card or subject altnames.
 
  $ zmcertmgr createcrt -new -days 1825 -subjectAltNames "*.example.com"
- $ zmcertmgr createcrt -new -days 1825 -subject "/C=US/ST=CA/L=NA/O=ZCS/OU=ZCS/CN=*.example.com"
+ $ zmcertmgr createcrt -new -days 1825 -subject "/C=US/ST=CA/O=Example/CN=*.example.com"
  $ zmcertmgr createcrt -new -days 1825 -subjectAltNames "host1.example.com,host2.example.com"
 
 =item 3.
@@ -340,6 +346,23 @@ Deploy the certificate to all nodes in the deployment.
 To finish, verify the certificate was deployed.
 
  $ zmcertmgr viewdeployedcrt
+
+=back
+
+=head1 SEE ALSO
+
+=over 4
+
+=item RFC 5280
+
+L<https://tools.ietf.org/html/rfc5280> - Internet X.509 Public Key
+Infrastructure Certificate and Certificate Revocation List (CRL)
+Profile
+
+=item RFC 4514
+
+L<https://tools.ietf.org/html/rfc4514> - LDAP String Representation of
+Distinguished Names
 
 =back
 
@@ -400,7 +423,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     use Carp           ();
     use Cwd            ();
     use File::Basename ();
-    use File::Copy qw(copy);
+    use File::Copy ();
     use File::Find ();
     use File::Path ();
     use File::Spec ();
@@ -420,11 +443,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
     sub _defaultSubject {
         my ($self) = @_;
-        my $lc     = $self->Localconfig;
-        my $org    = "Zimbra Collaboration Server";
-        my $svr    = $lc->get("zimbra_server_hostname");
-        my $na     = 'N\/A';
-        return "/C=US/ST=$na/L=$na/O=$org/OU=$org/CN=$svr";
+        my $svr = $self->Localconfig->get("zimbra_server_hostname");
+        return "/OU=Zimbra Collaboration Server/CN=$svr";
     }
 
     sub new {
@@ -866,9 +886,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             }
 
             # BUG?: need -fp behavior?
-            print("** Copying '$csrf' to '$file'\n");
-            return $self->error("copy '$csrf' to '$file' failed: $!\n")
-              unless File::Copy::copy( $csrf, $file );
+            $self->_copy( $csrf, $file )
+              or return undef;
         }
         return 1;
     }
@@ -941,10 +960,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             my $oldf = $self->sslFiles($fkey);
             my $newf = $self->sslFiles( "conf_" . $fkey );
             if ( -s $oldf ) {
-                print("** Copying '$oldf' to '$newf'\n");
-                File::Copy::copy( $oldf, $newf )
-                  or
-                  return $self->error("copy '$oldf' to '$newf' failed: $!\n");
+                $self->_copy( $oldf, $newf )
+                  or return undef;
             }
         }
 
@@ -1866,8 +1883,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         foreach my $key ( sort keys %prev ) {
             my ( $oldf, $newf ) = ( $prev{$key}, $self->sslFiles($key) );
             if ( -f $oldf ) {
-                File::Copy::copy( $oldf, $newf )
-                  or die("copy '$oldf' to '$newf' failed: $!\n");
+                $self->_copy( $oldf, $newf )
+                  or return undef;
             }
         }
         return 1;
