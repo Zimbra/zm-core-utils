@@ -57,8 +57,8 @@ Where valid command/option combinations are:
   viewstagedcrt <self|comm> [certfile]
   verifycrt     <self|comm> [[[priv_key] [certfile]] [ca_chain_file]]
 
-  verifycrtchain <ca_file> <certfile>
-  verifycrtkey  <key_file> <certfile>
+  verifycrtchain <ca_chain_file> <certfile>
+  verifycrtkey   <priv_key>      <certfile>
 
   viewdeployedcrt    [all|ldap|mailboxd|mta|proxy]
   checkcrtexpiration [all|ldap|mailboxd|mta|proxy] [-days days]
@@ -254,7 +254,11 @@ Shows a certificate signing request (CSR).
 
 =item B<verifycrt>
 
-Compares openssl sha256 <priv_key> and <certfile> modulus digests.
+Combines B<verifycrtkey> and B<verifycrtchain> verification (see below).
+
+=item B<verifycrtkey>
+
+Compares private key and certificate modulus digests.
 
 =item B<verifycrtchain>
 
@@ -1451,8 +1455,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     sub verifycrtchain {
         my ( $self, $cafile, $crtf ) = ( shift, @_ );
 
-        my $usage = "verifycrtchain <ca_file> <certfile>";
-        die("$usage: missing 'ca_file' argument\n")  unless ($cafile);
+        my $usage = "verifycrtchain <ca_chain_file> <certfile>";
+        die("$usage: missing 'ca_chain_file' argument\n")  unless ($cafile);
         die("$usage: missing 'certfile' argument\n") unless ($crtf);
         warn("DEBUG: verifycrtchain(@_)\n") if $self->Debug;
 
@@ -1477,8 +1481,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     sub verifycrtkey {
         my ( $self, $keyf, $crtf ) = ( shift, @_ );
 
-        my $usage = "verifycrtkey <key_file> <certfile>";
-        die("$usage: missing 'key_file' argument\n") unless ($keyf);
+        my $usage = "verifycrtkey <priv_key> <certfile>";
+        die("$usage: missing 'priv_key' argument\n") unless ($keyf);
         die("$usage: missing 'certfile' argument\n") unless ($crtf);
         warn("DEBUG: verifycrtkey(@_)\n") if $self->Debug;
 
@@ -2439,9 +2443,9 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 xinfo     => "[[[priv_key] [certfile]] [ca_chain_file]]",
             },
             "verifycrtchain" =>
-              { xargs => [2], xinfo => "<ca_file> <certfile>" },
+              { xargs => [2], xinfo => "<ca_chain_file> <certfile>" },
             "verifycrtkey" =>
-              { xargs => [2], xinfo => "<key_file> <certfile>" },
+              { xargs => [2], xinfo => "<priv_key> <certfile>" },
             "viewcsr" =>
               { need_type => undef, xargs => [ 0, 1 ], xinfo => "<csr_file>" },
             "viewstagedcrt" =>
