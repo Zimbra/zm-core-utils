@@ -123,7 +123,7 @@ bind_pw = ${ldap_postfix_password}
 timeout = 30
 EOF
 
-cat<<EOF > ${confdir}/ldap-scm.cf
+cat<<EOF > ${confdir}/ldap-canonical.cf
 server_host = ${ldap_url}
 server_port = ${ldap_port}
 search_base = 
