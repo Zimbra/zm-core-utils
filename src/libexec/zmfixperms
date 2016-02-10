@@ -256,7 +256,7 @@ if [ -d /opt/zimbra ]; then
       chmod 644 /opt/zimbra/conf/nginx.conf
     fi
 
-    for i in /opt/zimbra/conf/*-{scm,slm,transport,vad,vam,vmd,vmm}.cf; do
+    for i in /opt/zimbra/conf/*-{canonical,slm,transport,vad,vam,vmd,vmm}.cf; do
       printMsg "Fixing ownership and permissions on ${i}"
       chgrp -f ${postfix_owner} ${i}
       chmod 640 ${i}
