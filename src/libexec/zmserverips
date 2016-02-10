@@ -24,7 +24,7 @@ use strict;
 use warnings;
 use File::Basename qw(basename);
 use Getopt::Long qw(GetOptionsFromArray);
-use NetAddr::IP ();
+use NetAddr::IP qw(:lower);
 use Pod::Usage qw(pod2usage);
 
 my %opt;
@@ -77,19 +77,22 @@ sub enumerate {
         chomp;
         my ( $type, $ipmask, undef ) = split( " ", $_,      3 );
         my ( $ip,   $mask,   undef ) = split( "/", $ipmask, 3 );
-        my $maskl;
 
         if ( $type eq "inet" ) {
-            $mask  = NetAddr::IP->new($ipmask)->mask;
-            $maskl = NetAddr::IP->new($ipmask)->masklen;
+            $mask = NetAddr::IP->new($ipmask)->mask;
         }
-        else {
-            $maskl = $mask;
+        if ( $opt{networks} ) {
+            if ( $type eq "inet" ) {
+                $ip = NetAddr::IP->new($ipmask)->network;
+            }
+            else {
+                $ip = NetAddr::IP->new($ipmask)->network->short;
+            }
         }
         if ( $type eq "inet6" && $opt{networks} ) {
-            $ip = "[" . $ip . "]";
+            $ip = "[" . $ip . "]" . "/" . $mask;
         }
-        push( @iface, [ $ip, $mask, $maskl ] );
+        push( @iface, [ $ip, $mask ] );
     }
     return \@iface;
 }
@@ -98,7 +101,7 @@ sub print_output {
     my ( $class, $ifs ) = @_;
     if ( $opt{networks} ) {
         foreach my $if ( @{ $ifs || [] } ) {
-            print( $if->[0], "/", $if->[2], "\n" );
+            print( $if->[0], "\n" );
         }
     }
     else {
@@ -138,9 +141,9 @@ The following is an example of the output:
  addr:10.1.5.9 Mask:255.255.255.0
 
 The following is an example of the output with --networks:
-  127.0.0.1/8
+  127.0.0.0/8
   [::1]/128
-  10.1.5.9/24
+  10.1.5.0/24
 
 =head1 SEE ALSO
 
