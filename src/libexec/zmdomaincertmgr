@@ -103,15 +103,17 @@ loadConfigKey() {
   fi
   TMPDIR=${zimbra_tmp_directory}
   local tmpfile=`mktemp -t zmcertmgr.XXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
-  if [ ! -s ${file} ]; then
-    echo -n "** Retrieving $location config key $key..."
-    /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} "${key}" | sed  -e "s/^${key}: //" > ${tmpfile} 2> /dev/null && mv -f ${tmpfile} ${file} 2> /dev/null
-    if [ $? = 0 -a -s "${file}" ]; then
-      chmod 400 ${file} 2> /dev/null
-      echo "done."
-    else
-      echo "failed."
-    fi
+  if [ -s ${file} ]; then
+    cp -a ${file} ${file}.$(date +%Y%m%d)
+  fi
+  echo -n "** Retrieving $location config key $key..."
+  /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} "${key}" | sed  -e "s/^${key}: //" > ${tmpfile} 2> /dev/null
+  if [ $? = 0 -a -s "${tmpfile}" ]; then
+    chmod 400 ${tmpfile}
+    mv -f ${tmpfile} ${file}
+    echo "done."
+  else
+    echo "failed."
   fi
   rm -f ${tmpfile} 2> /dev/null
 }
