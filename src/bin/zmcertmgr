@@ -132,7 +132,10 @@ Valid services are 'all' or any of: ldap,mailboxd,mta,proxy.
 
 The X.500 distinguished name (DN). The default is:
 
-  /OU=Zimbra Collaboration Server/CN=`zmhostname`
+ CA:
+  /O=CA/OU=Zimbra Collaboration Server/CN=`zmhostname`
+ Server:
+       /OU=Zimbra Collaboration Server/CN=`zmhostname`
 
 This argument is passed as the '-subj' argument to I<openssl req> and
 thus must be formatted as /type0=value0/type1=value1/type2=...,
@@ -152,6 +155,10 @@ Commonly used attributes include:
 For example:
 
   /C=US/ST=NC/L=Mayberry/O=Sales/OU=Example, Inc./CN=www.example.com
+
+Note: the DN of the CA (issuer) must be different than the DN of the
+server (subject) to avoid MS windows based clients from throwing a SSL
+error similar to, "This certificate has invalid digital signature."
 
 =item B<-subjectAltNames> I<subjectAltNames>
 
@@ -448,7 +455,8 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     sub _defaultSubject {
         my ($self) = @_;
         my $svr = $self->Localconfig->get("zimbra_server_hostname");
-        return "/OU=Zimbra Collaboration Server/CN=$svr";
+        my $o = $self->Command eq "createca" ? "/O=CA" : "";
+        return "$o/OU=Zimbra Collaboration Server/CN=$svr";
     }
 
     sub new {
@@ -504,8 +512,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             $self->Days( $self->$daymethod );
         }
 
-        $self->Digest( $self->_defaultDigest )   if !$self->Digest;
-        $self->Subject( $self->_defaultSubject ) if !$self->Subject;
+        $self->Digest( $self->_defaultDigest ) if !$self->Digest;
 
         # hard coded "options"
         my $home = $self->Home("/opt/zimbra");
@@ -1457,7 +1464,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my ( $self, $cafile, $crtf ) = ( shift, @_ );
 
         my $usage = "verifycrtchain <ca_chain_file> <certfile>";
-        die("$usage: missing 'ca_chain_file' argument\n")  unless ($cafile);
+        die("$usage: missing 'ca_chain_file' argument\n") unless ($cafile);
         die("$usage: missing 'certfile' argument\n") unless ($crtf);
         warn("DEBUG: verifycrtchain(@_)\n") if $self->Debug;
 
@@ -2315,7 +2322,9 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
     }
 
     sub Subject {
-        ( @_ > 1 ) ? $_[0]->{Subject} = $_[1] : $_[0]->{Subject};
+        my ( $self, $subj ) = @_;
+        $self->{Subject} = $subj if ( @_ > 1 );
+        defined $self->{Subject} ? $self->{Subject} : $self->_defaultSubject;
     }
 
     # do not force zmhostname in SAN when using -noDefaultSubjectAltName
