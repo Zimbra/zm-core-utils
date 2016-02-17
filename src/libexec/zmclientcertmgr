@@ -205,6 +205,7 @@ getClientCertFromLdap() {
 }
 
 usage () {
+  rc=${1:-1}
   echo "Usage:
   $0 -h | --help
   $0 savecrt <domain> <cert file>
@@ -214,24 +215,28 @@ usage () {
   $0 cleancrt server
   $0 cleancrt global
 "
-  exit 1;
+  exit $rc;
 }
 
 ###Main Execution###
 
-if [ $# = 0 ]; then
+if [[ $# = 0 ]]; then
   usage
 fi
 
-ACTION=$1
+ACTION="$1"
 shift
 
 # check for valid usage
-if [ "$ACTION" = "savecrt" ]; then
+if [[ "$ACTION" = "savecrt" ]]; then
   saveClientCertToLdap "$@"
-elif [ "$ACTION" = "cleancrt" ]; then
+elif [[ "$ACTION" = "cleancrt" ]]; then
   cleanClientCertFromLdap "$@"
 else
+  for arg in "$ACTION" "$@"; do
+    [[ "$arg" =~ ^-?-h ]] && usage 0
+  done
+  echo "$ERROR_PREFIX unknown argument(s): $ACTION $@"
   usage
 fi
 
