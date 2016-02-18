@@ -80,12 +80,18 @@ case "$1" in
 
     # read the last line of nginx.conf which indicates the conf gen result
     res=`tail -n 1 ${configfile}`
+    warn=''
+
     if ! [[ $res =~ __SUCCESS__ ]]; then
+      msg=`echo $res | awk -F ':' '{print $2}'`
+      if [ x"$msg" = "x" ]; then msg="unknown"; fi
+      if ! [[ $res =~ "No available nginx lookup handlers could be contacted" ]]; then
         echo "failed."
-        msg=`echo $res | awk -F ':' '{print $2}'`
-        if [ x"$msg" = "x" ]; then msg="unknown"; fi
         echo "nginx start failed. reason: $msg"
         exit 1
+      else
+        warn=$msg
+      fi
     fi
 
     sudo /opt/zimbra/common/sbin/nginx -c ${configfile}
@@ -98,6 +104,9 @@ case "$1" in
     done
     if [ "x$pid" != "x" ]; then
       echo "done."
+      if [ x"$warn" != "x" ]; then
+        echo "Warning: $warn"
+      fi
       exit 0
     else
       echo "failed."
