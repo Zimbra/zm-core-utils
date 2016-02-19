@@ -286,7 +286,7 @@ sub usage {
         additional options.
   -r: RID is a unique Integer Replication ID for this replication
         agreement.  It must be unique inside this server.
-        Example: 100 Default: 100. Must be 100 or greater.
+        Example: 100. Must be 100 or greater.
   -p: providerURI is the LDAP URI for the master.
         Example: ldap://ldap-provider.example.com:389/
   -t: set startTLS to critical (required) or off (disabled)
