@@ -32,7 +32,7 @@ zimbra_conf_directory=/opt/zimbra/conf
 exp_thres_days=${zimbra_zmcertmgr_expiration_threshold:=30}
 exp_thres_secs=$(($exp_thres_days*24*60*60))
 
-zimbra_domain_cert_directory=${zimbra_conf_directory}/domaincerts
+zimbra_domain_cert_directory="${zimbra_conf_directory}/domaincerts"
 
 if [ -x "/opt/zimbra/common/bin/openssl" ]; then
   openssl=/opt/zimbra/common/bin/openssl
@@ -43,7 +43,7 @@ fi
 # this avoid "unable to write 'random state' errors from openssl
 export RANDFILE=/opt/zimbra/ssl/.rnd
 
-ERROR_PREFIX="XXXXX ERROR:"
+ERROR_PREFIX="ERROR:"
 
 if [ -f "${zimbra_java_home}/lib/security/cacerts" ]; then
   CACERTS=${zimbra_java_home}/lib/security/cacerts
@@ -74,7 +74,7 @@ saveConfigKey() {
   fi
 
   echo -n "** Saving $location config key $key..."
-  /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} "${key}" "$content" 2> /dev/null
+  /opt/zimbra/bin/zmprov -m -l ${zmprov_opts} "${key}" "$content" 2> /dev/null
   if [ $? = 0 ]; then
     echo "done."
   else
@@ -107,7 +107,7 @@ loadConfigKey() {
     cp -a ${file} ${file}.$(date +%Y%m%d)
   fi
   echo -n "** Retrieving $location config key $key..."
-  /opt/zimbra/bin/zmprov -m -l -- ${zmprov_opts} "${key}" | sed  -e "s/^${key}: //" > ${tmpfile} 2> /dev/null
+  /opt/zimbra/bin/zmprov -m -l ${zmprov_opts} "${key}" | sed  -e "s/^${key}: //" > ${tmpfile} 2> /dev/null
   if [ $? = 0 -a -s "${tmpfile}" ]; then
     chmod 400 ${tmpfile}
     mv -f ${tmpfile} ${file}
@@ -119,18 +119,23 @@ loadConfigKey() {
 }
 
 deployCerts() {
-
-  if [ "x$1" = "x-force" ]; then
-    rm -rf ${zimbra_domain_cert_directory} > /dev/null 2>&1
+  if [ "x$1" = "x-force" ] && [ -d "${zimbra_domain_cert_directory}" ]; then
+    rm -rf "${zimbra_domain_cert_directory}" > /dev/null 2>&1
   fi
 
-  DOMAINS=$(/opt/zimbra/bin/zmprov -m -l -- garpd | awk '{print $1}')
+  DOMAINS=$(/opt/zimbra/bin/zmprov -m -l garpd | awk '{print $1}')
   if [ $? != 0 ]; then
-    echo "Unable to retrieve list of domains with SSL certificates";
+    echo "$ERROR_PREFIX zmprov -m -l getAllReverseProxyDomains failed (rc=$?)."
     exit 1
   fi
 
-  for i in ${DOMAINS}; do
+  if [ "$DOMAINS" = "" ]; then
+    echo "No domains returned by zmprov getAllReverseProxyDomains."
+    echo "Consider setting zimbraVirtualHostname."
+    exit 1
+  fi
+
+  for i in $DOMAINS; do
     echo -n "** Deploying cert for ${i}..."
     getDomainCertFromLdap $i > /dev/null 2>&1
     if [ $? = 0 ]; then
@@ -138,7 +143,6 @@ deployCerts() {
     else
       echo "failed."
     fi
-
   done
 }
 
@@ -168,11 +172,11 @@ getDomainCertFromLdap() {
   if [ x"$domain" = "x" ]; then
     echo "$ERROR_PREFIX Domain must be specified"
   fi
-  if [ ! -d ${zimbra_domain_cert_directory} ]; then
-    mkdir -m 755 -p ${zimbra_domain_cert_directory}
+  if [ ! -d "${zimbra_domain_cert_directory}" ]; then
+    mkdir -m 755 -p "${zimbra_domain_cert_directory}"
   fi
-  current_crt=${zimbra_domain_cert_directory}/${domain}.crt
-  current_key=${zimbra_domain_cert_directory}/${domain}.key
+  current_crt="${zimbra_domain_cert_directory}/${domain}.crt"
+  current_key="${zimbra_domain_cert_directory}/${domain}.key"
 
   loadConfigKey "zimbraSSLCertificate" ${current_crt} "domain" ${domain}
   loadConfigKey "zimbraSSLPrivateKey" ${current_key} "domain" ${domain}
@@ -404,7 +408,7 @@ verifycrtkey() {
           key=${server_key}
       elif [ "$type" = "comm" ]; then
           key=${commercial_key}
-        fi
+      fi
     fi
 
    if [ x"${crt}" = "x" ] ; then
@@ -412,7 +416,7 @@ verifycrtkey() {
           crt=${server_crt}
       elif [ "$type" = "comm" ]; then
           crt=${commercial_crt}
-        fi
+      fi
     fi
 
   fi
@@ -469,7 +473,7 @@ usage () {
   echo "-  savecrt"
   echo
 
-  exit 1;
+  exit 1
 }
 
 
