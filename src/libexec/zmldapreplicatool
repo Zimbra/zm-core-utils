@@ -72,7 +72,8 @@ my $zimbra_require_interprocess_security =
   $localxml->{key}->{zimbra_require_interprocess_security}->{value};
 chomp( $ldap_is_master, $ldap_root_password, $ldap_replication_password );
 
-usage(0) if ( lc($ldap_is_master) eq "true" );
+die "ERROR: Cannot be used on a LDAP master.\n"
+  if ( lc($ldap_is_master) eq "true" );
 
 my %providers;
 
@@ -225,31 +226,12 @@ if ($modify) {
                 $tls = "starttls=critical";
             }
         }
-    }
-    else {
-        if ( $providerURI && $providerURI !~ /^ldaps/ ) {
-            if (   $ldap_starttls_supported
-                && $zimbra_require_interprocess_security )
-            {
-                $tls = "starttls=critical";
-            }
+        if ( $tls =~ /starttls/ && $providers{$rid}{entry} !~ /starttls/ ) {
+            $providers{$rid}{entry} =~ s/filter=/$tls filter=/;
         }
-        else {
-            if ( $providers{$rid}{provider} !~ /^ldaps/ ) {
-                if (   $ldap_starttls_supported
-                    && $zimbra_require_interprocess_security )
-                {
-                    $tls = "starttls=critical";
-                }
-            }
+        elsif ( $tls !~ /starttls/ && $providers{$rid}{entry} =~ /starttls/ ) {
+            $providers{$rid}{entry} =~ s/starttls=critical //;
         }
-    }
-
-    if ( $tls =~ /starttls/ && $providers{$rid}{entry} !~ /starttls/ ) {
-        $providers{$rid}{entry} =~ s/filter=/$tls filter=/;
-    }
-    elsif ( $tls !~ /starttls/ && $providers{$rid}{entry} =~ /starttls/ ) {
-        $providers{$rid}{entry} =~ s/starttls=critical //;
     }
 
     if ($providerURI) {
