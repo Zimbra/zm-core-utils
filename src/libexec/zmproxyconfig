@@ -261,8 +261,7 @@ if ($options{e}) {
                  "zimbraPop3SSLProxyBindPort $p4 ".
                  "zimbraImapCleartextLoginEnabled TRUE ".
                  "zimbraPop3CleartextLoginEnabled TRUE ".
-                 "zimbraReverseProxyLookupTarget TRUE ".
-                 "zimbraReverseProxyMailEnabled TRUE\n";
+                 "zimbraReverseProxyLookupTarget TRUE\n";
             }
             if ($options{w}) {
                ($proxyMailMode, $storeMailMode) = getMailMode($SSLToUp);
@@ -275,8 +274,7 @@ if ($options{e}) {
                "zimbraMailSSLProxyPort $w4 ".
                "zimbraMailMode $storeMailMode ".
                "zimbraReverseProxyMailMode $proxyMailMode ".
-               "zimbraReverseProxyLookupTarget TRUE ".
-               "zimbraReverseProxyHttpEnabled TRUE\n";
+               "zimbraReverseProxyLookupTarget TRUE\n";
 
                if ($options{C}) {
                    print ZMPROV "ms $hostname ".
@@ -353,8 +351,7 @@ if ($options{e}) {
                  "zimbraPop3BindPort $p1 ".
                  "zimbraPop3ProxyBindPort $p2 ".
                  "zimbraPop3SSLBindPort $p3 ".
-                 "zimbraPop3SSLProxyBindPort $p4 ".
-                 "zimbraReverseProxyMailEnabled TRUE\n";
+                 "zimbraPop3SSLProxyBindPort $p4\n";
      	   }
             if ($options{w}) {
                 ($proxyMailMode, $storeMailMode) = getMailMode($SSLToUp);
@@ -364,8 +361,7 @@ if ($options{e}) {
                  "zimbraMailProxyPort $w2 ".
                  "zimbraMailSSLPort $w3 ".
                  "zimbraMailSSLProxyPort $w4 ".
-                 "zimbraReverseProxyMailMode $proxyMailMode ".
-                 "zimbraReverseProxyHttpEnabled TRUE\n";
+                 "zimbraReverseProxyMailMode $proxyMailMode\n";
 
                if ($options{C}) {
                    print ZMPROV "ms $hostname ".
@@ -422,8 +418,7 @@ if ($options{d}) {
             "zimbraPop3BindPort $p1 ".
             "zimbraPop3ProxyBindPort $p2 ".
             "zimbraPop3SSLBindPort $p3 ".
-            "zimbraPop3SSLProxyBindPort $p4 ".
-            "zimbraReverseProxyMailEnabled FALSE\n";
+            "zimbraPop3SSLProxyBindPort $p4\n";
           if ($options{s}) {
             print ZMPROV "ms $hostname ".
               "zimbraImapCleartextLoginEnabled FALSE ".
@@ -442,8 +437,7 @@ if ($options{d}) {
             "zimbraMailSSLPort $w3 ".
             "zimbraMailSSLProxyPort $w4 ".
             "zimbraMailMode $storeMailMode ".
-            "zimbraReverseProxyMailMode $storeMailMode ".
-            "zimbraReverseProxyHttpEnabled FALSE\n";
+            "zimbraReverseProxyMailMode $storeMailMode\n";
 
             #once web proxy is disabled, admin console proxy will be disabled for sure
             print ZMPROV "ms $hostname ".
@@ -451,15 +445,9 @@ if ($options{d}) {
                 "zimbraAdminPort $n1 ".
                 "zimbraAdminProxyPort $n2\n";
        }
-       $enabledHTTPProxy = getLdapServerValue("zimbraReverseProxyHttpEnabled");
-       $enabledMailProxy = getLdapServerValue("zimbraReverseProxyMailEnabled");
-       if ($enabledHTTPProxy eq "FALSE" && $enabledMailProxy eq "FALSE" && isEnabled("zimbra-proxy")) {
+       if (isEnabled("zimbra-proxy")) {
             print ZMPROV "ms $hostname ".
                "-zimbraServiceEnabled proxy\n";
-       }
-       if ($enabledHTTPProxy eq "FALSE" && $enabledMailProxy eq "FALSE") {
-            print ZMPROV "ms $hostname ".
-               "zimbraReverseProxyLookupTarget FALSE\n";
        }
   } else {
        if (isEnabled("zimbra-store") || (isInstalled("zimbra-store") && $options{o})) {
@@ -513,8 +501,7 @@ if ($options{d}) {
                  "zimbraPop3BindPort $p1 ".
                  "zimbraPop3ProxyBindPort $p2 ".
                  "zimbraPop3SSLBindPort $p3 ".
-                 "zimbraPop3SSLProxyBindPort $p4 ".
-                 "zimbraReverseProxyMailEnabled FALSE\n";
+                 "zimbraPop3SSLProxyBindPort $p4\n";
      	   }
      	   if ($options{w}) {
                  if ($options{x}) {
@@ -526,8 +513,7 @@ if ($options{d}) {
                  "zimbraMailProxyPort $w2 ".
                  "zimbraMailSSLPort $w3 ".
                  "zimbraMailSSLProxyPort $w4 ".
-                 "zimbraReverseProxyMailMode $proxyMailMode ".
-                 "zimbraReverseProxyHttpEnabled FALSE\n";
+                 "zimbraReverseProxyMailMode $proxyMailMode\n";
 
                  #once web proxy is disabled, admin console proxy will be disabled for sure
                  print ZMPROV "ms $hostname ".
@@ -535,9 +521,7 @@ if ($options{d}) {
                    "zimbraAdminPort $n1 ".
                    "zimbraAdminProxyPort $n2\n";
             }
-            $enabledHTTPProxy = getLdapServerValue("zimbraReverseProxyHttpEnabled");
-            $enabledMailProxy = getLdapServerValue("zimbraReverseProxyMailEnabled");
-            if ($enabledHTTPProxy eq "FALSE" && $enabledMailProxy eq "FALSE" && isEnabled("zimbra-proxy")) {
+            if (isEnabled("zimbra-proxy")) {
                  print ZMPROV "ms $hostname ".
                     "-zimbraServiceEnabled proxy\n";
             }
