@@ -51,7 +51,6 @@ extended=no
 verbose=no
 
 components="\
-  common \
   keyview \
   conf/crontabs \
   common/lib/jylibs \
