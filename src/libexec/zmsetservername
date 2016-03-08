@@ -166,8 +166,10 @@ if (!$usersonly) {
   if (!-f "/opt/zimbra/ssl/zimbra/commercial/commercial.crt") {
     if(lc($c{ldap_is_master}) eq "true") {
       runCommand("$c{zmcertmgr} createca -new");
+      runCommand("$c{zmcertmgr} deployca");
     }
-    runCommand("$c{zmcertmgr} createcrt self -new");
+    runCommand("$c{zmcertmgr} createcrt -new");
+    runCommand("$c{zmcertmgr} deploycrt self -allserver");
   }
 } else {
   modifyAccountData($newServerName);
@@ -258,27 +260,6 @@ sub modifyServerName($) {
         replace => {zimbraServiceHostname => "$server"},
         );
       print ($result->code() ? "failed.\n" : "done.\n");
-    }
-    print("Updating zimbraMtaAuthHost attribute\n") if ($verbose > 1);
-    $result = $ldap->search(base => $server_base,
-      scope =>'one',
-      attrs => ['cn'],
-      filter => "(&(objectClass=zimbraServer)(zimbraMtaAuthHost=$c{zimbra_server_hostname}))");
-    return $result if ($result->code());
-    foreach my $entry ($result->all_entries) {
-      print "Updating zimbraMtaAuthHost for ", $entry->dn(), "...";
-      addLdapServerConfig($entry->get_value("cn"), "zimbraMtaAuthHost", "$server");
-      removeLdapServerConfig($entry->get_value("cn"), "zimbraMtaAuthHost","$c{zimbra_server_hostname}");
-    }
-    $result = $ldap->search(base => $config_base,
-      scope =>'base',
-      attrs => ['1.1'],
-      filter => "(&(objectClass=zimbraGlobalConfig)(zimbraMtaAuthHost=$c{zimbra_server_hostname}))");
-    return $result if ($result->code());
-    foreach my $entry ($result->all_entries) {
-      print "Updating zimbraMtaAuthHost for ", $entry->dn(), "...";
-      addLdapGlobalConfig("zimbraMtaAuthHost", "$server");
-      removeLdapGlobalConfig("zimbraMtaAuthHost","$c{zimbra_server_hostname}");
     }
     print("Updating zimbraConvertdURL attribute\n") if ($verbose > 1);
     $result = $ldap->search(base => $zimbra_base,
