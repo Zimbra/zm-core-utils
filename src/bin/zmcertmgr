@@ -848,12 +848,12 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             "-policy",              "policy_anything",
             "-days",                $self->Days,
             "-md",                  $self->Digest,
-            "-config",              $self->sslFiles("ssl_conf_ca"),
+            "-config",              $self->sslFiles("ssl_conf_cert"),
             "-in",                  $self->sslFiles("self_csr"),
             "-out",                 $self->sslFiles("self_crt"),
             "-cert",                $self->sslFiles("ca_crt"),
             "-keyfile",             $self->sslFiles("ca_key"),
-            "-extfile",             $self->sslFiles("ssl_conf_ca"),
+            "-extfile",             $self->sslFiles("ssl_conf_cert"),
             qw(-extensions v3_req), "2>&1"
         );
 
