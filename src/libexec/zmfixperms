@@ -222,6 +222,17 @@ if [ -d /opt/zimbra ]; then
       chmod 444 /opt/zimbra/conf/attrs/zimbra-attrs.xml
     fi
 
+    if [ -d /opt/zimbra/conf/ca ]; then
+      printMsg "Fixing permissions on /opt/zimbra/conf/ca"
+      chmod 755 /opt/zimbra/conf/ca
+      for i in /opt/zimbra/conf/ca/*.{crt,pem}; do
+        if [ -f "$i" ]; then
+          printMsg "Fixing permissions on ${i}"
+          chmod 644 "${i}"
+        fi
+      done
+    fi
+
     if [ -d /opt/zimbra/conf/spamassassin ]; then
       printMsg "Fixing permissions on /opt/zimbra/conf/spamassassin"
       chmod 755 /opt/zimbra/conf/spamassassin
