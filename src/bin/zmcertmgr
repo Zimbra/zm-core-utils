@@ -431,15 +431,18 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
     use strict;
     use warnings;
-    use Carp           ();
-    use Cwd            ();
+
+    use Carp ();
+    use Cwd  ();
+
     use File::Basename ();
-    use File::Copy ();
-    use File::Find ();
-    use File::Path ();
-    use File::Spec ();
-    use File::stat ();
-    use POSIX      ();
+    use File::Copy     ();
+    use File::Find     ();
+    use File::Path     ();
+    use File::Spec     ();
+    use File::stat     ();
+
+    use POSIX ();
 
     #use LocalConfig (); # inline
 
@@ -967,19 +970,23 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         }
 
         # copy to conf_ca_key and conf_ca_crt
+        # - set mask to create world readable files (after key handling)
+        my $omask = umask;
         print("** Copying CA to $caconfd\n");
+        my $err = 0;
         foreach my $fkey (qw(ca_key ca_crt)) {
             my $oldf = $self->sslFiles($fkey);
             my $newf = $self->sslFiles( "conf_" . $fkey );
             if ( -s $oldf ) {
                 $self->_copy( $oldf, $newf )
-                  or return undef;
+                  or $err++;
             }
+            umask(0022);    # open up mask after handling the key
         }
 
         my $file = $self->sslFiles("conf_ca_crt");
-        if ( -s $file ) {
-            $self->makeCAHashLink($file) or return undef;
+        if ( !$err and -s $file ) {
+            $self->makeCAHashLink($file) or $err++;
         }
         else {
             warn("DEBUG: CA '$file' does not exist or is empty\n")
@@ -988,7 +995,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         # break concatenated PEM into parts: name.pem -> name_#.pem
         my $ifile = $self->sslFiles("comm_ca_crt");
-        if ( -s $ifile ) {
+        if ( !$err and -s $ifile ) {
             my ( $name, $idir, $ext ) =
               File::Basename::fileparse( $ifile, '\.[^.]*$' );
             my $odir = $caconfd;
@@ -998,17 +1005,20 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 $i++;
                 my $ofile = File::Spec->catfile( $odir, $name . "_$i" . $ext );
                 print("** Creating $ofile\n");
-                open( my $ofh, ">", $ofile )
-                  or
-                  return $self->error("installCA: open '$ofile' failed: $!\n");
-                print {$ofh} $cert;
-                close($ofh);
-
-                $self->makeCAHashLink($ofile)
-                  or return undef;
+                if ( open( my $ofh, ">", $ofile ) ) {
+                    print {$ofh} $cert;
+                    close($ofh);
+                    $self->makeCAHashLink($ofile)
+                      or $err++;
+                }
+                else {
+                    $self->error("installCA: open '$ofile' failed: $!\n");
+                    $err++;
+                }
             }
         }
-        return 1;
+        umask($omask);    # reset umask
+        return $err ? undef : 1;
     }
 
     # deployCA [-localonly]
@@ -1465,7 +1475,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         my $usage = "verifycrtchain <ca_chain_file> <certfile>";
         die("$usage: missing 'ca_chain_file' argument\n") unless ($cafile);
-        die("$usage: missing 'certfile' argument\n") unless ($crtf);
+        die("$usage: missing 'certfile' argument\n")      unless ($crtf);
         warn("DEBUG: verifycrtchain(@_)\n") if $self->Debug;
 
         print("** Verifying '$crtf' against '$cafile'\n");
@@ -2025,17 +2035,29 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my $zu = ( getpwnam($zn) )[2];
         my ( $err, $etag ) = ( 0, "initSSLDirs" );
 
+        my $caconfd = $self->sslDirs("ca_conf_dir");
         foreach my $dir (@dirs) {
+            my $e = 0;
             if ( -d $dir ) {
                 $self->_checkStat( $etag, $dir, $zn, $zu )
-                  or $err++;
-                next;
+                  or $e++;
             }
-            print("** Creating directory '$dir'\n");
-            unless ( File::Path::make_path($dir) ) {
-                $self->error("$etag: mkdir '$dir' failed: $!\n");
-                $err++;
+            else {
+                print("** Creating directory '$dir'\n");
+                unless ( File::Path::make_path($dir) ) {
+                    $self->error("$etag: mkdir '$dir' failed: $!\n");
+                    $e++;
+                }
             }
+
+            # special case conf/ca permissions to be world r-x
+            if ( !$e and $dir eq $caconfd ) {
+                unless ( chmod( 0755, $dir ) ) {
+                    $self->error("$etag: chmod(0755) '$dir' failed: $!\n");
+                    $e++;
+                }
+            }
+            $err += $e;
         }
 
         # BUG?: do anything special with index.txt?
@@ -2074,6 +2096,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             my $confd = $self->confDir;
 
             $self->{sslDirs} = {
+                ca_conf_dir  => "$confd/ca",    # deployed ca
                 ca_directory => "$based/ca",    # zimbra_ca_directory
                 comm_cert_directory =>
                   "$based/commercial",          # zimbra_comm_cert_directory
@@ -2081,10 +2104,6 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                   "$based/server",              # zimbra_self_cert_directory
                 ssl_directory => $based,        # zimbra_ssl_directory
             };
-
-            # only needed when deploying the ca
-            $self->{sslDirs}->{ca_conf_dir} = "$confd/ca"    # was hardcoded
-              if ( $self->Command =~ /^deploy/ );
 
             my $mbdir = $self->Home . "/mailboxd/webapps/zimbraAdmin";
             my $dldir = -d $mbdir ? $mbdir : $self->Home . "/data";
@@ -2102,15 +2121,12 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         if ( !$self->{sslFiles} ) {
             my $etcdir  = $self->Home . "/mailboxd/etc";
             my $confdir = $self->confDir;
+            my $confcad = $self->sslDirs("ca_conf_dir");
             my $cadir   = $self->sslDirs("ca_directory");
             my $commdir = $self->sslDirs("comm_cert_directory");
             my $downdir = $self->sslDirs("csr_download_directory");
             my $selfdir = $self->sslDirs("self_cert_directory");
             my $ssldir  = $self->sslDirs("ssl_directory");
-            my $confcad =
-              ( $self->Command =~ /^deploy/ )
-              ? $self->sslDirs("ca_conf_dir")
-              : undef;
 
             $self->{sslFiles} = {
 
@@ -2150,18 +2166,16 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 cacerts  => $self->lc->get("mailboxd_truststore"),
                 keystore => $self->lc->get("mailboxd_keystore"),
 
+                # deployed CA
+                conf_ca_crt => "$confcad/ca.pem",
+                conf_ca_key => "$confcad/ca.key",
+
                 # OLD: cs{r,t}_download_file, ca_chain_download_file
                 $downdir
                 ? (
                     download_csr   => "$downdir/current.csr",
                     download_crt   => "$downdir/current.crt",
                     download_chain => "$downdir/current_chain.crt",
-                  )
-                : (),
-                $confcad
-                ? (
-                    conf_ca_crt => "$confcad/ca.pem",
-                    conf_ca_key => "$confcad/ca.key",
                   )
                 : (),
             };
