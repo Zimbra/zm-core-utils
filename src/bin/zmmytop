@@ -45,11 +45,11 @@ fi
 source `dirname $0`/zmshutil || exit 1
 zmsetvars
 
-if [ -x "/opt/zimbra/mariadb/bin/mytop" ]; then
+if [ -x "/opt/zimbra/common/bin/mytop" ]; then
   if [ x"$1" = "x-r" ]; then
     shift
-    /opt/zimbra/mariadb/bin/mytop -u root -S $mysql_socket -p $mysql_root_password $@
+    /opt/zimbra/common/bin/mytop -u root -S $mysql_socket -p $mysql_root_password $@
   else
-    /opt/zimbra/mariadb/bin/mytop -u $zimbra_mysql_user -S $mysql_socket -p $zimbra_mysql_password $@
+    /opt/zimbra/common/bin/mytop -u $zimbra_mysql_user -S $mysql_socket -p $zimbra_mysql_password $@
   fi
 fi
