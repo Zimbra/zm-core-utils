@@ -892,18 +892,6 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         # when ldap is down saveConfKey fails but we ignore that
         $self->createServerCertReq($type);
 
-        if ( $type eq "comm" and $self->sslFiles("download_csr") ) {
-            $file = $self->sslFiles("download_csr");
-            if ( -f $file ) {
-                print("** Removing old '$file'\n");
-                return $self->error("unlink '$file' failed\n")
-                  unless unlink($file);
-            }
-
-            # BUG?: need -fp behavior?
-            $self->_copy( $csrf, $file )
-              or return undef;
-        }
         return 1;
     }
 
@@ -2104,10 +2092,6 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                   "$based/server",              # zimbra_self_cert_directory
                 ssl_directory => $based,        # zimbra_ssl_directory
             };
-
-            my $mbdir = $self->Home . "/mailboxd/webapps/zimbraAdmin";
-            my $dldir = -d $mbdir ? $mbdir : $self->Home . "/data";
-            $self->{sslDirs}->{csr_download_directory} = $dldir . "/tmp";
         }
 
         Carp::confess("sslDirs: no match for key '@dirs'\n")
@@ -2124,7 +2108,6 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
             my $confcad = $self->sslDirs("ca_conf_dir");
             my $cadir   = $self->sslDirs("ca_directory");
             my $commdir = $self->sslDirs("comm_cert_directory");
-            my $downdir = $self->sslDirs("csr_download_directory");
             my $selfdir = $self->sslDirs("self_cert_directory");
             my $ssldir  = $self->sslDirs("ssl_directory");
 
@@ -2169,15 +2152,6 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
                 # deployed CA
                 conf_ca_crt => "$confcad/ca.pem",
                 conf_ca_key => "$confcad/ca.key",
-
-                # OLD: cs{r,t}_download_file, ca_chain_download_file
-                $downdir
-                ? (
-                    download_csr   => "$downdir/current.csr",
-                    download_crt   => "$downdir/current.crt",
-                    download_chain => "$downdir/current_chain.crt",
-                  )
-                : (),
             };
         }
 
