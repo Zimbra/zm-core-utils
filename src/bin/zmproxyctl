@@ -59,10 +59,6 @@ case "$1" in
       exit 1
     fi
 
-    if [ ! -f ${configfile} ]; then
-      echo "${configfile} is missing."
-    fi
-
     checkrunning
     echo -n "Starting ${servicename}..."
     if [ $running = 1 ]; then
