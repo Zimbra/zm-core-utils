@@ -1,0 +1,288 @@
+#!/bin/bash
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2010, 2011, 2013, 2014 Zimbra, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <http://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+
+export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+
+zuser="zimbra"
+
+if [ "`whoami 2>/dev/null`" != "$zuser" ]; then
+    echo "ERROR: ${0##*/} must be run as user '$zuser'"
+    exit 1
+fi
+
+# set:
+#   ${ldap_host} ${ldap_is_master}
+#   ${zimbra_log_directory} ${zimbra_server_hostname}
+source "${0%/*}/zmshutil" || exit 1
+zmsetvars
+
+# note: DEBUG=anything will give verbose debug output
+DEBUG=${DEBUG:-}
+execf="/opt/zimbra/common/sbin/consul"
+execn="consul"
+
+# NOTE: consul uses up to 5 different tcp/udp ports
+# - TBD: command line args vs. config file
+#   refs:
+#     https://www.consul.io/docs/agent/options.html
+#     https://www.consul.io/docs/agent/options.html#configuration_files
+
+# HACKS: redo/revisit in the future (bugs: 98650, 98651)
+# - IF on LDAP master localconfig(ldap_is_master=true)
+#   - use -server (OK)
+#   - use -bootstrap-expect=1 (BAD assumption)
+#     - NOTE: this will fail miserably with a cluster and must be revisited/fixed
+# - ELSE
+#   - use -client (OK)
+#   - use -join=localconfig(ldap_host) (BAD assumption)
+#     - NOTE: need to use list of MMR hosts
+
+# avoid: WARNING: It is highly recommended to set GOMAXPROCS higher than 1
+GOMAXPROCS=${GOMAXPROCS:-`nproc 2>/dev/null`}
+export GOMAXPROCS=${GOMAXPROCS:-2}
+
+# Other future TBD (must be tested!):
+# - need -advertise? If so, how do we decide which IP to advertise? refs:
+#   https://github.com/hashicorp/consul/issues/529
+#   https://github.com/hashicorp/consul/issues/725
+# - will things work in a mixed ipv4/ipv6 env and/or multiple interfaces?
+#   https://github.com/hashicorp/serf/issues/256
+# - see bindips=... in 'start'
+if [ "${ldap_is_master}" = "true" ]; then
+    agentargs=(-server -bootstrap-expect=1)
+else
+    agentargs=(-join="${ldap_host}")
+fi
+
+# - Instead of logfile=/opt/zimbra/log/consul.log
+#   - use -syslog, note LOCAL0 is used by default (/var/log/zimbra.log)
+# - TODO:
+#   - use "disable_update_check": true # turn off phone home!
+#   - use -rejoin to rejoin a cluster
+#   - define mechanism to go from -bootstrap-expect=1 to a cluster
+#   - TBD: -bind | "bind_addr": ...
+
+cnffile="/opt/zimbra/conf/consul.conf"
+datadir="/opt/zimbra/data/consul"
+pidfile="${zimbra_log_directory}/consul.pid"
+
+agentargs+=(-node="${zimbra_server_hostname}" )
+agentargs+=(-data-dir="$datadir" -pid-file="$pidfile" -syslog)
+
+# returns (via stdout) pid found via pidfile
+function pid_pidfile ()
+{
+    pid=""
+    if [ -r "$pidfile" ]; then
+        read pid < "$pidfile"
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: pid_pidfile ret($pid)" >&2
+    echo "$pid"
+}
+
+# returns (via stdout) pid running as $zuser found via ps
+function pid_ps ()
+{
+    pid=$(ps auxwww | awk "/^$zuser"'[[:space:]]/ && /[c]onsul[[:space:]]/ {print $2}')
+    [ -z "$DEBUG" ] || echo "DEBUG: pid_ps ret($pid)" >&2
+    echo "$pid"
+}
+
+function checkrunning_ps ()
+{
+    pid=$(pid_ps)
+    if [ "$pid" != "" ]; then
+        kill -0 "$pid" 2>/dev/null
+        if [ $? != 0 ]; then # not our process?
+            echo "WARN: process check failed, not our pid(s)? $pid" >&2
+            pid=""
+        fi
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: checkrunning_ps ret($pid)" >&2
+    echo "$pid"
+}
+
+function checkrunning ()
+{
+    pid=$(pid_pidfile)
+    if [ "$pid" != "" ]; then
+        kill -0 "$pid" 2>/dev/null
+        if [ $? != 0 ]; then # no process or not our process
+            [ -z "$DEBUG" ] || echo "DEBUG: kill -0 '$pid' failed, stale pidfile($pidfile)?" >&2
+            pspid=$(pid_ps)
+            if [ "$pid" = "$pspid" ]; then
+                echo "WARN: check process (kill -0) '$pid', permission denied?" >&2
+            else
+                if [ "$pspid" != "" ]; then
+                    echo "WARN: unexpected running process(es): $pspid (!= $pid in $pidfile)" >&2
+                fi
+
+                # clear out the pidfile and hope for the best
+                [ -z "$DEBUG" ] || echo "DEBUG: set pid='' and remove pidfile '$pidfile'" >&2
+                rm "$pidfile" || echo "ERROR: remove stale '$pidfile' pid='$pid' failed" >&2
+                pid=""
+            fi
+        fi
+    else
+        pid=$(checkrunning_ps)
+        if [ -n "$pid" ]; then
+            echo "WARN: found running pid($pid) not in '$pidfile'!" >&2
+        fi
+    fi
+    [ -z "$DEBUG" ] || echo "DEBUG: checkrunning ret($pid) pidfile($pidfile)" >&2
+    echo "$pid"
+}
+
+function wait_for_proc () {
+    want="${1:-up}"
+    ret=1
+    [ -z "$DEBUG" ] || echo "DEBUG: wait_for_proc '$want' with pid_ps..." >&2
+
+    for (( i=1; i<=10; i++ )); do
+        pid=$(pid_ps)
+        if [[ "$want" = "down" && -z "$pid" ]]; then
+            ret=0
+            break
+        elif [[ "$want" = "up" && -n "$pid" ]]; then
+            ret=0
+            break
+        fi
+        sleep 1
+    done
+    echo "$pid"
+    return $ret
+}
+
+
+function start () {
+    if [ ! -x "$execf" ]; then
+        echo "ERROR: unable to execute '$execf'" >&2
+        return 1
+    fi
+    if [ ! -d "$datadir" ]; then
+        echo "ERROR: data-dir '$datadir' does not exist" >&2
+        return 1
+    fi
+    confargs=()
+    if [ -r "$cnffile" ]; then
+        confargs=(-config-file="$cnffile")
+    fi
+    echo -n "Starting $execn..."
+    pid=$(checkrunning)
+    if [ -n "$pid" ]; then
+        echo "already running pid($pid)!"
+        return 3;
+    fi
+
+    # sigh... more hacks:
+    # 1. consul doesn't become a daemon!
+    # 2. consul writes to stdout even with -syslog
+    #    (holds on to the tty for stdin/stdout/stderr)
+
+    # avoid: Failed to start lan serf: Failed to parse advertise address
+    bindips=()
+    if [ "${ldap_is_master}" = "true" ]; then
+        ipmode=$(zmprov -l gs "${zimbra_server_hostname}" zimbraIPMode 2>/dev/null | awk '/ode:/ {print $NF}')
+        hostarg=""
+        if [ "$ipmode" = "ipv4" ]; then
+            hostarg="-t A"
+        elif [ "$ipmode" = "ipv6" ]; then
+            hostarg="-t AAAA"
+        fi
+        bindips=(
+            $(host $hostarg "${zimbra_server_hostname}" | awk '/ address/ {print "-bind=" $NF}')
+        )
+    fi
+
+    [ -z "$DEBUG" ] \
+      || echo "DEBUG: running $execf" agent "${agentargs[@]}" "${confargs[@]}" "${bindips[@]}" >&2
+    ( "$execf" agent "${agentargs[@]}" "${confargs[@]}" "${bindips[@]}" 0<&- 1>&- 2>&- & )
+
+    # $? can't be used on the process exec'd via the subshell
+    # sleep if necessary to try to avoid any race conditions...
+    pid=$(wait_for_proc "up")
+    ret=$?
+
+    [ -n "$pid" ] && echo "done" || echo "failed"
+    return $ret
+}
+
+# use kill -INT per https://www.consul.io/docs/agent/basics.html
+# could use command: consul leave
+function stop () {
+    echo -n "Stopping $execn..."
+    pid=$(checkrunning)
+    ret=0
+    if [ -n "$pid" ]; then
+        kill -INT "$pid"
+        ret=$?
+        if [ $ret = 0 ]; then
+            pid=$(wait_for_proc "down")
+            ret=$?
+        fi
+    else
+        echo -n "(not running) "
+    fi
+
+    [ $ret = 0 ] && echo "done" || echo "failed"
+    return $ret
+}
+
+# attempt start even when stop fails
+function restart () {
+    stop
+    start
+    return $?
+}
+
+# could use command: consul reload
+#function reload () {
+#}
+
+function status () {
+    echo -n "$execn is "
+    pid=$(checkrunning)
+    ret=0
+    if [ -z "$pid" ]; then
+        ret=1
+        echo -n "not "
+    fi
+
+    echo "running"
+    return $ret
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    reload|restart)
+        restart
+        ;;
+    status)
+        status
+        ;;
+    *)
+        echo "usage: ${0##*/} {start|stop|reload|restart|status}" >&2
+        exit 1
+esac
+
+exit $?
