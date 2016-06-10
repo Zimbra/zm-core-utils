@@ -1,0 +1,94 @@
+#!/usr/bin/perl
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2012, 2013, 2014 Zimbra, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <http://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+use strict;
+use lib '/opt/zimbra/common/lib/perl5';
+use Net::LDAP;
+use Net::LDAP::Util qw ( ldap_error_name );
+use XML::Simple;
+use Getopt::Long qw(:config no_ignore_case);
+
+if ( !-x "/opt/zimbra/common/bin/cbpolicyd" ) {
+    print
+"ERROR: cluebringer policy daemon does not appear to be installed - exiting\n";
+    exit(1);
+}
+
+my $id = getpwuid($<);
+chomp $id;
+if ( $id ne "zimbra" ) {
+    print STDERR "Error: must be run as zimbra user\n";
+    exit(1);
+}
+
+if ( !@ARGV ) {
+    print STDERR "Error: Must supply an argument.\n";
+    exit(1);
+}
+
+my $localxml              = XMLin("/opt/zimbra/conf/localconfig.xml");
+my $ldap_url              = $localxml->{key}->{ldap_url}->{value};
+my $zimbra_admin_dn       = $localxml->{key}->{zimbra_ldap_userdn}->{value};
+my $zimbra_admin_password = $localxml->{key}->{zimbra_ldap_password}->{value};
+chomp($zimbra_admin_password);
+my $ldap_starttls_supported =
+  $localxml->{key}->{ldap_starttls_supported}->{value};
+my $zimbra_require_interprocess_security =
+  $localxml->{key}->{zimbra_require_interprocess_security}->{value};
+
+my $cbpadmin = "/opt/zimbra/common/bin/cbpadmin";
+
+my $mesg;
+my @servers = split( / /, $ldap_url );
+my $server_ref = \@servers;
+
+my $server_base = "cn=servers,cn=zimbra";
+my $hostname    = qx(/opt/zimbra/bin/zmhostname);
+
+my $ldap = Net::LDAP->new($server_ref) or die "$@";
+
+if ( $ldap_url !~ /^ldaps/i ) {
+    if ($ldap_starttls_supported) {
+        $mesg = $ldap->start_tls(
+            verify => 'none',
+            capath => "/opt/zimbra/conf/ca",
+        ) or die "start_tls: $@";
+        $mesg->code && die "Could not execute StartTLS\n";
+    }
+}
+if ( !defined($ldap) ) {
+    die "Server down\n";
+}
+$mesg = $ldap->bind( $zimbra_admin_dn, password => $zimbra_admin_password );
+$mesg->code && die "Bind: " . $mesg->error . "\n";
+
+if ( -f '/opt/zimbra/conf/cbpolicyd.conf' ) {
+    $mesg = $ldap->search(
+        base   => "cn=$hostname,$server_base",
+        filter => "(zimbraServiceEnabled=cbpolicyd)",
+        scope  => "base",
+    );
+
+    my $size = $mesg->count;
+    if ( $size == 0 ) {
+        print STDERR "cluebringer not enabled.\n";
+        exit(1);
+    }
+    system( "/opt/zimbra/common/bin/cbpadmin",
+        "--config=/opt/zimbra/conf/cbpolicyd.conf", @ARGV );
+    exit($?);
+}
