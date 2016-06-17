@@ -92,3 +92,7 @@ if ( -f '/opt/zimbra/conf/cbpolicyd.conf' ) {
         "--config=/opt/zimbra/conf/cbpolicyd.conf", @ARGV );
     exit($?);
 }
+else {
+    print STDERR "cluebringer not enabled.\n";
+    exit(1);
+}
