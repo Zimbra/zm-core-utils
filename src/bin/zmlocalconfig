@@ -2,17 +2,17 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Zimbra, Inc.
-# 
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016 Synacor, Inc.
+#
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software Foundation,
 # version 2 of the License.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # See the GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License along with this program.
-# If not, see <http://www.gnu.org/licenses/>.
+# If not, see <https://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
 #
 #
@@ -40,18 +40,31 @@ CYGWIN*) PATHSEP=";";;
 *) PATHSEP=":";;
 esac
 
-CP=${ZMROOT}/lib/jars/*
+CP=${ZMROOT}/lib/jars/zimbracommon.jar\
+${PATHSEP}${ZMROOT}/lib/jars/zimbrasoap.jar\
+${PATHSEP}${ZMROOT}/lib/jars/zimbraclient.jar\
+${PATHSEP}${ZMROOT}/lib/jars/zimbrastore.jar\
+${PATHSEP}${ZMROOT}/lib/jars/zimbra-native.jar\
+${PATHSEP}${ZMROOT}/lib/jars/apache-log4j-extras-1.0.jar\
+${PATHSEP}${ZMROOT}/lib/jars/commons-logging.jar\
+${PATHSEP}${ZMROOT}/lib/jars/commons-cli-1.2.jar\
+${PATHSEP}${ZMROOT}/lib/jars/commons-httpclient-3.1.jar\
+${PATHSEP}${ZMROOT}/lib/jars/commons-codec-1.7.jar\
+${PATHSEP}${ZMROOT}/lib/jars/guava-13.0.1.jar\
+${PATHSEP}${ZMROOT}/lib/jars/dom4j-1.5.2.jar\
+${PATHSEP}${ZMROOT}/lib/jars/log4j-1.2.16.jar\
+${PATHSEP}${ZMROOT}/lib/jars/json.jar
 
-if [ -d "${ZMROOT}/lib/ext/backup/" ]; then
-    CP="$CP${PATHSEP}${ZMROOT}/lib/ext/backup/*"
+if [ -f "${ZMROOT}/lib/ext/backup/zimbrabackup.jar" ]; then
+    CP="$CP${PATHSEP}${ZMROOT}/lib/ext/backup/zimbrabackup.jar"
 fi
 
-if [ -d "${ZMROOT}/lib/ext/voice/" ]; then
-    CP="$CP${PATHSEP}${ZMROOT}/lib/ext/voice/*"
+if [ -f "${ZMROOT}/lib/ext/voice/zimbravoice.jar" ]; then
+    CP="$CP${PATHSEP}${ZMROOT}/lib/ext/voice/zimbravoice.jar"
 fi
 
-if [ -d "${ZMROOT}/lib/ext/com_zimbra_oo/" ]; then
-    CP="$CP${PATHSEP}${ZMROOT}/lib/ext/com_zimbra_oo/*"
+if [ -f "${ZMROOT}/lib/ext/com_zimbra_oo/com_zimbra_oo.jar" ]; then
+    CP="$CP${PATHSEP}${ZMROOT}/lib/ext/com_zimbra_oo/com_zimbra_oo.jar"
 fi
 
 java_version=$(${java} -version 2>&1 | grep "java version" | sed -e 's/"//g' | awk '{print $NF}' | awk -F_ '{print $1}')
