@@ -99,7 +99,23 @@ printMsg() {
 if [ ${extended} = "yes" ]; then
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/a* /opt/zimbra/[c-hj-ot-z]* /opt/zimbra/s[a-su-z]* 2> /dev/null
 fi
-chown -R ${root_user}:${root_group} /opt/zimbra/common 2> /dev/null
+
+chown -R ${root_user}:${root_group} /opt/zimbra/common
+chown -R ${root_user}:${zimbra_group} /opt/zimbra/common/conf
+
+for i in master.cf master.cf.in bysender bysender.lmdb tag_as_foreign.re tag_as_foreign.re.in tag_as_originating.re tag_as_originating.re.in;
+do
+  if [ -f /opt/zimbra/common/conf/${i} ]; then
+    chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/${i};
+  fi
+done
+
+for i in snmp.conf main.cf; do
+  if [ -f /opt/zimbra/common/conf/${i} ]; then
+    chown -f ${root_user}:${root_group} /opt/zimbra/common/conf/${i};
+  fi
+done
+
 
 if [ -d /opt/zimbra ]; then
   chown ${root_user}:${root_group} /opt/zimbra
