@@ -99,6 +99,7 @@ printMsg() {
 if [ ${extended} = "yes" ]; then
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/a* /opt/zimbra/[c-hj-ot-z]* /opt/zimbra/s[a-su-z]* 2> /dev/null
 fi
+chown -R ${root_user}:${root_group} /opt/zimbra/common 2> /dev/null
 
 if [ -d /opt/zimbra ]; then
   chown ${root_user}:${root_group} /opt/zimbra
@@ -562,6 +563,14 @@ fi
 if [ -x /opt/zimbra/common/sbin/postfix ]; then
   printMsg "Fixing postfix related permissions"
 
+  if [ -f /opt/zimbra/common/sbin/postqueue ]; then
+    chgrp -f ${postfix_suid_group} /opt/zimbra/common/sbin/postqueue
+    chmod -f u=rwx,g=rsx,o=rx /opt/zimbra/common/sbin/postqueue
+  fi
+  if [ -f /opt/zimbra/common/sbin/postdrop ]; then
+    chgrp -f ${postfix_suid_group} /opt/zimbra/common/sbin/postdrop
+    chmod -f u=rwx,g=rsx,o=rx /opt/zimbra/common/sbin/postdrop
+  fi
   if [ -e /opt/zimbra/common/conf ]; then
     if [ -f /opt/zimbra/common/conf/master.cf.in ]; then
       chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/master.cf.in
