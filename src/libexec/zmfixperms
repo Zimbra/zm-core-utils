@@ -535,11 +535,11 @@ if [ -L /opt/zimbra/jetty ]; then
   chown ${zimbra_user}:${zimbra_group} /opt/zimbra/data/mailboxd/spnego
   chmod 755 /opt/zimbra/data/mailboxd/spnego
 
-  if [ -f /opt/zimbra/common/lib/jvm/java/jre/lib/security/cacerts ]; then
-    chown zimbra:zimbra /opt/zimbra/common/lib/jvm/java/jre/lib/security/cacerts
-    chmod 644 /opt/zimbra/common/lib/jvm/java/jre/lib/security/cacerts
-  fi
+fi
 
+if [ -f /opt/zimbra/common/etc/java/cacerts ]; then
+  chown zimbra:zimbra /opt/zimbra/common/etc/java/cacerts
+  chmod 644 /opt/zimbra/common/etc/java/cacerts
 fi
 
 if [ -d /opt/zimbra/ssl ]; then
