@@ -1,5 +1,5 @@
 #!/bin/bash
-# 
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
 # Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2013, 2014, 2015, 2016 Synacor, Inc.
@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see <https://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
-# 
+#
 
 # Much faster; just call zmlocalconfig once
 source `dirname $0`/zmshutil || exit 1
@@ -35,23 +35,23 @@ CYGWIN*) PATHSEP=";";;
 *) PATHSEP=":";;
 esac
 
-ZIMBRA_EXTENSIONS="backup clamscanner network zimbra-license zimbrahsm zimbrasync twofactorauth"
+ZIMBRA_EXTENSIONS="backup clamscanner network zimbra-license zimbrahsm zimbrasync twofactorauth com_zimbra_ssdb_ephemeral_store"
 ZIMBRA_EXT_DIR="/opt/zimbra/lib/ext-common"
 for i in $ZIMBRA_EXTENSIONS; do
   if [ -d "/opt/zimbra/lib/ext/$i" ]; then
    ZIMBRA_EXT_DIR="${ZIMBRA_EXT_DIR}${PATHSEP}/opt/zimbra/lib/ext/$i"
   fi
-done 
+done
 
 java_options="-XX:ErrorFile=/opt/zimbra/log"
 
 if [ x${zimbra_zmjava_java_library_path} = "x" ]; then
   zimbra_zmjava_java_library_path=/opt/zimbra/lib
-fi  
+fi
 
 if [ x${zimbra_zmjava_java_ext_dirs} = "x" ]; then
   zimbra_zmjava_java_ext_dirs=${JRE_EXT_DIR}${PATHSEP}/opt/zimbra/lib/jars${PATHSEP}${ZIMBRA_EXT_DIR}
-fi  
+fi
 
 exec ${zimbra_java_home}/bin/java ${java_options} \
      -client ${zimbra_zmjava_options} \
