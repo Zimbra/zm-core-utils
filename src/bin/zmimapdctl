@@ -1,0 +1,128 @@
+#!/bin/bash
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2017 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+# 
+
+source `dirname $0`/zmshutil || exit 1
+zmsetvars
+
+if [ ! -d ${zimbra_java_home} ]; then
+    (>&2 echo "Did not find java at '${jar_prefix}'")
+    exit 1
+fi
+
+NC=`which nc 2>/dev/null`; NC=${NC:-`which netcat 2>/dev/null`}
+platform=`/opt/zimbra/libexec/get_plat_tag.sh`
+
+#
+# TODO-JVM options
+# 
+
+PID_FILE=/opt/zimbra/log/imapd.pid
+NOHUP_FILE=/opt/zimbra/log/imapd.out
+
+CAT=/bin/cat
+JAVA="${zimbra_java_home}/bin/java"
+JAVAD="${zimbra_java_home}/bin/java -agentlib:jdwp=transport=dt_socket,server=y,address=9000,suspend=n"
+LS=/bin/ls
+KILL=/bin/kill
+NOHUP=/usr/bin/nohup
+PS=/bin/ps
+RM=/bin/rm
+
+#
+# Utility
+#
+
+function find_jar {
+    jar_prefix="$1"
+    jar_path=$($LS "${jar_prefix}"*".jar" 2>/dev/null)
+    
+    if [ "${jar_path}" = "" ]
+    then
+        (>&2 echo "Error resolving jar_prefix '${jar_prefix}'") 
+        exit 1
+    else
+        echo -n "$jar_path"
+    fi
+}
+
+function is_running {
+    if [ -f $PID_FILE ] && $($PS augx | grep -q $($CAT $PID_FILE))
+    then
+        echo yes
+    else
+        echo no
+    fi
+}
+
+#
+# Main
+#
+
+case "$1" in
+    'start')
+        if [ $(is_running) = "no" ]
+        then
+            /opt/zimbra/bin/zmlocalconfig -e imap_always_use_remote_store=true
+            ${NOHUP} ${JAVAD} -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
+            PID=$!
+            echo -n $PID > $PID_FILE
+            # TODO - find deterministic way to tell when Java has completed startup
+            sleep 2
+            if [ $(is_running) = "yes" ]
+            then
+                echo "IMAP service started with PID=${PID}"
+                exit 0
+            else
+                cat $NOHUP_FILE
+                exit 1
+            fi
+        else
+            echo "IMAP service running with PID=$($CAT $PID_FILE)"
+            exit 0
+        fi
+        ;;
+    'kill'|'stop')
+        if [ $(is_running) = "yes" ]
+        then
+            echo "stopping IMAP daemon..."
+            $KILL -TERM $($CAT $PID_FILE)
+            $RM $PID_FILE
+        fi
+        exit 0
+        ;;
+    'restart'|'reload')
+        $0 stop
+        $0 start
+        ;;
+    'status')
+        echo -n "imap is "
+        if [ $(is_running) = "yes" ]
+        then
+            echo "running."
+            exit 0
+        else
+            echo "not running."
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Usage: $0 start|stop|kill|restart|reload|status"
+        exit 1
+        ;;
+esac
+
