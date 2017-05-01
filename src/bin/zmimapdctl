@@ -45,7 +45,7 @@ RM=/bin/rm
 #
 
 function is_running {
-    if [ -f $PID_FILE ] && $PS augx | grep -q "$($CAT $PID_FILE)"
+    if [ -f $PID_FILE ] && $PS -p "$($CAT $PID_FILE)" >/dev/null
     then
         echo yes
     else
