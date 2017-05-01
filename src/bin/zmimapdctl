@@ -45,8 +45,7 @@ RM=/bin/rm
 #
 
 function is_running {
-    if [ -f $PID_FILE ] && $PS -p "$($CAT $PID_FILE)" >/dev/null
-    then
+    if [ -f $PID_FILE ] && $PS -p "$($CAT $PID_FILE)" >/dev/null; then
         echo yes
     else
         echo no
@@ -59,16 +58,14 @@ function is_running {
 
 case "$1" in
     'start')
-        if [ "$(is_running)" = "no" ]
-        then
+        if [ "$(is_running)" = "no" ]; then
             /opt/zimbra/bin/zmlocalconfig -e imap_always_use_remote_store=true
             ${NOHUP} "${JAVA}" -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
             PID=$!
             echo -n $PID > $PID_FILE
             # TODO - find deterministic way to tell when Java has completed startup
             sleep 2
-            if [ "$(is_running)" = "yes" ]
-            then
+            if [ "$(is_running)" = "yes" ]; then
                 echo "IMAP service started with PID=${PID}"
                 exit 0
             else
@@ -81,8 +78,7 @@ case "$1" in
         fi
         ;;
     'kill'|'stop')
-        if [ "$(is_running)" = "yes" ]
-        then
+        if [ "$(is_running)" = "yes" ]; then
             echo "stopping IMAP daemon..."
             $KILL -TERM "$($CAT $PID_FILE)"
             $RM $PID_FILE
@@ -95,8 +91,7 @@ case "$1" in
         ;;
     'status')
         echo -n "imap is "
-        if [ "$(is_running)" = "yes" ]
-        then
+        if [ "$(is_running)" = "yes" ]; then
             echo "running."
             exit 0
         else
