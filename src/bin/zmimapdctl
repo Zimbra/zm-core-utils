@@ -21,8 +21,8 @@ source "${SDIR}/zmshutil" || exit 1
 zmsetvars
 
 if [ ! -d "${zimbra_java_home}" ]; then
-    echo "Did not find java at '${zimbra_java_home}'" >&2
-    exit 1
+  echo "Did not find java at '${zimbra_java_home}'" >&2
+  exit 1
 fi
 
 #
@@ -45,11 +45,11 @@ RM=/bin/rm
 #
 
 function is_running {
-    if [ -f $PID_FILE ] && $PS -p "$($CAT $PID_FILE)" >/dev/null; then
-        echo yes
-    else
-        echo no
-    fi
+  if [ -f $PID_FILE ] && $PS -p "$($CAT $PID_FILE)" >/dev/null; then
+    echo yes
+  else
+    echo no
+  fi
 }
 
 #
@@ -57,51 +57,51 @@ function is_running {
 #
 
 case "$1" in
-    'start')
-        if [ "$(is_running)" = "no" ]; then
-            /opt/zimbra/bin/zmlocalconfig -e imap_always_use_remote_store=true
-            ${NOHUP} "${JAVA}" -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
-            PID=$!
-            echo -n $PID > $PID_FILE
-            # TODO - find deterministic way to tell when Java has completed startup
-            sleep 2
-            if [ "$(is_running)" = "yes" ]; then
-                echo "IMAP service started with PID=${PID}"
-                exit 0
-            else
-                cat $NOHUP_FILE
-                exit 1
-            fi
-        else
-            echo "IMAP service running with PID=$($CAT $PID_FILE)"
-            exit 0
-        fi
-        ;;
-    'kill'|'stop')
-        if [ "$(is_running)" = "yes" ]; then
-            echo "stopping IMAP daemon..."
-            $KILL -TERM "$($CAT $PID_FILE)"
-            $RM $PID_FILE
-        fi
+  'start')
+    if [ "$(is_running)" = "no" ]; then
+      /opt/zimbra/bin/zmlocalconfig -e imap_always_use_remote_store=true
+      ${NOHUP} "${JAVA}" -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
+      PID=$!
+      echo -n $PID > $PID_FILE
+      # TODO - find deterministic way to tell when Java has completed startup
+      sleep 2
+      if [ "$(is_running)" = "yes" ]; then
+        echo "IMAP service started with PID=${PID}"
         exit 0
-        ;;
-    'restart'|'reload')
-        $0 stop
-        $0 start
-        ;;
-    'status')
-        echo -n "imap is "
-        if [ "$(is_running)" = "yes" ]; then
-            echo "running."
-            exit 0
-        else
-            echo "not running."
-            exit 1
-        fi
-        ;;
-    *)
-        echo "Usage: $0 start|stop|kill|restart|reload|status"
+      else
+        cat $NOHUP_FILE
         exit 1
-        ;;
+      fi
+    else
+      echo "IMAP service running with PID=$($CAT $PID_FILE)"
+      exit 0
+    fi
+    ;;
+  'kill'|'stop')
+    if [ "$(is_running)" = "yes" ]; then
+      echo "stopping IMAP daemon..."
+      $KILL -TERM "$($CAT $PID_FILE)"
+      $RM $PID_FILE
+    fi
+    exit 0
+    ;;
+  'restart'|'reload')
+    $0 stop
+    $0 start
+    ;;
+  'status')
+    echo -n "imap is "
+    if [ "$(is_running)" = "yes" ]; then
+      echo "running."
+      exit 0
+    else
+      echo "not running."
+      exit 1
+    fi
+    ;;
+  *)
+    echo "Usage: $0 start|stop|kill|restart|reload|status"
+    exit 1
+    ;;
 esac
 
