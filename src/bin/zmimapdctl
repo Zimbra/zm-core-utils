@@ -57,7 +57,7 @@ function is_running {
 #
 
 case "$1" in
-  'start')
+  start)
     if [ "$(is_running)" = "no" ]; then
       /opt/zimbra/bin/zmlocalconfig -e imap_always_use_remote_store=true
       ${NOHUP} "${JAVA}" -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
@@ -77,7 +77,7 @@ case "$1" in
       exit 0
     fi
     ;;
-  'kill'|'stop')
+  kill|stop)
     if [ "$(is_running)" = "yes" ]; then
       echo "stopping IMAP daemon..."
       $KILL -TERM "$($CAT $PID_FILE)"
@@ -85,11 +85,11 @@ case "$1" in
     fi
     exit 0
     ;;
-  'restart'|'reload')
+  restart|reload)
     $0 stop
     $0 start
     ;;
-  'status')
+  status)
     echo -n "imap is "
     if [ "$(is_running)" = "yes" ]; then
       echo "running."
