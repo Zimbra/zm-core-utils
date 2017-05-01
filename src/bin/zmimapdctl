@@ -44,19 +44,6 @@ RM=/bin/rm
 # Utility
 #
 
-function find_jar {
-    jar_prefix="$1"
-    jar_path=$($LS "${jar_prefix}"*".jar" 2>/dev/null)
-    
-    if [ "${jar_path}" = "" ]
-    then
-        (>&2 echo "Error resolving jar_prefix '${jar_prefix}'") 
-        exit 1
-    else
-        echo -n "$jar_path"
-    fi
-}
-
 function is_running {
     if [ -f $PID_FILE ] && $PS augx | grep -q "$($CAT $PID_FILE)"
     then
