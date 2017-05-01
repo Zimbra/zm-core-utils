@@ -16,16 +16,14 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-source `dirname $0`/zmshutil || exit 1
+SDIR=$(dirname "$0")
+source "${SDIR}/zmshutil" || exit 1
 zmsetvars
 
-if [ ! -d ${zimbra_java_home} ]; then
+if [ ! -d "${zimbra_java_home}" ]; then
     (>&2 echo "Did not find java at '${jar_prefix}'")
     exit 1
 fi
-
-NC=`which nc 2>/dev/null`; NC=${NC:-`which netcat 2>/dev/null`}
-platform=`/opt/zimbra/libexec/get_plat_tag.sh`
 
 #
 # TODO-JVM options
@@ -36,7 +34,6 @@ NOHUP_FILE=/opt/zimbra/log/imapd.out
 
 CAT=/bin/cat
 JAVA="${zimbra_java_home}/bin/java"
-JAVAD="${zimbra_java_home}/bin/java -agentlib:jdwp=transport=dt_socket,server=y,address=9000,suspend=n"
 LS=/bin/ls
 KILL=/bin/kill
 NOHUP=/usr/bin/nohup
@@ -61,7 +58,7 @@ function find_jar {
 }
 
 function is_running {
-    if [ -f $PID_FILE ] && $($PS augx | grep -q $($CAT $PID_FILE))
+    if [ -f $PID_FILE ] && $PS augx | grep -q "$($CAT $PID_FILE)"
     then
         echo yes
     else
@@ -75,15 +72,15 @@ function is_running {
 
 case "$1" in
     'start')
-        if [ $(is_running) = "no" ]
+        if [ "$(is_running)" = "no" ]
         then
             /opt/zimbra/bin/zmlocalconfig -e imap_always_use_remote_store=true
-            ${NOHUP} ${JAVAD} -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
+            ${NOHUP} "${JAVA}" -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
             PID=$!
             echo -n $PID > $PID_FILE
             # TODO - find deterministic way to tell when Java has completed startup
             sleep 2
-            if [ $(is_running) = "yes" ]
+            if [ "$(is_running)" = "yes" ]
             then
                 echo "IMAP service started with PID=${PID}"
                 exit 0
@@ -97,10 +94,10 @@ case "$1" in
         fi
         ;;
     'kill'|'stop')
-        if [ $(is_running) = "yes" ]
+        if [ "$(is_running)" = "yes" ]
         then
             echo "stopping IMAP daemon..."
-            $KILL -TERM $($CAT $PID_FILE)
+            $KILL -TERM "$($CAT $PID_FILE)"
             $RM $PID_FILE
         fi
         exit 0
@@ -111,7 +108,7 @@ case "$1" in
         ;;
     'status')
         echo -n "imap is "
-        if [ $(is_running) = "yes" ]
+        if [ "$(is_running)" = "yes" ]
         then
             echo "running."
             exit 0
