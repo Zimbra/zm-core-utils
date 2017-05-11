@@ -26,9 +26,18 @@ if [ ! -d "${zimbra_java_home}" ]; then
   exit 1
 fi
 
-#
-# TODO-JVM options
-# 
+# shellcheck disable=SC2154
+JVM_OPTS="${imapd_java_options}"
+JVM_HS=""
+# shellcheck disable=SC2154
+if [ -n "${imapd_java_heap_size}" ]; then
+  JVM_HS="-Xms${imapd_java_heap_size}m -Xmx${imapd_java_heap_size}m"
+fi
+JVM_HNS=""
+# shellcheck disable=SC2154
+if [ -n "${imapd_java_heap_new_size_percent}" ]; then
+  JVM_HNS="-Xmn${imapd_java_heap_new_size_percent}m"
+fi
 
 PID_FILE=/opt/zimbra/log/imapd.pid
 NOHUP_FILE=/opt/zimbra/log/imapd.out
@@ -76,14 +85,15 @@ case "$1" in
   start)
     if [ "$(is_running)" = "no" ]; then
       /opt/zimbra/bin/zmlocalconfig -e imap_always_use_remote_store=true
-      ${NOHUP} "${JAVA}" -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
+      # shellcheck disable=SC2086
+      ${NOHUP} "${JAVA}" ${JVM_OPTS} ${JVM_HS} ${JVM_HNS} -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
       PID=$!
       echo -n $PID > $PID_FILE
       if [ "$(is_running)" = "yes" ]; then
         echo "IMAP service started with PID=${PID}"
         exit 0
       else
-        cat $NOHUP_FILE
+        $CAT $NOHUP_FILE
         exit 1
       fi
     else
