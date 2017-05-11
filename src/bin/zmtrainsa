@@ -20,8 +20,8 @@
 autoTrainSystem() {
 
   timestampit "Starting spam/ham extraction from system accounts."
-  spamdir=`mktemp -d -t spam.XXXXXXX` || exit 1
-  hamdir=`mktemp -d -t ham.XXXXXXX` || exit 1
+  spamdir=`mktmpdir spam`
+  hamdir=`mktmpdir ham`
   /opt/zimbra/libexec/zmspamextract ${spam_account} -o ${spamdir}
   /opt/zimbra/libexec/zmspamextract ${ham_account} -o ${hamdir}
   timestampit "Finished extracting spam/ham from system accounts."
@@ -58,11 +58,10 @@ autoTrainSystem() {
 
 trainAccountFolder() {
 
+  tempdir=`mktmpdir ${MODE}`
   if [ "x${MODE}" = "xspam" ]; then
-    tempdir=`mktemp -d -t spam.XXXXXX` || exit 1
     FOLDER=${FOLDER:=junk}
   elif [ "x${MODE}" = "xham" ]; then
-    tempdir=`mktemp -d -t ham.XXXXXX` || exit 1
     FOLDER=${FOLDER:=inbox}
   fi
 
@@ -92,6 +91,10 @@ trainAccountFolder() {
 
   /bin/rm -rf ${tempdir}
 
+}
+
+mktmpdir() {
+  mktemp -d "${zmtrainsa_tmp_directory:-${zimbra_tmp_directory}}/zmtrainsa.$$.$1.XXXXXX" || exit 1
 }
 
 timestampit() {
@@ -151,7 +154,7 @@ fi
 if [ x$1 = "x--cleanup" ]; then
   if [ x${zmtrainsa_cleanup_host} = "xtrue" ]; then
     timestampit "Starting spam/ham cleanup"
-    mydir=`mktemp -d -t cleanup.XXXXXX` || exit 1
+    mydir=`mktmpdir cleanup`
     /opt/zimbra/libexec/zmspamextract ${spam_account} -o ${mydir} -d
     /opt/zimbra/libexec/zmspamextract ${ham_account} -o ${mydir} -d
     /bin/rm -rf ${mydir}
