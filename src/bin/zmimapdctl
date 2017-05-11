@@ -20,6 +20,7 @@ SDIR=$(dirname "$0")
 source "${SDIR}/zmshutil" || exit 1
 zmsetvars
 
+# shellcheck disable=SC2154
 if [ ! -d "${zimbra_java_home}" ]; then
   echo "Did not find java at '${zimbra_java_home}'" >&2
   exit 1
@@ -31,25 +32,40 @@ fi
 
 PID_FILE=/opt/zimbra/log/imapd.pid
 NOHUP_FILE=/opt/zimbra/log/imapd.out
+RUNNING_CHECK_SLEEP=1
+RUNNING_CHECK_TRIES=10
 
 CAT=/bin/cat
+EXPR=/usr/bin/expr
 JAVA="${zimbra_java_home}/bin/java"
-LS=/bin/ls
 KILL=/bin/kill
 NOHUP=/usr/bin/nohup
 PS=/bin/ps
 RM=/bin/rm
+SLEEP=/bin/sleep
 
 #
 # Utility
 #
 
 function is_running {
-  if [ -f $PID_FILE ] && $PS -p "$($CAT $PID_FILE)" >/dev/null; then
-    echo yes
-  else
-    echo no
-  fi
+  attempt=1
+  rc=no
+  while [ $attempt -le $RUNNING_CHECK_TRIES ]; do
+    attempt=$($EXPR $attempt + 1)
+    if [ -f $PID_FILE ]; then
+      pid="$($CAT $PID_FILE)"
+      if $PS -p "${pid}" >/dev/null; then
+        rc=yes
+        break
+      else
+        $SLEEP $RUNNING_CHECK_SLEEP
+      fi
+    else
+      break
+    fi
+  done
+  echo $rc
 }
 
 #
@@ -63,8 +79,6 @@ case "$1" in
       ${NOHUP} "${JAVA}" -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
       PID=$!
       echo -n $PID > $PID_FILE
-      # TODO - find deterministic way to tell when Java has completed startup
-      sleep 2
       if [ "$(is_running)" = "yes" ]; then
         echo "IMAP service started with PID=${PID}"
         exit 0
