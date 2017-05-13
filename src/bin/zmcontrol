@@ -71,6 +71,7 @@ my %startorder = (
 	"zimbra"	=> 180,
 	"zimbraAdmin"	=> 190,
 	"zimlet"	=> 200,
+	"imapd"		=> 210,
 	"vmware-ha"	=> 250,  # this should remain last
 );
 
@@ -96,7 +97,8 @@ my %stoporder = (
 	"zimbra"	=> 170,
 	"zimbraAdmin"	=> 180,
 	"zimlet"	=> 190,
-	"zmconfigd"	=> 200,
+	"imapd"		=> 200,
+	"zmconfigd"	=> 210,
 	"vmware-ha"	=> 250,
 );
 
@@ -124,6 +126,7 @@ my %allservices = (
 	"zmconfigd" => "/opt/zimbra/bin/zmconfigdctl",
 	"cbpolicyd" => "/opt/zimbra/bin/zmcbpolicydctl",
 	"vmware-ha" => "/opt/zimbra/bin/zmhactl",
+	"imapd" => "/opt/zimbra/bin/zmimapdctl",
 );
 
 my %rewrites = ( 
