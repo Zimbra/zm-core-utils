@@ -364,6 +364,7 @@ sub doShutdown {
 	my $rrc = 0;
 	foreach (sort {$stoporder{$b} <=> $stoporder{$a}} keys %allservices) {
 		Zimbra::Mon::Logger::Log ("info", "Stopping $_ via zmcontrol");
+		if ($_ eq "imapd" && !(-f "/opt/zimbra/bin/zmimapdctl") ) { next; }
 		if ($_ eq "ldap" && !(-x "/opt/zimbra/common/libexec/slapd") ) { next; }
 		if ($_ eq "mta" && !(-x "/opt/zimbra/common/sbin/postfix") ) { next; }
 		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
