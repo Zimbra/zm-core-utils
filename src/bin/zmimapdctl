@@ -84,7 +84,6 @@ function is_running {
 case "$1" in
   start)
     if [ "$(is_running)" = "no" ]; then
-      /opt/zimbra/bin/zmlocalconfig -e imap_always_use_remote_store=true
       # shellcheck disable=SC2086
       ${NOHUP} "${JAVA}" ${JVM_OPTS} ${JVM_HS} ${JVM_HNS} -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
       PID=$!
