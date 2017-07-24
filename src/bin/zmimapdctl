@@ -1,0 +1,130 @@
+#!/bin/bash
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2017 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+# 
+
+SDIR=$(dirname "$0")
+source "${SDIR}/zmshutil" || exit 1
+zmsetvars
+
+# shellcheck disable=SC2154
+if [ ! -d "${zimbra_java_home}" ]; then
+  echo "Did not find java at '${zimbra_java_home}'" >&2
+  exit 1
+fi
+
+# shellcheck disable=SC2154
+JVM_OPTS="${imapd_java_options}"
+JVM_HS=""
+# shellcheck disable=SC2154
+if [ -n "${imapd_java_heap_size}" ]; then
+  JVM_HS="-Xms${imapd_java_heap_size}m -Xmx${imapd_java_heap_size}m"
+fi
+JVM_HNS=""
+# shellcheck disable=SC2154
+if [ -n "${imapd_java_heap_new_size_percent}" ]; then
+  JVM_HNS="-Xmn${imapd_java_heap_new_size_percent}m"
+fi
+
+PID_FILE=/opt/zimbra/log/imapd.pid
+NOHUP_FILE=/opt/zimbra/log/imapd.out
+RUNNING_CHECK_SLEEP=1
+RUNNING_CHECK_TRIES=10
+
+CAT=/bin/cat
+EXPR=/usr/bin/expr
+JAVA="${zimbra_java_home}/bin/java"
+KILL=/bin/kill
+NOHUP=/usr/bin/nohup
+PS=/bin/ps
+RM=/bin/rm
+SLEEP=/bin/sleep
+
+#
+# Utility
+#
+
+function is_running {
+  attempt=1
+  rc=no
+  while [ $attempt -le $RUNNING_CHECK_TRIES ]; do
+    attempt=$($EXPR $attempt + 1)
+    if [ -f $PID_FILE ]; then
+      pid="$($CAT $PID_FILE)"
+      if $PS -p "${pid}" >/dev/null; then
+        rc=yes
+        break
+      else
+        $SLEEP $RUNNING_CHECK_SLEEP
+      fi
+    else
+      break
+    fi
+  done
+  echo $rc
+}
+
+#
+# Main
+#
+
+case "$1" in
+  start)
+    if [ "$(is_running)" = "no" ]; then
+      # shellcheck disable=SC2086
+      ${NOHUP} "${JAVA}" ${JVM_OPTS} ${JVM_HS} ${JVM_HNS} -cp /opt/zimbra/lib/jars/*: com.zimbra.cs.imap.ImapDaemon 1>$NOHUP_FILE 2>&1 &
+      PID=$!
+      echo -n $PID > $PID_FILE
+      if [ "$(is_running)" = "yes" ]; then
+        echo "IMAP service started with PID=${PID}"
+        exit 0
+      else
+        $CAT $NOHUP_FILE
+        exit 1
+      fi
+    else
+      echo "IMAP service running with PID=$($CAT $PID_FILE)"
+      exit 0
+    fi
+    ;;
+  kill|stop)
+    if [ "$(is_running)" = "yes" ]; then
+      echo "stopping IMAP daemon..."
+      $KILL -TERM "$($CAT $PID_FILE)"
+      $RM $PID_FILE
+    fi
+    exit 0
+    ;;
+  restart|reload)
+    $0 stop
+    $0 start
+    ;;
+  status)
+    echo -n "imap is "
+    if [ "$(is_running)" = "yes" ]; then
+      echo "running."
+      exit 0
+    else
+      echo "not running."
+      exit 1
+    fi
+    ;;
+  *)
+    echo "Usage: $0 start|stop|kill|restart|reload|status"
+    exit 1
+    ;;
+esac
+
