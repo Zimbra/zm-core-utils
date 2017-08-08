@@ -71,6 +71,7 @@ my %startorder = (
 	"zimbra"	=> 180,
 	"zimbraAdmin"	=> 190,
 	"zimlet"	=> 200,
+	"imapd"		=> 210,
 	"vmware-ha"	=> 250,  # this should remain last
 );
 
@@ -96,7 +97,8 @@ my %stoporder = (
 	"zimbra"	=> 170,
 	"zimbraAdmin"	=> 180,
 	"zimlet"	=> 190,
-	"zmconfigd"	=> 200,
+	"imapd"		=> 200,
+	"zmconfigd"	=> 210,
 	"vmware-ha"	=> 250,
 );
 
@@ -124,6 +126,7 @@ my %allservices = (
 	"zmconfigd" => "/opt/zimbra/bin/zmconfigdctl",
 	"cbpolicyd" => "/opt/zimbra/bin/zmcbpolicydctl",
 	"vmware-ha" => "/opt/zimbra/bin/zmhactl",
+	"imapd" => "/opt/zimbra/bin/zmimapdctl",
 );
 
 my %rewrites = ( 
@@ -361,6 +364,7 @@ sub doShutdown {
 	my $rrc = 0;
 	foreach (sort {$stoporder{$b} <=> $stoporder{$a}} keys %allservices) {
 		Zimbra::Mon::Logger::Log ("info", "Stopping $_ via zmcontrol");
+		if ($_ eq "imapd" && !(-f "/opt/zimbra/bin/zmimapdctl") ) { next; }
 		if ($_ eq "ldap" && !(-x "/opt/zimbra/common/libexec/slapd") ) { next; }
 		if ($_ eq "mta" && !(-x "/opt/zimbra/common/sbin/postfix") ) { next; }
 		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
