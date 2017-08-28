@@ -178,7 +178,7 @@ sub filterProcs(;$$$) {
 }
 
 sub getMailboxProcess() {
-    my @regex = ('(mailboxd|jetty)/start\.jar');
+    my @regex = ('jetty_home/start[.]jar');
     my @ret = filterProcs($ZIMBRA_USER, \@regex);
     return @ret;
 }
