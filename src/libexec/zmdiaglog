@@ -601,12 +601,22 @@ sub run() {
     );
     cp $_, "$destination/confs" for @conf_files;
 
+    mkdir("$destination/confs/network");
+    my @network_conf_files = (
+        "/opt/zimbra/conf/zextras/config",
+        "/opt/zimbra/conf/zextras/config/oplog",
+        "/opt/zimbra/conf/zextras/cluster_config/zextras.json",
+        glob("/opt/zimbra/conf/zextras/zxadmin/*")
+    );
+    cp $_, "$destination/confs/network" for @network_conf_files;
+
     # Copy hidden .install_history file to a visible file
     cp "/opt/zimbra/.install_history", "$destination/install_history";
 
     mkdir("$destination/logs");
     mkdir("$destination/stats");
     mkdir("$destination/confs/ld.so.conf");
+    mkdir("$destination/logs/network");
 
     if ( !-f $ZMSTAT_CONF ) {
         logmsg "Saving ZCS statistics chart config\n";
@@ -637,6 +647,7 @@ sub run() {
         "/opt/zimbra/log/zmconfigd.log",
         "/opt/zimbra/log/zmmailboxd.out",
         "/var/log/zimbra.log",
+        glob("/opt/zimbra/log/op_*"),
         glob("/opt/zimbra/db/data/*.err"),
         glob("/opt/zimbra/log/hs_err_pid*"),
         glob("/opt/zimbra/log/my*.log"),
@@ -645,6 +656,11 @@ sub run() {
         "/opt/zimbra/log/mysql-mailboxd.log"
     );
     cp $_, "$destination/logs" for @log_files;
+
+    my @network_log_files = (
+        glob("/opt/zimbra/log/op_*"),
+    );
+    cp $_, "$destination/logs/network" for @network_log_files;
 
     logmsg "Copying file system info and mounts\n";
     my @static_info = ( "/etc/fstab", "/proc/mounts", );
