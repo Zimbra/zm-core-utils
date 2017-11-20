@@ -31,7 +31,7 @@ use Digest::MD5;
 use vars qw(
   $VERSION $PID_FILE $DEFAULT_DEST $DLOGDIR $JMAP $JAVA $JINFO $DEFAULT_TIMEOUT
   $HAVE_GCORE $HAVE_PSTACK $HAVE_LSOF $HAVE_DMESG $LOG_FILE $ZMSTAT_CONF
-  $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT $HAVE_MYSQL $ZMMYTOP $ZMINNOTOP
+  $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT $HAVE_MYSQL $ZMMYTOP $ZMINNOTOP $HAVE_NETWORK
 );
 
 my $isMac = isMac();
@@ -75,6 +75,7 @@ $ZMMYTOP                            = '/opt/zimbra/bin/zmmytop --nocolor -b';
 $ZMINNOTOP = '/opt/zimbra/bin/zminnotop --nocolor --nonint';
 $SU        = "su - zimbra -c ";
 $SU        = "su - zimbra -c -l " if ( isMac() );
+$HAVE_NETWORK                       = has_cmd('/opt/zimbra/bin/zxsuite');
 
 sub logmsg($) {
     my $msg = shift;
@@ -601,6 +602,17 @@ sub run() {
     );
     cp $_, "$destination/confs" for @conf_files;
 
+    if ($HAVE_NETWORK) {
+        mkdir("$destination/confs/network");
+        my @network_conf_files = (
+            "/opt/zimbra/conf/zextras/config",
+            "/opt/zimbra/conf/zextras/oplog",
+            "/opt/zimbra/conf/zextras/cluster_config/zextras.json",
+            glob("/opt/zimbra/conf/zextras/zxadmin/*")
+        );
+        cp $_, "$destination/confs/network" for @network_conf_files;
+    }
+
     # Copy hidden .install_history file to a visible file
     cp "/opt/zimbra/.install_history", "$destination/install_history";
 
@@ -645,6 +657,14 @@ sub run() {
         "/opt/zimbra/log/mysql-mailboxd.log"
     );
     cp $_, "$destination/logs" for @log_files;
+
+    if ($HAVE_NETWORK) {
+        mkdir("$destination/logs/network");
+        my @network_log_files = (
+            glob("/opt/zimbra/log/op_*"),
+        );
+        cp $_, "$destination/logs/network" for @network_log_files;
+    }
 
     logmsg "Copying file system info and mounts\n";
     my @static_info = ( "/etc/fstab", "/proc/mounts", );
