@@ -607,6 +607,7 @@ sub run() {
         my @network_conf_files = (
             "/opt/zimbra/conf/zextras/config",
             "/opt/zimbra/conf/zextras/oplog",
+            "/opt/zimbra/conf/zextras/bulk_delete/*",
             "/opt/zimbra/conf/zextras/cluster_config/zextras.json",
             glob("/opt/zimbra/conf/zextras/zxadmin/*")
         );
