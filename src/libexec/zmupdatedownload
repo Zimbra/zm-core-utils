@@ -38,8 +38,34 @@ admin_dir=${mailboxd_directory}/webapps/zimbraAdmin/WEB-INF/classes/messages
 zmsg=${admin_dir}/ZaMsg.properties
 
 function find_download_filename {
-    fname="$1"
-    find "${download_dir}" -name "$fname" -exec basename '{}' \;
+  fname="$1"
+  find "${download_dir}" -name "$fname" -exec basename '{}' \;
+}
+
+function append_download_if_missing {
+  key="$1"
+  val="$2"
+
+  grep -q -E "\<${key}\>" "${zmsg}"
+  if [ $? -ne 0 ]; then
+    echo "${key} = ${val}" >> "${zmsg}"
+  fi
+}
+
+# shellcheck disable=SC2034
+function populate_downloads_to_append {
+  CONNECTOR_MSI_DOWNLOAD_LINK=$(find_download_filename "ZmCustomizeMsi.js")
+  ZCO_BRANDING_DOWNLOAD_LINK=$(find_download_filename "ZimbraBrandMsi.vbs")
+  CONNECTOR_64_DOWNLOAD_LINK=$(find_download_filename "ZimbraConnectorOLK_*_x64.msi")
+  CONNECTOR_UNSIGNED_64_DOWNLOAD_LINK=$(find_download_filename "ZimbraConnectorOLK_*_x64-UNSIGNED.msi")
+  CONNECTOR_32_DOWNLOAD_LINK=$(find_download_filename "ZimbraConnectorOLK_*_x86.msi")
+  CONNECTOR_UNSIGNED_32_DOWNLOAD_LINK=$(find_download_filename "ZimbraConnectorOLK_*_x86-UNSIGNED.msi")
+  GENERAL_MIG_WIZ_X64_DOWNLOAD_LINK=$(find_download_filename "ZimbraMigration_*_x64.zip")
+  GENERAL_MIG_WIZ_X86_DOWNLOAD_LINK=$(find_download_filename "ZimbraMigration_*_x86.zip")
+  IMPORT_WIZ_DOWNLOAD_LINK=$(find_download_filename "ZCSPSTImportWizard-*.zip")
+  DOMINO_MIG_WIZ_DOWNLOAD_LINK=$(find_download_filename "ZCSDominoMigrationWizard-*.zip")
+  GROUPWISE_MIG_WIZ_DOWNLOAD_LINK=$(find_download_filename "ZCSGroupwiseMigrationWizard-*.exe")
+  MIG_WIZ_DOWNLOAD_LINK=$(find_download_filename "ZCSExchangeMigrationWizard-*.zip")
 }
 
 if [ -d "${download_dir}" ]; then
@@ -50,6 +76,8 @@ if [ -d "${download_dir}" ]; then
   DOMINO_MIG_WIZARD=$(find_download_filename "ZCSDominoMigrationWizard*")
   GENERAL_MIG_WIZARD_32BIT=$(find_download_filename "ZimbraMigration_*_x86.zip")
   GENERAL_MIG_WIZARD_64BIT=$(find_download_filename "ZimbraMigration_*_x64.zip")
+
+  populate_downloads_to_append 
 
   sed -e "s/@@ZCO_32BIT@@/${ZCO_32BIT}/" \
   -e "s/@@ZCO_64BIT@@/${ZCO_64BIT}/" \
@@ -63,6 +91,26 @@ if [ -d "${download_dir}" ]; then
     sed -i -e "s#ZimbraConnectorOLK_.*x86.msi#${ZCO_32BIT}#" \
       -e "s#ZimbraConnectorOLK_.*x64.msi#${ZCO_64BIT}#" "${zmsg}"
   fi
+
+  downloads_to_add=(
+    CONNECTOR_MSI_DOWNLOAD_LINK
+    ZCO_BRANDING_DOWNLOAD_LINK
+    CONNECTOR_64_DOWNLOAD_LINK
+    CONNECTOR_UNSIGNED_64_DOWNLOAD_LINK
+    CONNECTOR_32_DOWNLOAD_LINK
+    CONNECTOR_UNSIGNED_32_DOWNLOAD_LINK
+    GENERAL_MIG_WIZ_X64_DOWNLOAD_LINK
+    GENERAL_MIG_WIZ_X86_DOWNLOAD_LINK
+    IMPORT_WIZ_DOWNLOAD_LINK
+    DOMINO_MIG_WIZ_DOWNLOAD_LINK
+    GROUPWISE_MIG_WIZ_DOWNLOAD_LINK
+    MIG_WIZ_DOWNLOAD_LINK
+  )
+
+  for dl in "${downloads_to_add[@]}"; do
+     # shellcheck disable=SC2046
+     append_download_if_missing "${dl}" $(eval echo "\$$dl")
+  done
 fi
 
 exit 0
