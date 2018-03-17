@@ -48,7 +48,7 @@ function append_download_if_missing {
 
   grep -q -E "\<${key}\>" "${zmsg}"
   if [ $? -ne 0 ]; then
-    echo "${key} = ${val}" >> "${zmsg}"
+    echo "${key} = /downloads/${val}" >> "${zmsg}"
   fi
 }
 
