@@ -26,10 +26,10 @@ zmcontactbackup <-h|-m|-r|-p|-q|-d|-f|[-a backup_schedule]> [mailbox_server...]
        -p|--stop           : stop contact backup
        -h|--help           : print a brief help message
        -m|--man            : print full man message
-       -q|--query          : prints existing schedule
+       -q|--query          : print existing schedule
        -a|--append         : append contact backup schedule
        -f|--flush          : flush all contact backup schedules
-       -d|--default        : flush all schedules and set default schedule to srart (default = 3 am everyday on all mailbox servers)
+       -d|--default        : (re)set to the default (3am daily) backup schedule
        backup_schedule     : crontab style time specifier, QUOTED.  See crontab(5)
                 Fields are:
                         minute         0-59
@@ -117,7 +117,7 @@ Display full man page.
 
 =item --query
 
-Displays existing contact backup schelude times in cron format with operation and list of mailbox server names.
+Displays existing contact backup schedule times in cron format with operation and list of mailbox server names.
 
 =item --flush
 
@@ -125,11 +125,11 @@ Flushes all the contact backup schedules.
 
 =item --default
 
-Flushes all the contact backup schedules and sets defalult contact backup schedule.
-Default contact backup shcedule is "0 3 * * *"
-i.e. everyday at 3 am for all the mailbox servers.
+Flushes all the contact backup schedules and sets default contact backup schedule.
+Default contact backup schedule is "0 3 * * *"
+i.e. everyday at 3am for all the mailbox servers.
 
-=item --append <"schedule"> [<mailbox.server1.name> <mailbox.server2.name> ...]
+=item --append <"schedule"> [<mailbox.server.name>...]
 
 Let existing contact backup schedules be in place, just append the specified schedule.
 schedule : crontab style time specifier, QUOTED.  See crontab(5)
@@ -141,11 +141,11 @@ schedule : crontab style time specifier, QUOTED.  See crontab(5)
                         day of week    0-7 (0 or 7 is Sun, or use names)
                 Example: Everyday at 1am  - "0 1 * * *"
 
-=item --start [<mailbox.server1.name> <mailbox.server2.name> ...]
+=item --start [<mailbox.server.name>...]
 
 Start contact backup for all mailbox stores or space separated list of mailbox server names.
 
-=item --stop [<mailbox.server1.name> <mailbox.server2.name> ...]
+=item --stop [<mailbox.server.name>...]
 
 Stop contact backup on all mailbox stores or on space separated list of mailbox server names.
 
