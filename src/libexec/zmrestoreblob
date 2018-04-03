@@ -14,6 +14,11 @@
 # If not, see <https://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
 
+#Usage 
+# su - zimbra
+# zmrestoreblob -m 3 
+# where -m is to specify which mailbox to check. In above case it is mailbox id 3 
+
 use strict;
 use warnings;  #or else.
 use lib "/opt/zimbra/common/lib/perl5";
@@ -27,15 +32,18 @@ my $backup_dir = "/opt/zimbra/backup/blobs";
 
 my $mailbox_id = $ARGV[1];
 
+#execute zmblobchk command for a given mailbox.
 my $zmblobchk_output = `zmblobchk -m $mailbox_id start`;
 
+# check if there are any orphaned headers.
 my $orphaned_header_check = ($zmblobchk_output =~ /blob not found/g);
 
-my $zmblobchk_noutput = $zmblobchk_output;
+chop($zmblobchk_output);
 
 if ($orphaned_header_check) {
 
-	my @matches = ($zmblobchk_noutput =~ /(\/opt\/zimbra\/store.*\.msg)/gm);
+	# find the missing blob entries
+	my @matches = ($zmblobchk_output =~ /(\/opt\/zimbra\/store.*\.msg)/gm);
 
 	for $matched_blob(@matches) {		
 
@@ -44,8 +52,9 @@ if ($orphaned_header_check) {
 		
 		my $backup_path = $backup_dir . "/" . $blob_fname;
 		
+		# if blob exists in backup restore it in the origin blob path and display appropriate message.
 		if (-f $backup_path) {
-			print "[] INFO: Restoring $matched_blob from backup\n";
+			print "[] INFO: Restoring $matched_blob from Backup\n";
 			copy($backup_path, $matched_blob);
 		}
 	}
