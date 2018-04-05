@@ -143,7 +143,7 @@ See also L<Input File Format>.
 
 LDAP filter used to search the directory for accounts.  The search is
 performed via ZCS Admin SOAP SearchDirectoryRequest and uses the
-default 'types=account' to only match accounts.  This option is not
+default 'types=accounts' to only match accounts.  This option is not
 allowed when using the --noadminauth option.
 
 Examples:
@@ -453,7 +453,7 @@ sub searchdirectory {
     my $limit = 50;
     my $attr  = {
         xmlns      => NS_ZADMIN,
-        types      => "account",
+        types      => "accounts",
         limit      => $limit,
         attrs      => "mail",
         applyCos   => 0,
