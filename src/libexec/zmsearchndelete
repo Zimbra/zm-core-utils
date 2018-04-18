@@ -288,7 +288,12 @@ sub main {
         $Opt{go}
     );
 
-    warn("$Prog: info: Total messages found for given query: $cnt \n");
+    my $msg = "$Prog: info: Total messages found";
+    if ($Opt{go}) {
+        $msg .= " and deleted";
+    }
+    $msg .= " for given query: $cnt";
+    warn("$msg \n");
 
     my $tEnd = Benchmark->new;
 
