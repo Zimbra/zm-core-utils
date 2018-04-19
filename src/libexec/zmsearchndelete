@@ -289,7 +289,7 @@ sub main {
     );
 
     my $msg = "$Prog: info: Total messages found";
-    if ($Opt{go}) {
+    if ( $Opt{go} ) {
         $msg .= " and deleted";
     }
     $msg .= " for given query: $cnt";
