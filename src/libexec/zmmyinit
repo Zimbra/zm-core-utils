@@ -95,13 +95,19 @@ rm -f ${mysql_mycnf}
   $mysql_memory_percent > ${mysql_mycnf}
 
 #
-# Create database
+# Create database, if necessary
 #
-echo '*' Creating database in ${mysql_data_directory}
-(/opt/zimbra/common/share/mysql/scripts/mysql_install_db \
+
+zimbra_db="${mysql_data_directory}/zimbra"
+if [ -d "${zimbra_db}" ]; then
+  echo '*' Database already exists in ${mysql_data_directory}
+else
+  echo '*' Creating database in ${mysql_data_directory}
+  (/opt/zimbra/common/share/mysql/scripts/mysql_install_db \
     --basedir=/opt/zimbra/common \
     --defaults-file=${mysql_mycnf}) \
     >> ${zimbra_log_directory}/zmmyinit.log 2>&1
+fi
 
 #
 # Start mysql server
