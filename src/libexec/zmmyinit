@@ -98,9 +98,14 @@ rm -f ${mysql_mycnf}
 # Create database, if necessary
 #
 
+# We assume that if this path exists, we are working with an existing database
 zimbra_db="${mysql_data_directory}/zimbra"
+# If we are working with an existing database, the root password will already have been 
+# set, so subsequent calls must use it.
+root_pw=
 if [ -d "${zimbra_db}" ]; then
   echo '*' Database already exists in ${mysql_data_directory}
+  root_pw="${sql_root_pw}"
 else
   echo '*' Creating database in ${mysql_data_directory}
   (/opt/zimbra/common/share/mysql/scripts/mysql_install_db \
@@ -117,7 +122,7 @@ echo '*' Starting mysql server
     >> ${zimbra_log_directory}/zmmyinit.log 2>&1
 
 # make sure we can connect before continuing 
-until `echo "show processlist" | /opt/zimbra/bin/mysql -u root --password= > /dev/null 2>&1`; do
+until `echo "show processlist" | /opt/zimbra/bin/mysql -u root --password="${root_pw}" > /dev/null 2>&1`; do
   let i++
   sleep 5
   if [ $i -gt 25 ]; then
@@ -132,29 +137,29 @@ done
 # Load zimbra sql files
 #
 echo '*' Loading schema ${zimbra_db_directory}/db.sql 
-/opt/zimbra/bin/mysql -u root --password= < \
+/opt/zimbra/bin/mysql -u root --password="${root_pw}" < \
     ${zimbra_db_directory}/db.sql
 
 if [ -f "${zimbra_db_directory}/create_sharing_database.sql" ];then
   echo '*' Loading schema ${zimbra_db_directory}/create_sharing_database.sql 
-  /opt/zimbra/bin/mysql -u root --password= < \
+  /opt/zimbra/bin/mysql -u root --password="${root_pw}" < \
       ${zimbra_db_directory}/create_sharing_database.sql
 fi
 
 echo '*' Loading version from ${zimbra_db_directory}/versions-init.sql
-/opt/zimbra/bin/mysql -u root --password= < \
+/opt/zimbra/bin/mysql -u root --password="${root_pw}" < \
     ${zimbra_db_directory}/versions-init.sql
 
 if [ -f "${zimbra_db_directory}/backup-version-init.sql" ]; then
   echo '*' Loading version from ${zimbra_db_directory}/backup-version-init.sql
-  /opt/zimbra/bin/mysql -u root --password= < \
+  /opt/zimbra/bin/mysql -u root --password="${root_pw}" < \
     ${zimbra_db_directory}/backup-version-init.sql
 fi
 
 #
 # Delete wildcard user login entries
 #
-/opt/zimbra/bin/mysql -u root --password= -e "DROP USER ''@'localhost'; DROP USER ''@'`hostname`';"
+/opt/zimbra/bin/mysql -u root --password="${root_pw}" -e "DROP USER ''@'localhost'; DROP USER ''@'`hostname`';"
 
 #
 # Generate passwords for mysql into local config
@@ -179,14 +184,18 @@ fi
 # this stage we know that the root password is empty.
 #
 zmsetvars -f
-echo '*' Changing mysql root user password
-cat <<EOF | /opt/zimbra/bin/mysql -u root --password=
+if [ -z "${root_pw}" ]; then
+  echo '*' Setting mysql root user password
+  cat <<EOF | /opt/zimbra/bin/mysql -u root --password=
     SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${mysql_root_password}');
     SET PASSWORD FOR 'root'@'`hostname`' = PASSWORD('${mysql_root_password}');
     SET PASSWORD FOR 'root'@'127.0.0.1' = PASSWORD('${mysql_root_password}');
     SET PASSWORD FOR 'root'@'::1' = PASSWORD('${mysql_root_password}');
     SET PASSWORD FOR 'root'@'localhost.localdomain' = PASSWORD('${mysql_root_password}');
 EOF
+else
+  echo '*' Mysql root user password already set
+fi
 
 echo '*' Changing mysql zimbra user password
 /opt/zimbra/bin/zmmypasswd ${zimbra_mysql_password}
