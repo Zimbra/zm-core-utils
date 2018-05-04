@@ -61,8 +61,8 @@ my $email = $opt_account;
 #get zimbraid for a given email account
 my $zimbra_id = `zmprov ga $email zimbraid 2>&1`;
 if( $zimbra_id =~ /ERROR:/g ) {
-	print("[] INFO: $zimbra_id \n");
-	exit(1);
+    print("[] INFO: $zimbra_id \n");
+    exit(1);
 }
 
 my @fields = split /:\s+/, $zimbra_id;
@@ -82,8 +82,8 @@ my $latest_backup_path = get_latest_backup_dir($backup_dir.'/full-*');
 
 #if no backup exist on server
 if (!defined($latest_backup_path)) {
-	print("[] INFO: No backup exist on server...\n");
-	exit(1);
+    print("[] INFO: No backup exist on server...\n");
+    exit(1);
 }
 
 my $first_three = substr($zimbra_id, 0,3);
