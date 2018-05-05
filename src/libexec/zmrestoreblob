@@ -14,14 +14,20 @@
 # If not, see <https://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
 
-=pod
-=head1 This utility is used to check orphan headers for given account, if founds any missing blobs, restore it
+=head1 NAME
+zmrestoreblob - restores missing blobs for orphan headers
 
-#Usage
-# su - zimbra
-# zmrestoreblob -a|account {name@domain|id}
-# zmrestoreblob -a test1@zcs-dev.test OR zmrestoreblob -a test1
-# where -a is to specify which mailbox account to check.
+=head1 SYNOPSIS
+
+  zmrestoreblob [options]
+  Options:
+    -a|account     Check orphan headers for given email account, if founds any missing blobs, restore it
+    -h|help        Display this help message.
+
+  Example:  zmrestoreblob -a test1@zcs-dev.test
+
+=head1 DESCRIPTION
+This utility is used to check orphan headers for given account, if founds any missing blobs, restore it
 
 =cut
 
@@ -33,34 +39,25 @@ use File::Basename;
 use File::Copy;
 use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
 use Getopt::Long;
-
+use Pod::Usage qw(pod2usage);
 
 my $opt_help;
 my $opt_account;
+
 GetOptions(
-    "help|h" => \$opt_help,
+    "help|h"      => \$opt_help,
     "account|a=s" => \$opt_account
 );
 
-if (defined($opt_help) || !defined($opt_account)) {
-    usage();
-}
-
-sub usage {
-    print <<EOF;
-Usage:
-zmrestoreblob -a|account  email-account
-    -a|account  - Check orphan headers for given account, if founds any missing blobs, restore it
-    -h|help     - Display this help message.
-EOF
-    exit(0);
+if ( defined($opt_help) || !defined($opt_account) ) {
+    pod2usage(1);
 }
 
 my $email = $opt_account;
 
 #get zimbraid for a given email account
 my $zimbra_id = `zmprov ga $email zimbraid 2>&1`;
-if( $zimbra_id =~ /ERROR:/g ) {
+if ( $zimbra_id =~ /ERROR:/g ) {
     print("[] INFO: $zimbra_id \n");
     exit(1);
 }
@@ -77,19 +74,20 @@ $mailbox_id = $fields[1];
 $zimbra_id =~ s/[\r\n]//g;
 $mailbox_id =~ s/[\r\n]//g;
 
-my $backup_dir = "/opt/zimbra/backup/sessions";
-my $latest_backup_path = get_latest_backup_dir($backup_dir.'/full-*');
+my $backup_dir         = "/opt/zimbra/backup/sessions";
+my $latest_backup_path = get_latest_backup_dir( $backup_dir . '/full-*' );
 
 #if no backup exist on server
-if (!defined($latest_backup_path)) {
+if ( !defined($latest_backup_path) ) {
     print("[] INFO: No backup exist on server...\n");
     exit(1);
 }
 
-my $first_three = substr($zimbra_id, 0,3);
-my $next_three = substr($zimbra_id, 3,3);
+my $first_three = substr( $zimbra_id, 0, 3 );
+my $next_three  = substr( $zimbra_id, 3, 3 );
 
-$backup_dir =  $latest_backup_path . "/accounts/$first_three/$next_three/$zimbra_id/blobs";
+$backup_dir =
+  $latest_backup_path . "/accounts/$first_three/$next_three/$zimbra_id/blobs";
 
 #execute zmblobchk command for a given mailbox.
 my $zmblobchk_output = `zmblobchk -m $mailbox_id start`;
@@ -107,24 +105,25 @@ if ($orphaned_header_check) {
     for my $matched_blob (@matches) {
 
         my ( $filename, $dirs, $suffix ) = fileparse($matched_blob);
-        my $blob_fname = basename($filename);
+        my $blob_fname    = basename($filename);
         my $org_blob_part = get_file_part($filename);
 
         my @backup_zip_files = glob( $backup_dir . '/*' );
-        my $msg_match_flag = 0;
+        my $msg_match_flag   = 0;
         foreach my $zip_file (@backup_zip_files) {
+
             # Read a Zip file
-            my $backup_file = '';
+            my $backup_file      = '';
             my $backup_blob_part = '';
-            my $zip = Archive::Zip->new();
+            my $zip              = Archive::Zip->new();
             $zip->read($zip_file) == AZ_OK or die 'read error';
             my @members = $zip->membersMatching('.*\.msg1');
             foreach my $member (@members) {
-                $backup_file = $member->fileName();
-                $backup_blob_part = get_file_part(fileparse($backup_file));
+                $backup_file      = $member->fileName();
+                $backup_blob_part = get_file_part( fileparse($backup_file) );
 
-                # if blob exists in backup, restore it in the origin blob path and display appropriate message.
-                if($org_blob_part eq $backup_blob_part) {
+# if blob exists in backup, restore it in the origin blob path and display appropriate message.
+                if ( $org_blob_part eq $backup_blob_part ) {
                     print "[] INFO: Restoring $matched_blob from Backup\n";
                     $member->extractToFileNamed("$matched_blob");
                     $msg_match_flag = 1;
@@ -132,7 +131,7 @@ if ($orphaned_header_check) {
                 }
             }
         }
-        if($msg_match_flag == 0) {
+        if ( $msg_match_flag == 0 ) {
             print "[] INFO: File $matched_blob not found in backup \n";
         }
     }
@@ -141,16 +140,15 @@ else {
     print "[] INFO: No Orphaned Headers Found\n";
 }
 
-
 sub get_file_part {
     my ($filename) = @_;
-    if($filename =~ /.*?(\d+\-\d+\.msg)/gm) {
+    if ( $filename =~ /.*?(\d+\-\d+\.msg)/gm ) {
         return $1;
     }
 }
 
 sub get_latest_backup_dir {
     my ($backup_path) = @_;
-    my $latest_backup_dir = ( sort {-M $a <=> -M $b} glob($backup_path) )[0];
+    my $latest_backup_dir = ( sort { -M $a <=> -M $b } glob($backup_path) )[0];
     return $latest_backup_dir;
 }
