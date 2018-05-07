@@ -24,7 +24,11 @@ zmrestoreblob - restores missing blobs for orphan headers
     -a|account     Check orphan headers for given email account, if founds any missing blobs, restore it
     -h|help        Display this help message.
 
-  Example:  zmrestoreblob -a test1@zcs-dev.test
+=head1 EXAMPLES
+  zmrestoreblob -a test1
+  zmrestoreblob -a test1@zcs-dev.test
+  zmrestoreblob -account test1
+  zmrestoreblob -account test1@zcs-dev.test
 
 =head1 DESCRIPTION
 This utility is used to check orphan headers for given account, if founds any missing blobs, restore it
