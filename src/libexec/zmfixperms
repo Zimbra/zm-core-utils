@@ -293,6 +293,35 @@ if [ -d /opt/zimbra ]; then
       chmod 640 /opt/zimbra/conf/sasl2/smtpd.conf
       chown ${zimbra_user}:${zimbra_group} /opt/zimbra/conf/sasl2/smtpd.conf
     fi
+    
+    if [ -d /opt/zimbra/conf/templates/ ]; then
+      chmod 755 /opt/zimbra/conf/templates
+      chown ${zimbra_user}:${zimbra_group} /opt/zimbra/conf/templates
+      
+      chmod 755 \
+        /opt/zimbra/conf/templates /opt/zimbra/conf/templates/abook /opt/zimbra/conf/templates/briefcase \
+        /opt/zimbra/conf/templates/calendar /opt/zimbra/conf/templates/data /opt/zimbra/conf/templates/dwt \
+        /opt/zimbra/conf/templates/mail /opt/zimbra/conf/templates/prefs /opt/zimbra/conf/templates/share \
+        /opt/zimbra/conf/templates/tasks /opt/zimbra/conf/templates/voicemail /opt/zimbra/conf/templates/zimbra
+
+      chown ${zimbra_user}:${zimbra_group} \
+        /opt/zimbra/conf/templates /opt/zimbra/conf/templates/abook /opt/zimbra/conf/templates/briefcase \
+        /opt/zimbra/conf/templates/calendar /opt/zimbra/conf/templates/data /opt/zimbra/conf/templates/dwt \
+        /opt/zimbra/conf/templates/mail /opt/zimbra/conf/templates/prefs /opt/zimbra/conf/templates/share \
+        /opt/zimbra/conf/templates/tasks /opt/zimbra/conf/templates/voicemail /opt/zimbra/conf/templates/zimbra
+
+      chmod 644 \
+        /opt/zimbra/conf/templates/abook/* /opt/zimbra/conf/templates/admin/* /opt/zimbra/conf/templates/briefcase/* \
+        /opt/zimbra/conf/templates/calendar/* /opt/zimbra/conf/templates/data/* /opt/zimbra/conf/templates/dwt/* \
+        /opt/zimbra/conf/templates/mail/* /opt/zimbra/conf/templates/prefs/* /opt/zimbra/conf/templates/share/* \
+        /opt/zimbra/conf/templates/tasks/* /opt/zimbra/conf/templates/voicemail/* /opt/zimbra/conf/templates/zimbra/*
+        
+      chown ${zimbra_user}:${zimbra_group} \
+        /opt/zimbra/conf/templates/abook/* /opt/zimbra/conf/templates/admin/* /opt/zimbra/conf/templates/briefcase/* \
+        /opt/zimbra/conf/templates/calendar/* /opt/zimbra/conf/templates/data/* /opt/zimbra/conf/templates/dwt/* \
+        /opt/zimbra/conf/templates/mail/* /opt/zimbra/conf/templates/prefs/* /opt/zimbra/conf/templates/share/* \
+        /opt/zimbra/conf/templates/tasks/* /opt/zimbra/conf/templates/voicemail/* /opt/zimbra/conf/templates/zimbra/*
+    fi
   fi
 
   if [ -d /opt/zimbra/docs ]; then
