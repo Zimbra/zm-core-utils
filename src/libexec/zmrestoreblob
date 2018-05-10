@@ -34,7 +34,8 @@ zmrestoreblob - restores missing blobs for orphaned messages
 
 =head1 DESCRIPTION
 
-Looks for orphaned messages for an account via zmblobcheck and restores blobs, if found, in a backup.
+Search for orphaned messages (missing blobs) in an account via zmblobcheck.
+Restore the orphan(s), if found, from a backup.
 
 =cut
 
@@ -144,7 +145,7 @@ if ($orphaned_header_check) {
     }
 }
 else {
-    print "[] INFO: No Orphaned message Found\n";
+    print "[] INFO: No orphaned message found\n";
 }
 
 sub get_file_part {
