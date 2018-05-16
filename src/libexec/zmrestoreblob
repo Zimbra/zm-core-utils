@@ -61,6 +61,8 @@ if ( defined($opt_help) || !defined($opt_account) ) {
     pod2usage( -verbose => 2, -noperldoc => 1 );
 }
 
+print("[] INFO: Processing, please wait...\n");
+
 my $email = $opt_account;
 
 #get zimbraid for a given email account
@@ -118,12 +120,12 @@ if ($orphaned_header_check) {
 
         my @backup_zip_files = glob( $backup_dir . '/*' );
         my $msg_match_flag   = 0;
+        my $zip              = Archive::Zip->new();
         foreach my $zip_file (@backup_zip_files) {
 
             # Read a Zip file
             my $backup_file      = '';
             my $backup_blob_part = '';
-            my $zip              = Archive::Zip->new();
             $zip->read($zip_file) == AZ_OK or die 'read error';
             my @members = $zip->membersMatching('.*\.msg1');
             foreach my $member (@members) {
@@ -138,9 +140,16 @@ if ($orphaned_header_check) {
                     last;
                 }
             }
+            if ( $msg_match_flag == 1 ) {
+                last;
+            }
         }
         if ( $msg_match_flag == 0 ) {
-            print "[] INFO: File $matched_blob not found in backup \n";
+            my @blob_part = split( '-', $org_blob_part );
+            my $msg_id = $blob_part[0];
+            if ( !check_msg_in_shared_blobs( $msg_id, $matched_blob ) ) {
+                print "[] INFO: File $matched_blob not found in backup \n";
+            }
         }
     }
 }
@@ -159,4 +168,29 @@ sub get_latest_backup_dir {
     my ($backup_path) = @_;
     my $latest_backup_dir = ( sort { -M $a <=> -M $b } glob($backup_path) )[0];
     return $latest_backup_dir;
+}
+
+sub check_msg_in_shared_blobs {
+    my ( $msg_id, $missing_blob ) = @_;
+    my $grid = $mailbox_id % 100;
+    $grid = ( $grid == 0 ) ? 100 : $grid;
+    my $blob_digest =
+`echo "select blob_digest from mail_item where blob_digest is not null and mailbox_id=${mailbox_id} and id=${msg_id};" | mysql -N mboxgroup${grid}`;
+    $blob_digest =~ s/[\r\n]//g;
+    $blob_digest = quotemeta($blob_digest);
+
+    my $zip              = Archive::Zip->new();
+    my @shared_blob_zips = glob( $latest_backup_path . '/shared_blobs/*' );
+    my $msg_match_flag   = 0;
+    foreach my $zip_file (@shared_blob_zips) {
+        $zip->read($zip_file) == AZ_OK
+          or die 'read error for shared_blobs zip: ' . $zip_file;
+        my @members = $zip->membersMatching($blob_digest);
+        foreach my $member (@members) {
+            $member->extractToFileNamed($missing_blob);
+            print "[] INFO: Restoring $missing_blob from Backup\n";
+            return 1;
+        }
+    }
+    return 0;
 }
