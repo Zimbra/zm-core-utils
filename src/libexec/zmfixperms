@@ -293,6 +293,12 @@ if [ -d /opt/zimbra ]; then
       chmod 640 /opt/zimbra/conf/sasl2/smtpd.conf
       chown ${zimbra_user}:${zimbra_group} /opt/zimbra/conf/sasl2/smtpd.conf
     fi
+
+    if [ -d /opt/zimbra/conf/templates/ ]; then
+      chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/conf/templates
+      find /opt/zimbra/conf/templates/ -type d -exec chmod 755 {} \;
+      find /opt/zimbra/conf/templates/ -type f -exec chmod 644 {} \;
+    fi
   fi
 
   if [ -d /opt/zimbra/docs ]; then
