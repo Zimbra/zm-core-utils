@@ -1,0 +1,202 @@
+#!/usr/bin/perl
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2018 Synacor, Inc.
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+
+=head1 NAME
+
+zmrestoreblob - restores missing blobs for orphaned messages
+
+=head1 SYNOPSIS
+
+  zmrestoreblob [options]
+  Options:
+    -a|account     <email-account> to check for orphaned messages
+    -h|help        Display this help message.
+
+=head1 EXAMPLES
+
+  zmrestoreblob -a test1
+  zmrestoreblob -a test1@zcs-dev.test
+  zmrestoreblob -account test1
+  zmrestoreblob -account test1@zcs-dev.test
+
+=head1 DESCRIPTION
+
+Search for orphaned messages (missing blobs) in an account via zmblobcheck.
+Restore the orphan(s), if found, from a backup.
+
+=cut
+
+use strict;
+use warnings;    #or else.
+use lib "/opt/zimbra/common/lib/perl5";
+use Data::Dumper;
+use File::Basename;
+use File::Copy;
+use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
+use Getopt::Long;
+use Pod::Usage qw(pod2usage);
+
+my $opt_help;
+my $opt_account;
+
+GetOptions(
+    "help|h"      => \$opt_help,
+    "account|a=s" => \$opt_account
+) or pod2usage( -verbose => 0 );
+
+if ( defined($opt_help) || !defined($opt_account) ) {
+    pod2usage( -verbose => 2, -noperldoc => 1 );
+}
+
+print("[] INFO: Processing, please wait...\n");
+
+my $email = $opt_account;
+
+#get zimbraid for a given email account
+my $zimbra_id = `zmprov ga $email zimbraid 2>&1`;
+if ( $zimbra_id =~ /ERROR:/g ) {
+    print("[] INFO: $zimbra_id \n");
+    exit(1);
+}
+
+my @fields = split /:\s+/, $zimbra_id;
+$zimbra_id = $fields[1];
+
+#get mailboxId for a given email account
+my $mailbox_id = `zmprov gmi $email | grep mailboxId`;
+@fields = split /:\s+/, $mailbox_id;
+$mailbox_id = $fields[1];
+
+#clean the values...
+$zimbra_id =~ s/[\r\n]//g;
+$mailbox_id =~ s/[\r\n]//g;
+
+my $backup_dir         = "/opt/zimbra/backup/sessions";
+my $latest_backup_path = get_latest_backup_dir( $backup_dir . '/full-*' );
+
+#if no backup exist on server
+if ( !defined($latest_backup_path) ) {
+    print("[] INFO: No backup exist on server...\n");
+    exit(1);
+}
+
+my $first_three = substr( $zimbra_id, 0, 3 );
+my $next_three  = substr( $zimbra_id, 3, 3 );
+
+$backup_dir =
+  $latest_backup_path . "/accounts/$first_three/$next_three/$zimbra_id/blobs";
+
+#execute zmblobchk command for a given mailbox.
+my $zmblobchk_output = `zmblobchk -m $mailbox_id start`;
+
+# check if there are any orphaned messages.
+my $orphaned_header_check = ( $zmblobchk_output =~ /blob not found/g );
+
+chop($zmblobchk_output);
+
+if ($orphaned_header_check) {
+
+    # find the missing blob entries
+    my @matches = ( $zmblobchk_output =~ /(\/opt\/zimbra\/store.*\.msg)/gm );
+
+    for my $matched_blob (@matches) {
+        my $restore_status =
+          process_zip_files( $backup_dir, '.*\.msg1', 'normal_blob',
+            $matched_blob );
+        if ( !$restore_status ) {
+            my $org_blob_part = get_file_part( fileparse($matched_blob) );
+            my $msg_id        = get_msg_id_from_blob_part($org_blob_part);
+            if ( !check_msg_in_shared_blobs( $msg_id, $matched_blob ) ) {
+                print "[] INFO: File $matched_blob not found in backup\n";
+            }
+        }
+    }
+}
+else {
+    print "[] INFO: No orphaned message found\n";
+}
+
+sub get_file_part {
+    my ($filename) = @_;
+    if ( $filename =~ /.*?(\d+\-\d+\.msg)/gm ) {
+        return $1;
+    }
+}
+
+sub get_latest_backup_dir {
+    my ($backup_path) = @_;
+    my $latest_backup_dir = ( sort { -M $a <=> -M $b } glob($backup_path) )[0];
+    return $latest_backup_dir;
+}
+
+sub check_msg_in_shared_blobs {
+    my ( $msg_id, $missing_blob ) = @_;
+    my $grid = $mailbox_id % 100;
+    $grid = ( $grid == 0 ) ? 100 : $grid;
+    my $blob_digest =
+`echo "select blob_digest from mail_item where blob_digest is not null and mailbox_id=${mailbox_id} and id=${msg_id};" | mysql -N mboxgroup${grid}`;
+    $blob_digest =~ s/[\r\n]//g;
+    $blob_digest = quotemeta($blob_digest);
+
+    my $backup_path = $latest_backup_path . '/shared_blobs';
+    process_zip_files( $backup_path, $blob_digest, 'shared_blob',
+        $missing_blob );
+}
+
+sub process_zip_files {
+    my ( $backup_dir, $msg_to_search, $restore_type, $missing_blob ) = @_;
+    my $org_blob_part    = get_file_part( fileparse($missing_blob) );
+    my $msg_id           = get_msg_id_from_blob_part($org_blob_part);
+    my @backup_zip_files = glob( $backup_dir . '/*' );
+    my $zip              = Archive::Zip->new();
+
+    foreach my $zip_file (@backup_zip_files) {
+
+        # Read a Zip file
+        my $backup_file      = '';
+        my $backup_blob_part = '';
+        $zip->read($zip_file) == AZ_OK or die 'read error';
+        my @members = $zip->membersMatching($msg_to_search);
+        foreach my $member (@members) {
+            if ( $restore_type eq 'normal_blob' ) {
+                $backup_file      = $member->fileName();
+                $backup_blob_part = get_file_part( fileparse($backup_file) );
+
+# if blob exists in backup, restore it in the origin blob path and display appropriate message.
+                if ( $org_blob_part eq $backup_blob_part ) {
+                    print
+"[] INFO: Restoring $missing_blob for message id: $msg_id from backup\n";
+                    $member->extractToFileNamed($missing_blob);
+                    return 1;
+                }
+            }
+            else {
+                $member->extractToFileNamed($missing_blob);
+                print
+"[] INFO: Restoring $missing_blob for message id: $msg_id from backup\n";
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+sub get_msg_id_from_blob_part {
+    my ($blob_part) = @_;
+    my @split_data = split( '-', $blob_part );
+    return $split_data[0];
+}
+
