@@ -55,7 +55,7 @@ checkrunning()
   if [ "x$pid" = "x" ]; then
 	running=0
   else
-	status=`echo STATUS | $NC -q2 -w 15 localhost ${zmconfigd_listen_port} 2>/dev/null`
+	status=`echo STATUS | $NC -w 15 localhost ${zmconfigd_listen_port} 2>/dev/null`
 	if [ $? = 0 -a "x$status" = "xSUCCESS ACTIVE" ]; then
 		running=1
 	else
