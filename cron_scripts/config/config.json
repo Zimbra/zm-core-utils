@@ -2,7 +2,4 @@
 	"MAILSTOREHOST":"10.139.28.238",
 	"MAILSTOREUSER":"admin@zimbra.nic.in",
 	"MAILSTOREPWD":"root123",
-	"LDAPHOST":"10.139.28.238",
-	"LDAPUSER":"uid=zimbra,cn=admins,cn=zimbra",
-	"LDAPPWD":"y8hBflpX0a"
 }

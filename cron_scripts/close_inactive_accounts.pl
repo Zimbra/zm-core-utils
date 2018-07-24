@@ -36,9 +36,6 @@ my $config = JSON->new->utf8->relaxed->decode(scalar read_file $config_file);
 die "MAILSTOREHOST is not defined in config file" if (!defined($config->{MAILSTOREHOST}) || $config->{MAILSTOREHOST} eq "");
 die "MAILSTOREUSER is not defined in config file" if (!defined($config->{MAILSTOREUSER}) || $config->{MAILSTOREUSER} eq "");
 die "MAILSTOREPWD is not defined in config file" if (!defined($config->{MAILSTOREPWD}) || $config->{MAILSTOREPWD} eq "");
-die "LDAPHOST is not defined in config file" if (!defined($config->{LDAPHOST}) || $config->{LDAPHOST} eq "");
-die "LDAPUSER is not defined in config file" if (!defined($config->{LDAPUSER}) || $config->{LDAPUSER} eq "");
-die "LDAPPWD is not defined in config file" if (!defined($config->{LDAPPWD}) || $config->{LDAPPWD} eq "");
 
 my $last_login_days = $opts{last_login_days};
 my $last_login_timestamp = strftime('%Y%m%d000000', localtime( time() - $last_login_days*(24 * 60 * 60) ) ) . "Z";
