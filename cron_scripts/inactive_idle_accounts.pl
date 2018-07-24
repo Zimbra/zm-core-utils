@@ -15,14 +15,16 @@ use POSIX qw(strftime);
 my $config_file = 'config/config.json';
 
 my %opts = (
-	last_login_days => 97
+	last_login_days => 97,
+	new_status => 'locked'
 );
 
 my $res = GetOptions(
 	\%opts,
 	"help",
 	"debug",
-	"last_login_days=i"
+	"last_login_days=i",
+	"new_status=s"
 );
 
 if ($opts{help}) {
@@ -38,6 +40,7 @@ die "MAILSTOREHOST is not defined in config file" if (!defined($config->{MAILSTO
 die "MAILSTOREUSER is not defined in config file" if (!defined($config->{MAILSTOREUSER}) || $config->{MAILSTOREUSER} eq "");
 die "MAILSTOREPWD is not defined in config file" if (!defined($config->{MAILSTOREPWD}) || $config->{MAILSTOREPWD} eq "");
 
+my $new_status = $opts{new_status};
 my $last_login_days = $opts{last_login_days};
 my $last_login_timestamp = strftime('%Y%m%d000000', localtime( time() - $last_login_days*(24 * 60 * 60) ) ) . "Z";
 
@@ -76,7 +79,7 @@ if ($soap_api) {
 	if (scalar @data != 0) {
 		foreach my $acc ( @data ) {
 			my $zimbraId = $acc->{id};
-			my $modify_data = {'zimbraAccountStatus' => 'pending' };
+			my $modify_data = {'zimbraAccountStatus' => $new_status };
 			if ( my $modify_acc = eval { $soap_api->modifyaccount( $zimbraId, $modify_data ) } ) {
 				warn("DEBUG: $acc->{name} made inactive \n") if ($soap_api->Debug);
 			}
@@ -103,5 +106,6 @@ perl $prog_name [options]
 --help    - print this message
 --debug   - print debug message
 --last_login_days - number of days to check for last login
+--new_status - new status to update the user account
 END_PRINT
 }
