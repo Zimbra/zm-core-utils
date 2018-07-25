@@ -71,9 +71,9 @@ case "$1" in
     addr="${addr//$'\n'/,}"
     port=$(/opt/zimbra/bin/zmprov -l gs ${zimbra_server_hostname} zimbraMemcachedBindPort | awk '/^zimbraMemcachedBindPort:/{ print $2 }')
     if [ x"$addr" = "x" ]; then
-      /opt/zimbra/common/bin/${servicename} -d -P ${pidfile} -p ${port:-11211}
+      /opt/zimbra/common/bin/${servicename} -d -P ${pidfile} -U 0 -p ${port:-11211}
     else
-      /opt/zimbra/common/bin/${servicename} -d -P ${pidfile} -l ${addr} -p ${port:-11211}
+      /opt/zimbra/common/bin/${servicename} -d -P ${pidfile} -U 0 -l ${addr} -p ${port:-11211}
     fi
     for ((i=0; i < 30; i++)); do
       checkrunning
