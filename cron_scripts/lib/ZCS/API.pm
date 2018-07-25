@@ -18,6 +18,14 @@ BEGIN {
     @LWP::Protocol::http::EXTRA_SOCK_OPTS = ( SSL_verify_mode => 0 );
 }
 
+=head1 NAME
+
+ZCS::API - perl module for accessing Zimbra SOAP API
+
+This program extracted required features from https://github.com/plobbes/zcs-api/blob/master/lib/ZCS/API.pm
+
+=cut
+
 sub new {
     my $class = shift;
     die("new: invalid arguments\n") if ( @_ % 2 );
@@ -53,12 +61,13 @@ sub Debug {
     $Debug = $_[1] if ( @_ > 1 );
     return $Debug;
 }
+
 sub Error {
     $Error = $_[1] if ( @_ > 1 );
     return $Error;
 }
 
-sub conf_keys      { return qw(SOAPURI SOAPUser SOAPPass); }
+sub conf_keys { return qw(SOAPURI SOAPUser SOAPPass); }
 
 sub conf {
     my ( $self, $conf ) = @_;
@@ -67,7 +76,7 @@ sub conf {
         my @req = $self->conf_keys;
         my @err;
         foreach my $k (@req) {
-            push( @err, $k ) unless ( defined($conf->{$k}) );
+            push( @err, $k ) unless ( defined( $conf->{$k} ) );
         }
         die( ref($self) . "->conf: missing info: ", join( ", ", @err ), "\n" )
           if @err;
@@ -79,6 +88,7 @@ sub conf {
 sub soap {
     my $self = shift;
     unless ( exists( $self->{_soap} ) ) {
+
         #SOAP::Lite->import( +trace => "all" ) if $self->Debug;
         $self->{_soap} = SOAP::Lite->new(
             proxy    => $self->conf->{SOAPURI},
@@ -103,11 +113,13 @@ sub soap_call {
         local ($@);
         eval { $resp = $self->soap->call( $req, $opt{head}, @body ); };
         $err = $@;
-        if (_err($resp) =~ /Client auth credentials have expired/) {
-              # reauthenticate for long running processes
-              $opt{head} = $self->reauth($opt{head});
-              $resp=undef; # force retry
-        } elsif ($err) {
+        if ( _err($resp) =~ /Client auth credentials have expired/ ) {
+
+            # reauthenticate for long running processes
+            $opt{head} = $self->reauth( $opt{head} );
+            $resp = undef;    # force retry
+        }
+        elsif ($err) {
             chomp($err);
             last unless ( $try < $maxtry );
             $sec += $try;    # back off a little more on each retry
@@ -149,7 +161,7 @@ sub _err {
               )
         );
     }
-    if (defined($resp->valueof("//Fault/faultcode"))) {
+    if ( defined( $resp->valueof("//Fault/faultcode") ) ) {
         return (
                 $resp->valueof("//Fault/faultcode") . " "
               . $resp->valueof("//Fault/faultstring")
@@ -251,13 +263,14 @@ using this method.
 
 sub reauth {
     my ( $self, $auth ) = @_;
-    if ($auth == $self->{_zimbra_auth}) {
-        delete($self->{_zimbra_auth});
+    if ( $auth == $self->{_zimbra_auth} ) {
+        delete( $self->{_zimbra_auth} );
         return $self->auth;
-    } elsif (exists($self->{_zimbra_delegateauth})) {
-        foreach my $account (keys %{$self->{_zimbra_delegateauth}}) {
-            if ($auth == $self->{_zimbra_delegateauth}{$account}) {
-                delete($self->{_zimbra_delegateauth}{$account});
+    }
+    elsif ( exists( $self->{_zimbra_delegateauth} ) ) {
+        foreach my $account ( keys %{ $self->{_zimbra_delegateauth} } ) {
+            if ( $auth == $self->{_zimbra_delegateauth}{$account} ) {
+                delete( $self->{_zimbra_delegateauth}{$account} );
                 return $self->delegateauth($account);
             }
         }
@@ -279,19 +292,6 @@ sub getaccount {
         head => $self->auth,
         body => $body
     );
-}
-
-sub getaccountid {
-    my ( $self, $value ) = @_;
-
-    if ( $value =~ /\@/ ) {  # probably an account name get SOAP::SOM to find id
-        $value = $self->getaccount($value);
-    }
-    if ( ref($value) eq "SOAP::SOM" ) {
-        $value = $value->dataof('//account')->attr->{id};
-    }
-
-    return $value;
 }
 
 sub modifyaccount {
@@ -320,16 +320,17 @@ sub modifyaccount {
     );
 }
 
-sub deleteaccount {
-    my ( $self, $acct ) = @_;
+sub searchdirectory {
+    my ( $self, %args ) = @_;
 
-    # Do this to all methods that need $id? This works as expected for
-    # email address, id or SOAP::SOM result from getaccount
-    my $id = $self->getaccountid($acct);
-
-    my $req  = "DeleteAccountRequest";
-    my $attr = { "xmlns" => "urn:zimbraAdmin" };
-    my $body = SOAP::Data->name( id => $id )->type("string");
+    my $req  = "SearchDirectoryRequest";
+    my $attr = {
+        "xmlns" => "urn:zimbraAdmin",
+        "types" => "accounts",
+        "query" => $args{query},
+        'attrs' => "$args{attrs}"
+    };
+    my $body = SOAP::Data->type( "xml" => "" );
 
     return $self->soap_call(
         req  => $req,
@@ -338,26 +339,5 @@ sub deleteaccount {
         body => $body
     );
 }
-
-sub searchdirectory {
-    my ( $self, %args ) = @_;
-
-	my $req = "SearchDirectoryRequest";
-    my $attr = {
-		"xmlns" => "urn:zimbraAdmin",
-		"types" => "accounts",
-		"query" => $args{query},
-		'attrs' => "$args{attrs}"
-	};
-	my $body = SOAP::Data->type( "xml" => "" );
-
-	return $self->soap_call(
-        req  => $req,
-        attr => $attr,
-        head => $self->auth,
-        body => $body
-    );
-}
-
 
 1;
