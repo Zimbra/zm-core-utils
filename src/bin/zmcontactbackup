@@ -1,0 +1,588 @@
+#!/usr/bin/perl
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2018 Synacor, Inc.
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+
+=head1 NAME
+
+zmcontactbackup - start/stop/schedule contact backup on mailbox server(s)
+
+=head1 SYNOPSIS
+
+zmcontactbackup <-h|-m|-r|-p|-q|-d|-f|[-l]|[-a backup_schedule]> [mailbox_server...]
+
+       -r|--start          : start contact backup
+       -p|--stop           : stop contact backup
+       -h|--help           : print a brief help message
+       -m|--man            : print full man message
+       -q|--query          : print existing schedule
+       -a|--append         : append contact backup schedule
+       -f|--flush          : flush all contact backup schedules
+       -d|--default        : (re)set to the default (3am daily) backup schedule
+       -l|--all            : run contact backup on all mailbox servers
+       backup_schedule     : crontab style time specifier, QUOTED.  See crontab(5)
+                Fields are:
+                        minute         0-59
+                        hour           0-23
+                        day of month   1-31
+                        month          1-12
+                        day of week    0-7 (0 or 7 where 0 is Sunday, or use names like sun, mon, etc...)
+                Example: Everyday at 1am  -  "0 1 * * *"
+        mailbox_server : space separated mailbox server names
+
+=head1 EXAMPLES
+
+Examples :
+1)  # append contact backup schedule to start everyday at 1am on current mailbox server
+    $ zmcontactbackup -a "0 1 * * *"
+
+2)  # append contact backup schedule to start everyday at 1am on all mailbox servers
+    $ zmcontactbackup -l -a "0 1 * * *"
+
+3)  # append contact backup schedule to start everyday at 1am on "test.server.com" only.
+    $ zmcontactbackup -a "0 1 * * *" test.server.com
+
+4)  # start contact backup on current mailbox server
+    $ zmcontactbackup -r
+
+5)  # start contact backup on mailbox servers test.server.com and test2.server.com
+    $ zmcontactbackup -r test.server.com test2.server.com
+
+6)  # start contact backup on all mailbox servers.
+    $ zmcontactbackup -r -l
+
+7)  # stop contact backup on current mailbox server if running.
+    $ zmcontactbackup -p
+
+8)  # stop contact backup on test.server.com, if running. do not disturb running contact backup on other mailbox servers.
+    $ zmcontactbackup -p test.server.com
+
+9)  # stop contact backup on all mailbox servers.
+    $ zmcontactbackup -p -l
+
+=head1 DESCRIPTION
+
+This utility is used to schedule contact backup for
+specified mailbox server(s).
+It can be used to start/stop contact backup immediately.
+It uses the ZCS Admin SOAP APIs.
+
+Specifically, this utility was created to meet the following
+requirements:
+1) start contact backup thread
+2) stop contact backup thread
+3) schecule contact backup to run on specific time
+4) contact backup should run on all, current, or specific mailbox servers.
+
+=over 4
+
+=item *
+
+List all existing schedules for contact backup
+This is done by specifying --query option
+
+=item *
+
+Schedule a time to run contact backup on all, current, or specific mailbox servers.
+This is done by specifying --append option with schedule.
+Schedule is set for specific mailbox servers if space separated mailbox server list is provided.
+Schedule is set for all mailbox servers if --all option is provided.
+Else schedule is set for current mailblox server.
+
+=item *
+
+On request start contact backup on current, specific, or all mailbox servers.
+This can be done by specifying --start option.
+Contact backup starts on specific mailbox servers if space separated mailbox server list is provided.
+Contact backup starts on all mailbox servers if --all optoin is provided.
+Else contact backup starts on current mailbox server.
+
+=item *
+
+On request stop contact backup on current, specific, or all mailbox servers.
+This can be done by specifying --stop option.
+Contact backup stops on specific mailbox servers if space separated mailbox server list is provided.
+Contact backup stops on all mailbox servers if --all optoin is provided.
+Else contact backup stops on current mailbox server.
+
+=back
+
+=head1 Options
+
+The section describes supported options.  The following key is used to
+indicates required arguments, arguments which can be supplied multiple
+times, etc.:
+
+=over 4
+
+=item --help
+
+Display a brief help message.
+
+=item --man
+
+Display full man page.
+
+=item --query
+
+Displays existing contact backup schedule times in cron format with operation and list of mailbox server names.
+
+=item --flush
+
+Flushes all the contact backup schedules.
+
+=item --default
+
+Flushes all the contact backup schedules and sets default contact backup schedule.
+Default contact backup schedule is "0 3 * * *"
+i.e. everyday at 3am for all the mailbox servers.
+
+=item --append <"schedule"> [<mailbox.server.name>...]
+
+Let existing contact backup schedules be in place, just append the specified schedule.
+schedule : crontab style time specifier, QUOTED.  See crontab(5)
+                Fields are:
+                        minute         0-59
+                        hour           0-23
+                        day of month   1-31
+                        month          1-12 
+                        day of week    0-7 (0 or 7 is Sun, or use names)
+                Example: Everyday at 1am  - "0 1 * * *"
+
+=item --start [--all] [<mailbox.server.name>...]
+
+Start contact backup for current, specific or all mailbox stores.
+
+=item --stop [--all] [<mailbox.server.name>...]
+
+Stop contact backup on current, specific or all mailbox stores.
+
+=back
+
+=cut
+
+###### imports ######
+use strict;
+use warnings;
+use File::Basename qw(basename dirname);
+use Getopt::Long qw(GetOptions);
+use Pod::Usage qw(pod2usage);
+use File::Temp;
+use IO::Handle;
+###### declaration part ######
+my %LC;
+my $Prog = basename($0);
+my ( $start, $stop, $help, $append, $query, $def, $flush, $man, $all ) =
+  ( 0, 0, 0, 0, 0, 0, 0, 0, 0 );
+GetOptions(
+            'h|help'    => \$help,
+            'r|start'   => \$start,
+            'p|stop'    => \$stop,
+            'a|append'  => \$append,
+            'q|query'   => \$query,
+            'd|default' => \$def,
+            'f|flush'   => \$flush,
+            'm|man'     => \$man,
+            'l|all'     => \$all,
+);
+my $schedule;
+my @servers;
+my @progArgs = @ARGV;
+my $cur      = `zmhostname`;
+$cur =~ s/^[\s,\n]+|[\s,\n]+$//g;
+
+if ( $append && not defined $schedule ) {
+    $schedule = shift(@progArgs);
+}
+if ( scalar(@progArgs) > 0 ) {
+    push @servers, @progArgs;
+}
+my @schedules = ();
+my @cron      = ();
+my ( $cronstart, $cronstop );
+my $soap;
+my $cmd;
+############### sub routines ##################
+sub getLocalConfig {
+    my @vars = @_;
+    my $dir  = dirname($0);
+    my $cmd  = "$dir/zmlocalconfig -q -x";
+    if ( scalar(@vars) > 0 ) {
+        $cmd .= ' ' . join( ' ', @vars );
+    }
+    my @lch = `$cmd` or die "Unable to invoke $cmd: $!";
+    foreach my $line (@lch) {
+        if ( not defined $line ) {
+            last;
+        }
+        $line =~ s/[\r\n]*$//;    # Remove trailing CR/LFs.
+        my @fields = split( /\s*=\s*/, $line, 2 );
+        $LC{ $fields[0] } = $fields[1];
+    }
+}
+
+sub userCheck() {
+    my $loggedIn = qx(id -un);
+    chomp($loggedIn) if ( defined($loggedIn) );
+    my $expected = $LC{zimbra_user};
+    if ( $loggedIn ne $expected ) {
+        print STDERR "Must be user $expected to run this command\n";
+        exit(1);
+    }
+}
+
+sub validateOptions() {
+    if ( !$help && !$start && !$stop && !$append && !$def && !$query && !$flush && !$man ) {
+        $help = 1;    #defaulting to help
+    } elsif ( $query
+            && ( $start || $stop || $append || $help || $def || $flush || $man || $all )) {
+        pod2usage(
+                -message => "$Prog: query can not be used with other options\n",
+                -verbose => 0 );
+    } elsif ( $help
+            && ( $start || $stop || $append || $query || $def || $flush || $man || $all )) {
+        pod2usage(
+                 -message => "$Prog: help can not be used with other options\n",
+                 -verbose => 0 );
+    } elsif ( $start
+          && ( $help || $stop || $append || $query || $def || $flush || $man )) {
+        pod2usage(
+             -message =>
+               "$Prog: start can not be used with other options except --all\n",
+             -verbose => 0 );
+    } elsif ( $stop
+         && ( $help || $start || $append || $query || $def || $flush || $man )) {
+        pod2usage(
+              -message =>
+                "$Prog: stop can not be used with other options except --all\n",
+              -verbose => 0 );
+    } elsif ( $append
+           && ( $help || $stop || $start || $query || $def || $flush || $man )) {
+        pod2usage(
+            -message =>
+              "$Prog: append can not be used with other options except --all\n",
+            -verbose => 0 );
+    } elsif ( $def
+            && ( $help || $stop || $start || $query || $append || $flush || $man || $all )) {
+        pod2usage(
+              -message => "$Prog: default can not be used with other options\n",
+              -verbose => 0 );
+    } elsif ( $flush
+            && ( $help || $stop || $start || $query || $append || $def || $man || $all )) {
+        pod2usage(
+                -message => "$Prog: flush can not be used with other options\n",
+                -verbose => 0 );
+    } elsif ( $man
+            && ( $help || $stop || $start || $query || $append || $def || $flush || $all )) {
+        pod2usage(-message => "$Prog: man can not be used with other options\n",
+                  -verbose => 0 );
+    } elsif ( $append && not defined $schedule ) {
+        pod2usage(
+             -message => "$Prog: Valid schedule must be provided with append\n",
+             -verbose => 0 );
+    } elsif ( $all && !( $stop || $start || $append ) ) {
+        pod2usage(
+                 -message => "$Prog: All must be used with start/stop/append\n",
+                 -verbose => 0 );
+    } elsif ( $all && @servers ) {
+        pod2usage(
+                -message => "$Prog: Server list can not be provided with all\n",
+                -verbose => 0 );
+    }
+}
+
+sub validateSchedule {
+    if ( not defined $schedule ) {
+        pod2usage( -message => "$Prog: Schedule must be provided\n",
+                   -verbose => 1 );
+    }
+    my @fields = split( " ", $schedule );
+    if ( scalar(@fields) != 5 ) {
+        pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                   -verbose => 1 );
+    } else {
+
+        # Legal values
+        #
+        # minute         0-59
+        # hour           0-23
+        # day of month   1-31
+        # month          1-12
+        # day of week    0-7 (0 or 7 is Sun, or use names)
+        if ( $fields[0] ne "*" ) {
+            if ( $fields[0] =~ m|(\d+)(/\d+)?| ) {
+                if ( $1 < 0 || $1 > 59 ) {
+                    pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                               -verbose => 1 );
+                }
+            } else {
+                pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                           -verbose => 1 );
+            }
+        }
+        if ( $fields[1] ne "*" ) {
+            if ( $fields[1] =~ m|(\d+)(/\d+)?| ) {
+                if ( $1 < 0 || $1 > 23 ) {
+                    pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                               -verbose => 1 );
+                }
+            } else {
+                pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                           -verbose => 1 );
+            }
+        }
+        if ( $fields[2] ne "*" ) {
+            if ( $fields[2] =~ m|(\d+)(/\d+)?| ) {
+                if ( $1 < 1 || $1 > 31 ) {
+                    pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                               -verbose => 1 );
+                }
+            } else {
+                pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                           -verbose => 1 );
+            }
+        }
+        if ( $fields[3] ne "*" ) {
+            if ( $fields[3] =~ m|(\d+)(/\d+)?| ) {
+                if ( $1 < 1 || $1 > 12 ) {
+                    pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                               -verbose => 1 );
+                }
+            } else {
+                pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                           -verbose => 1 );
+            }
+        }
+        if ( $fields[4] ne "*" ) {
+            if ( $fields[4] =~ m|(\d+)(/\d+)?| ) {
+                if ( $1 < 0 || $1 > 7 ) {
+                    pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                               -verbose => 1 );
+                }
+            } elsif (
+                     $fields[4] !~ /^(?:(?:mon|tue|wed|thu|fri|sat|sun),?)+$/i )
+            {
+                pod2usage( -message => "$Prog: Invalid schedule provided\n",
+                           -verbose => 1 );
+            }
+        }
+        @schedules = @fields;
+    }
+}
+
+sub loadCron {
+    @cron      = `crontab -l` or die "Unable to invoke crontab -l";
+    $cronstart = -1;
+    $cronstop  = -1;
+    my $comments_good = 0;
+    my $found         = 0;
+    for ( my $i = 0 ; $i <= $#cron ; $i++ ) {
+        $_ = $cron[$i];
+        if (m/CONTACT BACKUP END/) {
+            if ($found) {
+                $comments_good = 1;
+            }
+            last;
+        }
+        if ($found) {
+            $cronstop = $i;
+            next;
+        }
+        if (m/CONTACT BACKUP BEGIN/) {
+            $found     = 1;
+            $cronstart = $i;
+            $cronstop  = $i;
+            next;
+        }
+    }
+    if ( !$comments_good ) {
+        print STDERR "Rebuilding contact backup cron\n\n";
+
+        # Find ZIMBRAEND, and add contact backup comments
+        # before it. If not found add comments at the end
+        my $zimbraEndLoc = 0;
+        for ( my $i = 0 ; $i <= $#cron ; $i++ ) {
+            $_ = $cron[$i];
+            if (
+m/ZIMBRAEND -- DO NOT EDIT ANYTHING BETWEEN THIS LINE AND ZIMBRASTART/
+              )
+            {
+                $zimbraEndLoc = $i;
+                last;
+            }
+        }
+        if ($zimbraEndLoc) {
+
+            # ZIMBRAEND found, insert contact backup comments before ZIMBRAEND
+            splice(
+                    @cron,
+                    $zimbraEndLoc - 1,
+                    0,
+                    (
+                       "#\n# CONTACT BACKUP BEGIN\n",
+                       "# CONTACT BACKUP END\n#\n"
+                    )
+            );
+            saveCron();
+            loadCron();
+        } else {
+
+            # ZIMBRAEND not found
+            # One or both contact backup comments not found.
+            # Clean up the array, and add them to the end
+            if ( $cronstart == -1 && $cronstop == -1 ) {
+
+                # No comments at all
+                push @cron, "#\n# CONTACT BACKUP BEGIN\n";
+                $cronstart = $#cron;
+                $cronstop  = $#cron;
+                push @cron, "# CONTACT BACKUP END\n#\n";
+                saveCron();
+                loadCron();
+            } else {
+
+           # It's not possible to find an end and no start.
+           # No end comment - add the end comment right after the start comment.
+                splice( @cron, $cronstart + 1, 0, "# CONTACT BACKUP END\n" );
+            }
+        }
+    }
+}
+
+sub displayCurrentSchedule {
+    print "Current Schedule:\n\n";
+    for ( my $i = $cronstart + 1 ; $i <= $cronstop ; $i++ ) {
+        $_ = $cron[$i];
+        my @fields = split;
+        my $cnt    = @fields;
+        if ( $cnt < 9 ) {
+            print STDERR
+              "Invalid schedule found. Rebuild contact backup cron.\n\n";
+        }
+        print "\t$fields[0] $fields[1] $fields[2] $fields[3] $fields[4]";
+        my $tmp = $fields[8];
+        $tmp = substr( $tmp, ( index( $tmp, "=" ) + 1 ) );
+        print " $tmp";
+        if ( $cnt > 9 ) {
+            for my $j ( 9 ... ( $cnt - 1 ) ) {
+                $tmp = $fields[$j];
+                if ( index( $tmp, "server=" ) != -1 ) {
+                    $tmp = substr( $tmp, ( index( $tmp, "=" ) + 1 ) );
+                    print " $tmp";
+                }
+            }
+        }
+        print "\n\n";
+    }
+    exit(0);
+}
+
+sub prepareSoap {
+    $soap = "/opt/zimbra/bin/zmsoap -z ContactBackupRequest \@op=";
+    if ($stop) {
+        $soap .= "stop";
+    } else {
+        $soap .= "start";
+    }
+
+    # if all and server list is not provided, use current server as default value for cron job
+    if ( !$all && $#servers lt 0 ) {
+        push @servers, $cur;
+    }
+    my $pref = " servers ";
+    foreach my $srv (@servers) {
+        $soap .= $pref . "server=" . $srv . " \@by=name";
+        $pref = " ../" if ( $pref eq " servers " );
+    }
+}
+
+sub prepareCmd {
+    my $stringSchedule = join( " ", @schedules );
+    $cmd = $stringSchedule . " " . $soap;
+}
+
+sub saveCron {
+    my $fh = File::Temp->new( UNLINK => 1 )
+      or print STDERR "Can not open temp file\n\n";
+    my $fn = $fh->filename;
+    print $fh @cron;
+    qx(crontab $fn);
+    close $fh or print STDERR "Can not close temp file\n\n";
+}
+
+sub flushCron {
+    splice( @cron, $cronstart + 1, $cronstop - $cronstart );
+    saveCron();
+    print "Schedule flushed\n\n";
+    exit(0);
+}
+
+sub defaultCron {
+    my $default =
+        "0 3 * * * "
+      . " /opt/zimbra/bin/zmsoap -z ContactBackupRequest \@op=start"
+      . " servers server=$cur \@by=name\n";
+    print "Default schedule set\n\n";
+    splice( @cron, $cronstart + 1, $cronstop - $cronstart, ($default) );
+    saveCron();
+    loadCron();
+    displayCurrentSchedule();
+    exit(0);
+}
+
+sub appendCron {
+    print "Schedule appended\n\n";
+    splice( @cron, $cronstop + 1, 0, ( $cmd . "\n" ) );
+    saveCron();
+    loadCron();
+    displayCurrentSchedule();
+    exit(0);
+}
+
+sub startContactBackup {
+    qx/($soap >\/opt\/zimbra\/log\/contactbackup.out &)/;
+    print "Check soap output at /opt/zimbra/log/contactbackup.out\n";
+    exit(0);
+}
+
+sub stopContactBackup {
+    qx/($soap >\/opt\/zimbra\/log\/contactbackup.out &)/;
+    print "Check soap output at /opt/zimbra/log/contactbackup.out\n";
+    exit(0);
+}
+########################### Execution starts #################################
+###### help and man #######
+$help && pod2usage( -message => "$Prog:\n", -verbose => 1 );
+$man && pod2usage( -verbose => 2 );
+###### localconfig and user check ########
+getLocalConfig( 'zimbra_user', 'zimbra_server_hostname',
+                'zimbra_tmp_directory' );
+userCheck();
+###### validate options #########
+validateOptions();
+###### load cron ########
+loadCron();
+$query && displayCurrentSchedule();
+$def   && defaultCron();
+$flush && flushCron();
+###### start/stop contact backup ######
+prepareSoap();
+$start && startContactBackup();
+$stop  && stopContactBackup();
+###### validate schedule, prepare comand and append it #########
+validateSchedule();
+prepareCmd();
+$append && appendCron();
+
+#END
