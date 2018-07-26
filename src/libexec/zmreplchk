@@ -29,7 +29,7 @@ $c{zmlocalconfig}="/opt/zimbra/bin/zmlocalconfig";
 my $ldap_starttls_supported=getLocalConfig("ldap_starttls_supported");
 my $ldap_master=getLocalConfig("ldap_master_url");
 my $ldap_urls=getLocalConfig("ldap_url");
-my $ldap_pass=getLocalConfig("ldap_root_password");
+my $ldap_pass=getLocalConfig("ldap_master_root_password") || getLocalConfig("ldap_root_password");
 my ($mesgp, $entry);
 
 my @masters = split / /, $ldap_master;
@@ -71,7 +71,7 @@ foreach my $master (@masters) {
     next;
   }
   $mesgp=$ldapp->bind("cn=config", password => $ldap_pass);
-  $mesgp->code && die "Unable to bind to master\n";
+  $mesgp->code && die "Unable to bind to master: Please set ldap_master_root_password\n";
  
   $mesgp = $ldapp->search(
              base    =>  'cn=config',

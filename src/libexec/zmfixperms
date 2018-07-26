@@ -100,8 +100,14 @@ if [ ${extended} = "yes" ]; then
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/a* /opt/zimbra/[c-hj-ot-z]* /opt/zimbra/s[a-su-z]* 2> /dev/null
 fi
 
+chown ${root_user}:${root_group} /opt
+chmod 755 /opt
+chown ${root_user}:${root_group} /opt/zimbra
+chmod 755 /opt/zimbra
 chown -R ${root_user}:${root_group} /opt/zimbra/common
+chmod 755 /opt/zimbra/common
 chown -R ${root_user}:${zimbra_group} /opt/zimbra/common/conf
+chmod 775 /opt/zimbra/common/conf
 
 for i in master.cf master.cf.in bysender bysender.lmdb tag_as_foreign.re tag_as_foreign.re.in tag_as_originating.re tag_as_originating.re.in;
 do
@@ -286,6 +292,12 @@ if [ -d /opt/zimbra ]; then
     if [ -f /opt/zimbra/conf/sasl2/smtpd.conf ]; then
       chmod 640 /opt/zimbra/conf/sasl2/smtpd.conf
       chown ${zimbra_user}:${zimbra_group} /opt/zimbra/conf/sasl2/smtpd.conf
+    fi
+
+    if [ -d /opt/zimbra/conf/templates/ ]; then
+      chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/conf/templates
+      find /opt/zimbra/conf/templates/ -type d -exec chmod 755 {} \;
+      find /opt/zimbra/conf/templates/ -type f -exec chmod 644 {} \;
     fi
   fi
 
@@ -631,7 +643,10 @@ if [ -d /opt/zimbra/data/postfix ]; then
   chown -f ${postfix_owner} /opt/zimbra/data/postfix
   chown -f ${postfix_owner} /opt/zimbra/data/postfix/* 2> /dev/null
   chgrp -f ${postfix_suid_group} /opt/zimbra/data/postfix/data
+  chmod 755 /opt/zimbra/data/postfix/data
   chown -f ${postfix_owner}:${postfix_owner} /opt/zimbra/data/postfix/data/* 2> /dev/null
+  # `postfix check` checks that everything under data is not group or other writable
+  chmod -R go-w /opt/zimbra/data/postfix/data
   chown -f ${root_user} /opt/zimbra/data/postfix/spool
   chgrp -f ${root_group} /opt/zimbra/data/postfix/spool
 fi
