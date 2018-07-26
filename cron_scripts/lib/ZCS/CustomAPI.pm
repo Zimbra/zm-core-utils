@@ -1,4 +1,4 @@
-package ZCS::API;
+package ZCS::CustomAPI;
 
 use strict;
 use warnings;
@@ -20,7 +20,7 @@ BEGIN {
 
 =head1 NAME
 
-ZCS::API - perl module for accessing Zimbra SOAP API
+ZCS::CustomAPI - perl module for accessing Zimbra SOAP API
 
 This program extracted required features from https://github.com/plobbes/zcs-api/blob/master/lib/ZCS/API.pm
 
@@ -213,51 +213,15 @@ sub auth {
     return $self->{_zimbra_auth};
 }
 
-sub delegateauth {
-    my ( $self, $account ) = @_;
-
-    unless ( exists( $self->{_zimbra_delegateauth}{$account} ) ) {
-
-        # authenticate with zimbra to get AuthToken
-        my $req = "DelegateAuthRequest";
-        my $attr = { "xmlns" => "urn:zimbraAdmin" };
-        my $body =
-          SOAP::Data->name( account => $account )->type("string")
-          ->attr( { by => "name" } );
-
-        my $resp = $self->soap_call(
-            req  => $req,
-            attr => $attr,
-            head => $self->auth,
-            body => $body
-        );
-        die $self->Error unless $resp;
-
-        # Convert authToken into value that can be passed to zimbra requests
-        # and cache for all future requests
-        $self->{_zimbra_delegateauth}{$account} = SOAP::Header->name(
-            "context" => \SOAP::Header->value(
-                SOAP::Header->name(
-                    "authToken" => $resp->valueof('//authToken')
-                ),
-                SOAP::Header->name( "account" => $account )
-                  ->attr( { by => "name" } ),
-            )
-        )->attr( { xmlns => "urn:zimbra" } );
-    }
-    return $self->{_zimbra_delegateauth}{$account};
-}
-
 =head2 reauth(auth)
 
-Must pass either the auth value or delegateauth value that you want to reauthenticate.
+Must pass the auth value that you want to reauthenticate.
 
 This shouldn't ever need to be called directly soap_call should detect when a
 token is no longer valid and automatically attempt to generate a new one
 using this method.
 
   $za->reauth($self->auth);                         # re-auth admin
-  $za->reauth($self->delegateauth("test@test.com")) # re-auth "test@test.com"
 
 =cut
 
@@ -266,14 +230,6 @@ sub reauth {
     if ( $auth == $self->{_zimbra_auth} ) {
         delete( $self->{_zimbra_auth} );
         return $self->auth;
-    }
-    elsif ( exists( $self->{_zimbra_delegateauth} ) ) {
-        foreach my $account ( keys %{ $self->{_zimbra_delegateauth} } ) {
-            if ( $auth == $self->{_zimbra_delegateauth}{$account} ) {
-                delete( $self->{_zimbra_delegateauth}{$account} );
-                return $self->delegateauth($account);
-            }
-        }
     }
 }
 

@@ -2,37 +2,85 @@
 
 use strict;
 use warnings;
-
-use lib 'lib';
-
 use Getopt::Long;
-use ZCS::API;
 use Data::Dumper;
 use JSON;
 use File::Slurp;
 use POSIX qw(strftime);
+use Pod::Usage qw(pod2usage);
 
-my $config_file = 'config/config.json';
+=head1 NAME
+
+close_inactive_accounts.pl - to make inactive accounts to closed status
+
+=head1 SYNOPSIS
+
+  close_inactive_accounts.pl [-help -debug] -last_login_days <#no. of days>
+
+=head1 DESCRIPTION
+
+This script will go through Zimbra's Internal LDAP and look for any account whose status is 'locked/lockout/pending' and whose last login is greater than specified days.
+This script will modify their accounts status to 'closed' status.
+
+=head1 OPTIONS
+
+=over
+
+=item -help
+
+Prints the help message.
+
+=item -last_login_days
+
+Specifies number of days to check for last login.
+
+=item -debug
+
+Enable debug output.
+
+=back
+
+=cut
+
+my $dir_path;
+BEGIN {
+    use Cwd 'realpath';
+    ($dir_path) = __FILE__ =~ m{^(.*)/};    # $dir = path of current file
+    $dir_path = realpath($dir_path);
+}
+use lib "$dir_path/lib";
+use ZCS::CustomAPI;
+
+my $config_file = "$dir_path/config/config.json";
+
 my %opts = ( last_login_days => 187 );
 
-my $res = GetOptions( \%opts, "help", "debug", "last_login_days=i" );
+GetOptions( \%opts, "help", "debug", "last_login_days=i" )
+  or pod2usage( -verbose => 99, -sections => "SYNOPSIS", -exitval => 1 );
 
-if ( $opts{help} ) {
-    print_usage();
-    exit 0;
-}
-elsif ( !$res ) {
-    print_usage();
-    exit 1;
-}
+pod2usage(1) if ( $opts{help} );
 
 my $config = JSON->new->utf8->relaxed->decode( scalar read_file $config_file);
-die "MAILSTOREHOST is not defined in config file"
-  if ( !defined( $config->{MAILSTOREHOST} ) || $config->{MAILSTOREHOST} eq "" );
-die "MAILSTOREUSER is not defined in config file"
-  if ( !defined( $config->{MAILSTOREUSER} ) || $config->{MAILSTOREUSER} eq "" );
-die "MAILSTOREPWD is not defined in config file"
-  if ( !defined( $config->{MAILSTOREPWD} ) || $config->{MAILSTOREPWD} eq "" );
+unless ( defined( $config->{MAILSTOREHOST} ) && $config->{MAILSTOREHOST} ne "" )
+{
+    pod2usage(
+        -exitval => 1,
+        -msg     => "MAILSTOREHOST is not defined in config file."
+    );
+}
+unless ( defined( $config->{MAILSTOREUSER} ) && $config->{MAILSTOREUSER} ne "" )
+{
+    pod2usage(
+        -exitval => 1,
+        -msg     => "MAILSTOREUSER is not defined in config file."
+    );
+}
+unless ( defined( $config->{MAILSTOREPWD} ) && $config->{MAILSTOREPWD} ne "" ) {
+    pod2usage(
+        -exitval => 1,
+        -msg     => "MAILSTOREPWD is not defined in config file."
+    );
+}
 
 my $last_login_days = $opts{last_login_days};
 my $last_login_timestamp =
@@ -40,7 +88,7 @@ my $last_login_timestamp =
     localtime( time() - $last_login_days * ( 24 * 60 * 60 ) ) )
   . "Z";
 
-my $soap_api = ZCS::API->new(
+my $soap_api = ZCS::CustomAPI->new(
     conf => {
         SOAPURI => "https://"
           . $config->{MAILSTOREHOST}
@@ -73,9 +121,12 @@ if ($soap_api) {
         }
     }
     else {
-        warn(   "DEBUG: SearchDirectoryRequest "
-              . $soap_api->Error
-              . " via $config->{MAILSTOREHOST} \n" );
+		pod2usage(
+            -exitval => 1,
+            -msg     => "SearchDirectoryRequest: "
+              . $soap_api->Error . " via "
+              . $config->{MAILSTOREHOST}
+        );
     }
 
     if ( scalar @data != 0 ) {
@@ -85,13 +136,15 @@ if ($soap_api) {
             if ( my $modify_acc =
                 eval { $soap_api->modifyaccount( $zimbraId, $modify_data ) } )
             {
-                warn("DEBUG: $acc->{name} modified to closed status \n")
+                warn("DEBUG: $acc->{name} modified to closed status\n")
                   if ( $soap_api->Debug );
             }
             else {
-                warn(   "DEBUG: ModifyAccountRequest "
-                      . $soap_api->Error
-                      . " via $config->{MAILSTOREHOST} \n" );
+                pod2usage( -msg => "ModifyAccountRequest: "
+				  . $soap_api->Error . " via "
+				  . $config->{MAILSTOREHOST}
+				  . "for user: "
+				  . $acc->{name} );
             }
         }
     }
@@ -100,18 +153,8 @@ if ($soap_api) {
     }
 }
 else {
-    warn( ZCS::API->Error );
-}
-
-sub print_usage {
-    my $prog_name = substr( $0, rindex( $0, '/' ) + 1 );
-    print <<END_PRINT;
-This script will go through Zimbra's Internal LDAP and look for any account whose status is 'Inactive' and whose last login is greater than specified days. This script will modify their accounts status to 'closed' status.
-
-Usage:
-perl $prog_name [options]
---help    - print this message
---debug   - print debug message
---last_login_days - number of days to check for last login
-END_PRINT
+    pod2usage(
+        -exitval => 1,
+        -msg     => ZCS::CustomAPI->Error
+    );
 }
