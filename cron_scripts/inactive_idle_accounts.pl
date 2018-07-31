@@ -4,11 +4,11 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-use Data::Dumper;
 use JSON;
-use File::Slurp;
+use File::Slurp qw(read_file);
 use POSIX qw(strftime);
 use Pod::Usage qw(pod2usage);
+use FindBin;
 
 =head1 NAME
 
@@ -16,12 +16,12 @@ inactive_idle_accounts.pl - to make idle accounts to inactive status
 
 =head1 SYNOPSIS
 
-  inactive_idle_accounts.pl [-help -debug] -last_login_days <#no. of days> -new_status <#zimbraAccountStatus>
+  inactive_idle_accounts.pl [-help] [-debug] -last_login_days <numDays> -new_status <zimbraAccountStatus>
 
 =head1 DESCRIPTION
 
-This script will go through Zimbra's Internal LDAP and look for any account that has a last login greater than the specified days, 
-the script will change their account status to new status that passed to the script
+This script will search through Zimbra's Internal LDAP via SOAP API for accounts that have a last login older than the specified days.
+Matching accounts will have their account status updated to the value provided by the -new_status argument.
 
 =head1 OPTIONS
 
@@ -31,11 +31,11 @@ the script will change their account status to new status that passed to the scr
 
 Prints the help message.
 
-=item -last_login_days
+=item -last_login_days I<numDays>
 
 Specifies number of days to check for last login.
 
-=item -new_status
+=item -new_status I<zimbraAccountStatus>
 
 Specifies new status that should be changed to target users.
 
@@ -47,16 +47,9 @@ Enable debug output.
 
 =cut
 
-my $dir_path;
-
-BEGIN {
-    use Cwd 'realpath';
-    ($dir_path) = __FILE__ =~ m{^(.*)/};    # $dir = path of current file
-    $dir_path = realpath($dir_path);
-}
-use lib "$dir_path/lib";
+use lib "$FindBin::Bin/lib";
 use ZCS::CustomAPI;
-my $config_file = "$dir_path/config/config.json";
+my $config_file = "$FindBin::Bin/config/config.json";
 
 my %opts = (
     last_login_days => 97,
@@ -68,30 +61,52 @@ GetOptions( \%opts, "help", "debug", "last_login_days=i", "new_status=s" )
 
 pod2usage(1) if ( $opts{help} );
 
-my $config = JSON->new->utf8->relaxed->decode( scalar read_file $config_file);
-unless ( defined( $config->{MAILSTOREHOST} ) && $config->{MAILSTOREHOST} ne "" )
-{
+my $conf_content = scalar read_file( $config_file, err_mode => 'carp' )
+  or die("Unable to read config file.\n");
+my $config = JSON->new->utf8->relaxed->decode($conf_content);
+unless ( $config->{MAILSTOREHOST} ) {
     pod2usage(
         -exitval => 1,
         -msg     => "MAILSTOREHOST is not defined in config file."
     );
 }
-unless ( defined( $config->{MAILSTOREUSER} ) && $config->{MAILSTOREUSER} ne "" )
-{
+unless ( $config->{MAILSTOREUSER} ) {
     pod2usage(
         -exitval => 1,
         -msg     => "MAILSTOREUSER is not defined in config file."
     );
 }
-unless ( defined( $config->{MAILSTOREPWD} ) && $config->{MAILSTOREPWD} ne "" ) {
+unless ( $config->{MAILSTOREPWD} ) {
     pod2usage(
         -exitval => 1,
         -msg     => "MAILSTOREPWD is not defined in config file."
     );
 }
 
-my $new_status      = $opts{new_status};
-my $last_login_days = $opts{last_login_days};
+my $new_status;
+my $last_login_days;
+if ( $opts{last_login_days} > 0 ) {
+    $last_login_days = $opts{last_login_days};
+}
+else {
+    pod2usage(
+        -exitval => 1,
+        -msg     => "last_login_days should be greater than 0."
+    );
+}
+my @allowed_status =
+  ( 'locked', 'active', 'pending', 'lockout', 'maintenance', 'closed' );
+if ( grep { $_ eq $opts{new_status} } @allowed_status ) {
+    $new_status = $opts{new_status};
+}
+else {
+    pod2usage(
+        -exitval => 1,
+        -msg =>
+"new_status is not acceptable status. Valid status are 'locked','active','pending','lockout','maintenance','closed'"
+    );
+}
+
 my $last_login_timestamp =
   strftime( '%Y%m%d000000',
     localtime( time() - $last_login_days * ( 24 * 60 * 60 ) ) )
@@ -113,7 +128,7 @@ my @data;
 if ($soap_api) {
     my %args = (
         "query" =>
-"(&(zimbraLastLogonTimestamp<=$last_login_timestamp)(zimbraAccountStatus=active)(!(zimbraIsAdminAccount=TRUE)))",
+"(&(zimbraLastLogonTimestamp<=$last_login_timestamp)(zimbraAccountStatus=active)(!(zimbraIsAdminAccount=TRUE))(!(zimbraIsDelegatedAdminAccount=TRUE)))",
         "attrs" => "uid,zimbraId,zimbraAccountStatus,zimbraLastLogonTimestamp"
     );
 
