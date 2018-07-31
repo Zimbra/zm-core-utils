@@ -2,12 +2,13 @@
 
 use strict;
 use warnings;
+
 use Getopt::Long;
-use Data::Dumper;
 use JSON;
-use File::Slurp;
+use File::Slurp qw(read_file);
 use POSIX qw(strftime);
 use Pod::Usage qw(pod2usage);
+use FindBin;
 
 =head1 NAME
 
@@ -15,12 +16,13 @@ close_inactive_accounts.pl - to make inactive accounts to closed status
 
 =head1 SYNOPSIS
 
-  close_inactive_accounts.pl [-help -debug] -last_login_days <#no. of days>
+  close_inactive_accounts.pl [-help] [-debug] -last_login_days <numDays>
+  close_inactive_accounts.pl -last_login_days 187
 
 =head1 DESCRIPTION
 
-This script will go through Zimbra's Internal LDAP and look for any account whose status is 'locked/lockout/pending' and whose last login is greater than specified days.
-This script will modify their accounts status to 'closed' status.
+This script will search through Zimbra's Internal LDAP via SOAP API for accounts that have a last login older than the specified days and status is one of 'locked/lockout/pending'.
+Matching accounts will have their account status updated to 'closed' status.
 
 =head1 OPTIONS
 
@@ -30,7 +32,7 @@ This script will modify their accounts status to 'closed' status.
 
 Prints the help message.
 
-=item -last_login_days
+=item -last_login_days I<numDays>
 
 Specifies number of days to check for last login.
 
@@ -42,16 +44,9 @@ Enable debug output.
 
 =cut
 
-my $dir_path;
-BEGIN {
-    use Cwd 'realpath';
-    ($dir_path) = __FILE__ =~ m{^(.*)/};    # $dir = path of current file
-    $dir_path = realpath($dir_path);
-}
-use lib "$dir_path/lib";
+use lib "$FindBin::Bin/lib";
 use ZCS::CustomAPI;
-
-my $config_file = "$dir_path/config/config.json";
+my $config_file = "$FindBin::Bin/config/config.json";
 
 my %opts = ( last_login_days => 187 );
 
@@ -60,29 +55,39 @@ GetOptions( \%opts, "help", "debug", "last_login_days=i" )
 
 pod2usage(1) if ( $opts{help} );
 
-my $config = JSON->new->utf8->relaxed->decode( scalar read_file $config_file);
-unless ( defined( $config->{MAILSTOREHOST} ) && $config->{MAILSTOREHOST} ne "" )
-{
+my $conf_content = scalar read_file( $config_file, err_mode => 'carp' )
+  or die("Unable to read config file.\n");
+my $config = JSON->new->utf8->relaxed->decode($conf_content);
+unless ( $config->{MAILSTOREHOST} ) {
     pod2usage(
         -exitval => 1,
         -msg     => "MAILSTOREHOST is not defined in config file."
     );
 }
-unless ( defined( $config->{MAILSTOREUSER} ) && $config->{MAILSTOREUSER} ne "" )
-{
+unless ( $config->{MAILSTOREUSER} ) {
     pod2usage(
         -exitval => 1,
         -msg     => "MAILSTOREUSER is not defined in config file."
     );
 }
-unless ( defined( $config->{MAILSTOREPWD} ) && $config->{MAILSTOREPWD} ne "" ) {
+unless ( $config->{MAILSTOREPWD} ) {
     pod2usage(
         -exitval => 1,
         -msg     => "MAILSTOREPWD is not defined in config file."
     );
 }
 
-my $last_login_days = $opts{last_login_days};
+my $last_login_days;
+if ( $opts{last_login_days} > 0 ) {
+    $last_login_days = $opts{last_login_days};
+}
+else {
+    pod2usage(
+        -exitval => 1,
+        -msg     => "last_login_days should be greater than 0."
+    );
+}
+
 my $last_login_timestamp =
   strftime( '%Y%m%d000000',
     localtime( time() - $last_login_days * ( 24 * 60 * 60 ) ) )
@@ -105,7 +110,7 @@ my @data;
 if ($soap_api) {
     my %args = (
         "query" =>
-"(&(zimbraLastLogonTimestamp<=$last_login_timestamp)(!(zimbraIsAdminAccount=TRUE))(|(zimbraAccountStatus=locked)(zimbraAccountStatus=lockout)(zimbraAccountStatus=pending)))",
+"(&(zimbraLastLogonTimestamp<=$last_login_timestamp)(!(zimbraIsAdminAccount=TRUE))(!(zimbraIsDelegatedAdminAccount=TRUE))(|(zimbraAccountStatus=locked)(zimbraAccountStatus=lockout)(zimbraAccountStatus=pending)))",
         "attrs" => "uid,zimbraId,zimbraAccountStatus,zimbraLastLogonTimestamp"
     );
 
@@ -121,7 +126,7 @@ if ($soap_api) {
         }
     }
     else {
-		pod2usage(
+        pod2usage(
             -exitval => 1,
             -msg     => "SearchDirectoryRequest: "
               . $soap_api->Error . " via "
@@ -141,10 +146,10 @@ if ($soap_api) {
             }
             else {
                 pod2usage( -msg => "ModifyAccountRequest: "
-				  . $soap_api->Error . " via "
-				  . $config->{MAILSTOREHOST}
-				  . "for user: "
-				  . $acc->{name} );
+                      . $soap_api->Error . " via "
+                      . $config->{MAILSTOREHOST}
+                      . "for user: "
+                      . $acc->{name} );
             }
         }
     }
@@ -158,3 +163,4 @@ else {
         -msg     => ZCS::CustomAPI->Error
     );
 }
+
