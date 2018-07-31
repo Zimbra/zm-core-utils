@@ -103,7 +103,7 @@ else {
     pod2usage(
         -exitval => 1,
         -msg =>
-"new_status is not acceptable status. Valid status are 'locked','active','pending','lockout','maintenance','closed'"
+"new_status '$opts{new_status}' is invalid, use one of the following: " . join(", ", @allowed_status)
     );
 }
 
