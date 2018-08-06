@@ -294,26 +294,6 @@ sub searchdirectory {
     );
 }
 
-sub getserverbyname {
-    my ( $self, $server, $attrs ) = @_;
-	my $req  = "GetServerRequest";
-    my $attr = {
-        "xmlns" => "urn:zimbraAdmin",
-        "applyConfig" => "1"
-    };
-	$attr->{"attrs"} = $attrs if ( defined($attrs) );
-	
-	my $body = SOAP::Data->name( server => $server )->type("string")
-      ->attr( { by => "name" } );
-
-    return $self->soap_call(
-        req  => $req,
-        attr => $attr,
-        head => $self->auth,
-        body => $body
-    );
-}
-
 sub sendmessage {
 	my ( $self, $mail_data ) = @_;
     my $req  = "SendMsgRequest";
@@ -322,7 +302,7 @@ sub sendmessage {
         "noSave" => 1
     };
 
-    #FIXME - not to save in sent folder
+    #noSave - not to save in sent folder
     my $body = SOAP::Data->name(
         "m" => \SOAP::Data->value(
             SOAP::Data->name("e")
