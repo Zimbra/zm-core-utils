@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 use Getopt::Long;
-use Data::Dumper;
 use JSON;
 use File::Slurp qw(read_file);
 use POSIX qw(strftime);
@@ -19,7 +18,7 @@ password_expiration_notification.pl - notify end users to change their password 
 
 =head1 SYNOPSIS
 
-  password_expiration_notification.pl [-help] [-debug] -pass_expiration_days <numExpDays> -notification_days <numNotiDays> -mail_file <mailFilePath> -sms_file <smsFilePath> -max_proc <maxNumProc>
+  password_expiration_notification.pl [-help] [-debug] [-send_sms] [-pass_expiration_days <numExpDays>] [-notification_days <numNotiDays>] [-max_proc <maxNumProc>] -mail_file <mailFilePath> -sms_file <smsFilePath>
 
 =head1 DESCRIPTION
 
@@ -54,11 +53,16 @@ Specifies full file path, this file contains SMS content to send for password no
 
 =item -max_proc I<maxNumProc>
 
-Specifies maximum number of processes to be created to send mail/sms.
+Specifies maximum number of processes to be created to send mail/sms (default is 10).
 
 =item -debug
 
 Enable debug output.
+
+=item -send_sms
+
+Enable sending SMS.
+
 
 =back
 
@@ -67,7 +71,7 @@ Enable debug output.
 use lib "$FindBin::Bin/lib";
 use ZCS::CustomAPI;
 
-my $Debug       = 0;
+my ( $Debug, $SendSMS );
 my $config_file = "$FindBin::Bin/config/config.json";
 
 my %opts   = process_options();
@@ -143,7 +147,7 @@ if ($soap_api) {
             my $mobile         = $acc->{mobile};
             my $displayName    = $acc->{displayName} || 'User';
             my $expire_in_days = $acc->{'expire_in_days'};
-            if ($mail) {
+            if ( $mail ) {
                 my $mail_content = $config->{mail_content};
                 $mail_content =~ s/{displayName}/$displayName/g;
                 $mail_content =~ s/{numDays}/$expire_in_days/g;
@@ -163,21 +167,21 @@ if ($soap_api) {
                           . ZCS::CustomAPI->Error );
                 }
             }
-            if ($mobile) {
+            if ( $mobile && $SendSMS ) {
                 my $sms_content = $config->{sms_content};
                 $sms_content =~ s/{displayName}/$displayName/g;
                 $sms_content =~ s/{numDays}/$expire_in_days/g;
                 my $sms_url =
 "$config->{SMSHOST}?username=$config->{SMSUSER}&pin=$config->{SMSPIN}&mnumber=$mobile&message=$sms_content";
 
-#https://smsgw.sms.gov.in/failsafe/HttpLink?username=zimbra.sms&pin=moorxu81&message=hifromnic&mnumber=919922429908&signature=NICSMS
+#https://hostname/HttpLink?username=zimbra.sms&pin=redacted&message=hifromnic&mnumber=919922429908&signature=NICSMS
 
-                my $sms_res = LWP::UserAgent->new->get("$sms_url");
+                my $sms_res = LWP::UserAgent->new->get($sms_url);
 
                 #{ "_rc": 500, "_msg": "SMS Sent Successfully" }
                 if ( $sms_res->{'_rc'} != 000 ) {
                     warn(
-"Error: for $mail on sending SMS. Message: $sms_res->{'_msg'}"
+"Error: for $mail on sending SMS. Code: $sms_res->{'_rc'} Message: $sms_res->{'_msg'}"
                     );
                 }
                 else {
@@ -213,19 +217,26 @@ sub getSoapResponseData {
 sub process_options {
     my %opts = (
         pass_expiration_days => 90,
-        notification_days    => 14
+        notification_days    => 14,
+		max_proc             => 10
     );
 
-    GetOptions( \%opts, "help", "debug", "pass_expiration_days=i",
+    GetOptions( \%opts, "help", "debug", "send_sms", "pass_expiration_days=i",
         "notification_days=i", "mail_file=s", "sms_file=s", "max_proc=i" )
       or pod2usage( -verbose => 99, -sections => "SYNOPSIS", -exitval => 1 );
 
     pod2usage(1) if ( $opts{help} );
-    $Debug = $opts{debug} || 0;
+    $Debug   = $opts{debug} || 0;
+	$SendSMS = $opts{send_sms} || 0;
 
     podusage( 1, "max_proc should not be negative number." )
       if ( $opts{max_proc} < 0 );
-    return %opts;
+	podusage( 1, "pass_expiration_days should not be negative number." )
+      if ( $opts{pass_expiration_days} < 0 );
+	podusage( 1, "notification_days should not be negative number." )
+      if ( $opts{notification_days} < 0 );  
+	  
+	return %opts;
 }
 
 sub process_config {

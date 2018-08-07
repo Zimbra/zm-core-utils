@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use SOAP::Lite ();
-use Data::Dumper;
 
 our $Debug = 0;
 our $Error = '';
@@ -109,9 +108,9 @@ sub soap_call {
     my $resp;
 
     my ( $err, $try, $maxtry, $sec ) = ( undef, 0, 3, 0 );
-	while ( !$resp && $try++ < $maxtry ) {
+    while ( !$resp && $try++ < $maxtry ) {
         local ($@);
-		eval { $resp = $self->soap->call( $req, $opt{head}, @body ); };
+        eval { $resp = $self->soap->call( $req, $opt{head}, @body ); };
         $err = $@;
         if ( _err($resp) =~ /Client auth credentials have expired/ ) {
 
@@ -179,8 +178,9 @@ sub _err {
 # expect no issues with token expiring
 sub auth {
     my $self = shift;
-	unless ( exists( $self->{_zimbra_auth} ) ) {
-    # authenticate with zimbra to get AuthToken
+    unless ( exists( $self->{_zimbra_auth} ) ) {
+
+        # authenticate with zimbra to get AuthToken
         my $req = "AuthRequest";
         my $attr = { "xmlns" => "urn:zimbraAdmin" };
         my $head =
@@ -208,8 +208,6 @@ sub auth {
                 ),
             )
         )->attr( { xmlns => "urn:zimbra" } );
-		
-		#$self->{_zimbra_auth}{format} = { type => "js" };
     }
     return $self->{_zimbra_auth};
 }
@@ -254,6 +252,8 @@ sub getaccount {
 sub modifyaccount {
     my ( $self, $id, $data ) = @_;
 
+    #my $resp = $self->getaccount($account);
+
     my @attrs;
     foreach my $a ( keys %$data ) {
         push( @attrs,
@@ -277,7 +277,8 @@ sub modifyaccount {
 
 sub searchdirectory {
     my ( $self, %args ) = @_;
-	my $req  = "SearchDirectoryRequest";
+
+    my $req  = "SearchDirectoryRequest";
     my $attr = {
         "xmlns" => "urn:zimbraAdmin",
         "types" => "accounts",
@@ -320,4 +321,5 @@ sub sendmessage {
         body => $body
     );
 }
+
 1;
