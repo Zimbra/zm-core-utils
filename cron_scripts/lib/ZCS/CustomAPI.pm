@@ -296,7 +296,7 @@ sub searchdirectory {
 }
 
 sub sendmessage {
-	my ( $self, $mail_data ) = @_;
+    my ( $self, $mail_data ) = @_;
     my $req  = "SendMsgRequest";
     my $attr = {
         "xmlns"  => "urn:zimbraMail",

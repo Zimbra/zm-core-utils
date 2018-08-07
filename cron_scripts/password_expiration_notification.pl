@@ -63,7 +63,6 @@ Enable debug output.
 
 Enable sending SMS.
 
-
 =back
 
 =cut
@@ -97,8 +96,6 @@ my $soap_api = ZCS::CustomAPI->new(
     debug => $Debug
 );
 
-# search for accounts whose status are either of locked, lockout or pending
-# and last login is earlier than specified days $last_login_days
 my @data;
 if ($soap_api) {
     my %args = (
@@ -154,16 +151,15 @@ if ($soap_api) {
                 my $mail_data = {
                     'to' => $mail,
                     'subject' =>
-"Your Mail access password expire in $acc->{'expire_in_days'} days",
+"Your Mail access password expires in $acc->{'expire_in_days'} day(s)",
                     'body' => $mail_content
                 };
-                if ( my $sendmail =
-                    eval { $soap_api->sendmessage($mail_data) } )
+                if ( eval { $soap_api->sendmessage($mail_data) } )
                 {
                     warn("DEBUG: Mail sent to $mail\n") if ($Debug);
                 }
                 else {
-                    warn( "Error: for $mail on sending mail. Message: "
+                    warn( "Error: send mail to $mail failed. Message: "
                           . ZCS::CustomAPI->Error );
                 }
             }
@@ -181,7 +177,7 @@ if ($soap_api) {
                 #{ "_rc": 500, "_msg": "SMS Sent Successfully" }
                 if ( $sms_res->{'_rc'} != 000 ) {
                     warn(
-"Error: for $mail on sending SMS. Code: $sms_res->{'_rc'} Message: $sms_res->{'_msg'}"
+"Error: send SMS to $mail failed. Code: $sms_res->{'_rc'} Message: $sms_res->{'_msg'}"
                     );
                 }
                 else {
@@ -218,7 +214,7 @@ sub process_options {
     my %opts = (
         pass_expiration_days => 90,
         notification_days    => 14,
-		max_proc             => 10
+        max_proc             => 10
     );
 
     GetOptions( \%opts, "help", "debug", "send_sms", "pass_expiration_days=i",
@@ -227,24 +223,22 @@ sub process_options {
 
     pod2usage(1) if ( $opts{help} );
     $Debug   = $opts{debug} || 0;
-	$SendSMS = $opts{send_sms} || 0;
+    $SendSMS = $opts{send_sms} || 0;
 
     podusage( 1, "max_proc should not be negative number." )
       if ( $opts{max_proc} < 0 );
-	podusage( 1, "pass_expiration_days should not be negative number." )
+    podusage( 1, "pass_expiration_days should not be negative number." )
       if ( $opts{pass_expiration_days} < 0 );
-	podusage( 1, "notification_days should not be negative number." )
+    podusage( 1, "notification_days should not be negative number." )
       if ( $opts{notification_days} < 0 );  
-	  
-	return %opts;
+
+    return %opts;
 }
 
 sub process_config {
-    my $config;
-
     my $conf_content = scalar read_file( $config_file, err_mode => 'carp' )
       or die("Unable to read config file.\n");
-    $config = JSON->new->utf8->relaxed->decode($conf_content);
+    my $config = JSON->new->utf8->relaxed->decode($conf_content);
     podusage( 1, "MAILSTOREHOST is not defined in config file." )
       unless ( $config->{MAILSTOREHOST} );
     podusage( 1, "MAILSTOREUSER is not defined in config file." )
