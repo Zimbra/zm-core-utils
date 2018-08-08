@@ -1,5 +1,10 @@
 {
 	"MAILSTOREHOST":"10.139.28.238",
 	"MAILSTOREUSER":"admin@zimbra.nic.in",
-	"MAILSTOREPWD":"root123",
+	"MAILSTOREPWD":"admin",
+	"SMSHOST":"http://smsgw.sms.gov.in/failsafe/HttpLink",
+	"SMSUSER":"nic",
+	"SMSPIN":"123",
+	"SMSSENDERID":"nic",
 }
+
