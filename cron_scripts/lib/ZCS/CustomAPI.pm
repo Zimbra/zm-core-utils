@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use SOAP::Lite ();
-use Data::Dumper;
 
 our $Debug = 0;
 our $Error = '';
@@ -287,6 +286,33 @@ sub searchdirectory {
         'attrs' => "$args{attrs}"
     };
     my $body = SOAP::Data->type( "xml" => "" );
+
+    return $self->soap_call(
+        req  => $req,
+        attr => $attr,
+        head => $self->auth,
+        body => $body
+    );
+}
+
+sub sendmessage {
+    my ( $self, $mail_data ) = @_;
+    my $req  = "SendMsgRequest";
+    my $attr = {
+        "xmlns"  => "urn:zimbraMail",
+        "noSave" => 1
+    };
+
+    #noSave - not to save in sent folder
+    my $body = SOAP::Data->name(
+        "m" => \SOAP::Data->value(
+            SOAP::Data->name("e")
+              ->attr( { t => 't', a => $mail_data->{'to'} } ),
+            SOAP::Data->name( "su" => $mail_data->{'subject'} ),
+            SOAP::Data->name("mp")
+              ->attr( { ct => 'text/html', content => $mail_data->{'body'} } )
+        )
+    );
 
     return $self->soap_call(
         req  => $req,
