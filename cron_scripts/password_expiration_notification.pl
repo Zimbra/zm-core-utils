@@ -80,10 +80,14 @@ my $notification_compare_days =
   $opts{pass_expiration_days} - $opts{notification_days};
 my $pass_expiration_year_days = strftime( '%j',
     localtime( time() - $opts{pass_expiration_days} * ( 24 * 60 * 60 ) ) );
-my $notification_timestamp =
+my $notification_timestamp_max =
   strftime( '%Y%m%d000000',
     localtime( time() - $notification_compare_days * ( 24 * 60 * 60 ) ) )
   . "Z";
+my $notification_timestamp_min =
+  strftime( '%Y%m%d000000',
+    localtime( time() - $opts{pass_expiration_days} * ( 24 * 60 * 60 ) ) )
+  . "Z";  
 
 my $soap_api = ZCS::CustomAPI->new(
     conf => {
@@ -100,7 +104,7 @@ my @data;
 if ($soap_api) {
     my %args = (
         "query" =>
-"(&(zimbraPasswordModifiedTime<=$notification_timestamp)(zimbraAccountStatus=active)(!(zimbraIsAdminAccount=TRUE))(!(zimbraIsDelegatedAdminAccount=TRUE)))",
+"(&(zimbraPasswordModifiedTime<=$notification_timestamp_max)(zimbraPasswordModifiedTime>=$notification_timestamp_min)(zimbraAccountStatus=active)(!(zimbraIsAdminAccount=TRUE))(!(zimbraIsDelegatedAdminAccount=TRUE)))",
         "attrs" =>
           "uid,zimbraId,mobile,mail,displayName,zimbraPasswordModifiedTime"
     );
