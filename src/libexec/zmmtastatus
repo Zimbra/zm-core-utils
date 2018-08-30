@@ -39,6 +39,7 @@ $verbose = 1 if $debug;
 
 
 my $pidFile="/opt/zimbra/data/postfix/spool/pid/master.pid";
+my $postfixMaster="/opt/zimbra/common/libexec/master";
 
 exit (mtaIsRunning() ? 0 : 1);
 
@@ -49,8 +50,7 @@ sub mtaIsRunning {
     chomp $pid;
     if ($pid ne "") {
       print "MTA process $pid is "  if $verbose;
-      system("kill -0 $pid 2> /dev/null");
-      if ($? == 0) {
+      if (readlink("/proc/$pid/exe") eq $postfixMaster) {
         print "running.\n" if $verbose;
         return 1;
       } else {
