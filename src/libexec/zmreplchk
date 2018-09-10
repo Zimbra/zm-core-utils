@@ -71,7 +71,7 @@ foreach my $master (@masters) {
     next;
   }
   $mesgp=$ldapp->bind("cn=config", password => $ldap_pass);
-  $mesgp->code && die "Unable to bind to master ($master): " . (($ldap_pass) ? $mesgp->error : "Please set ldap_master_root_password") . "\n";
+  $mesgp->code && die "Unable to bind to master: Please set ldap_master_root_password\n";
  
   $mesgp = $ldapp->search(
              base    =>  'cn=config',
