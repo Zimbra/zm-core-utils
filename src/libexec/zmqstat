@@ -35,6 +35,29 @@ my $queue_directory;
 
 my $qfiles = 0;
 
+# Map for Long Format Queue IDs
+my $ALPHACHARS = "BCDFGHJKLMNPQRSTVWXYZ";
+
+# Map of 52 characters for Long Format Queue IDs:
+# ASCII digits and Lower/Upper Case ASCII letters without AEIOU/aeiou
+my @CHARLIST = ( 0..9, split( //, $ALPHACHARS . lc($ALPHACHARS) ) );
+my %CHARMAP = map { ( $CHARLIST[$_], $_) } 0 .. $#CHARLIST;
+
+
+# Regexes for Postfix Queue IDs
+
+# Short Format character: ASCII uppercase A-F range plus ASCII digits
+my $SF_QID_CHAR = qr{[A-F0-9]};
+
+# Long Format time portion character:  ASCII digits and ASCII uppercase/lowercase consonants
+my $LF_QID_TIME_CHAR  = qr{[0-9BCDFGHJKLMNPQRSTVWXYZ]}i;
+
+# Long Format inode number portion character: ASCII digits and ASCII uppercase/lowercase consonants minus "z"
+my $LF_QID_INODE_CHAR = qr{[0-9BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxy]};
+
+my $REGEX_POSTFIX_QID = qr{(?:${SF_QID_CHAR}{6,}+|${LF_QID_TIME_CHAR}{10,}z${LF_QID_INODE_CHAR}++)};
+
+
 sub getLocalConfig {
 	my $key = shift;
 	if (defined ($ENV{zmsetvars})) {
@@ -79,6 +102,14 @@ sub get_record {  # Borrowed from qshape
 sub getHashPath {
 	my $fn = shift;
 	my $p = "";
+	if ( (my $index = rindex($fn, "z") ) != -1 ) {
+		my @chars = reverse( split( //, substr($fn, $index-4, 4) ) );
+		$fn = 0;
+		for (my $i=0; $i <= 4; $i++ ) {
+			$fn += $CHARMAP{ $chars[$i] } * 52 ** $i;
+		}
+		$fn = sprintf("%05X", $fn);
+	}
 	for (my $i = 0; $i < $hash_queue_depth; $i++) {
 		$p .= substr($fn, $i, 1);
 		$p .="/";
@@ -88,7 +119,7 @@ sub getHashPath {
 
 sub processQ {
 	if (! -f $_ ) {return;}
-	if (! m{(^|/)[A-F0-9]{6,}$} ) { return; }
+	if (! m{(?:^|/)${REGEX_POSTFIX_QID}$}o ) { return; }
 	$qfiles++;
 	my ($cdir) = ($File::Find::dir =~ m|([^/]*)|);
 	#print STDERR "Processing $cdir - $_\n";
@@ -101,7 +132,7 @@ sub processQ {
 		#print STDERR "Processing file $_\n";
 		my $fh = new IO::File ($_, "r") || return;
 		my ($rec, $len, $data) = get_record($fh);
-		$qf{TO} = ();
+		$qf{TO} = [];
 		if ($rec eq "C") { # Size
 			($qf{SIZE}) = ($data =~ m/\s*(\d+)\s*\d+\s*\d+/);
 		} 
@@ -133,6 +164,12 @@ sub processQ {
                                 } else {
                                         $qf{TIME} = $data;
                                 }
+                        } elsif ($rec eq "p") {
+                                if ($data > 0) {
+                                        seek($fh,$data,0) or return();
+                                }
+                        } elsif ($rec eq "E") {
+                                last;
                         } 
 		}
 		$fh->close();

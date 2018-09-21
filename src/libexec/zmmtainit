@@ -96,7 +96,7 @@ cat<<EOF > ${confdir}/ldap-vam.cf
 server_host = ${ldap_url}
 server_port = ${ldap_port}
 search_base =
-query_filter = (&(|(zimbraMailDeliveryAddress=%s)(zimbraMailAlias=%s)(zimbraMailCatchAllAddress=%s))(zimbraMailStatus=enabled))
+query_filter = (&(|(zimbraMailDeliveryAddress=%s)(zimbraMailAlias=%s)(zimbraOldMailAddress=%s)(zimbraMailCatchAllAddress=%s))(zimbraMailStatus=enabled))
 result_attribute = zimbraMailDeliveryAddress,zimbraMailForwardingAddress,zimbraPrefMailForwardingAddress,zimbraMailCatchAllForwardingAddress
 version = 3
 start_tls = ${STARTTLS}

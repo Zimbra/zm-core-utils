@@ -91,7 +91,10 @@ sub get_java_version() {
     open( JAVA, "$JAVA -version 2>&1 |" )
       || die "Cannot determine java version: $!";
     my $version_line = <JAVA>;
-    if ( $version_line =~ /"1\.8/ ) {
+    if ( $version_line =~ /"11\.0/ ) {
+        $version = "11.0";
+    }
+    elsif ( $version_line =~ /"1\.8/ ) {
         $version = "1.8";
     }
     elsif ( $version_line =~ /"1\.7/ ) {
@@ -118,12 +121,11 @@ sub save_heap_info($$$$) {
 
     $histo_cmd = "$JMAP -histo:live $pid";
     $dump_file = "$destination/heapdump-live.hprof";
-    $dump_cmd  = "$SU '$JMAP -dump:live,file=$dump_file $pid'";
-
+    $dump_cmd  = " '$JMAP -dump:live,file=$dump_file $pid'";
     logmsg "Retrieving JVM $version heap histogram\n";
-    exec_with_timeout( "$SU '$histo_cmd' > heap.histo 2>&1", $timeout );
+    exec_with_timeout( " '$histo_cmd' > heap.histo 2>&1", $timeout );
     logmsg "Saving JVM $version heapdump\n";
-    my $success = exec_with_timeout( "$dump_cmd", $timeout );
+    my $success =  system("bash -c $dump_cmd "); 
     my $dumped = -f "$dump_file";
     $dumped && $success;
 }
@@ -197,7 +199,7 @@ sub get_pid() {
 
 sub invoke_thread_dump($$) {
     my ( $i, $ts ) = @_;
-    system("su zimbra -c '/opt/zimbra/bin/zmthrdump -i' > threaddump.$i.$ts 2>&1");
+    system("bash -c 'cd /opt/zimbra/bin/; ./zmthrdump -i' > threaddump.$i.$ts 2>&1");
 }
 
 sub collect_thread_stats($) {

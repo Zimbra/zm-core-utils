@@ -93,7 +93,7 @@ case "$1" in
       echo -n "Starting mailboxd..."
       sudo /opt/zimbra/libexec/zmmailboxdmgr start \
         -Dfile.encoding=UTF-8 ${mailboxd_java_options} ${spnegoJavaOptions} -Xms${javaXms}m \
-        -Xmx${javaXmx}m -Xmn${javaXmn}m < /dev/null > /dev/null 2>&1
+        -Xmx${javaXmx}m < /dev/null > /dev/null 2>&1
       status=$?
       if [ $status != 0 ]; then
         echo "failed."
