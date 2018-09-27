@@ -101,7 +101,7 @@ sub processQ {
 		#print STDERR "Processing file $_\n";
 		my $fh = new IO::File ($_, "r") || return;
 		my ($rec, $len, $data) = get_record($fh);
-		$qf{TO} = ();
+		$qf{TO} = [];
 		if ($rec eq "C") { # Size
 			($qf{SIZE}) = ($data =~ m/\s*(\d+)\s*\d+\s*\d+/);
 		} 
