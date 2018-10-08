@@ -246,7 +246,7 @@ sub run() {
                 }
             }
         } elsif ($app =~ /^postfix/o) {
-            if ($msg =~ /^([A-F0-9]+):/) {
+            if ($msg =~ /^([A-F0-9]{6,}|[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-z]{10}z[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-y]+):/) {
                 my $qid = $1;
             	counter_qid_add(\%host_qid_data, $host, $qid, $log_date);
                 counter_increment(\%host_data, $host, 'mta_count')

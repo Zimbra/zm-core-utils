@@ -88,7 +88,7 @@ sub getHashPath {
 
 sub processQ {
 	if (! -f $_ ) {return;}
-	if (! m{(^|/)[A-F0-9]{6,}$} ) { return; }
+	if (! m{(?:^|/)(?:[A-F0-9]{6,}|[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-z]{10}z[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-y]+)$} ) { return; }
 	$qfiles++;
 	my ($cdir) = ($File::Find::dir =~ m|([^/]*)|);
 	#print STDERR "Processing $cdir - $_\n";
