@@ -79,6 +79,20 @@ sub get_record {  # Borrowed from qshape
 sub getHashPath {
 	my $fn = shift;
 	my $p = "";
+	if ( (my $index = rindex($fn, "z") ) != -1 ) {
+		my @charlist = (
+			0..9,
+			"B".."D","F".."H","J".."N","P".."T","V".."Z",
+			"b".."d","f".."h","j".."n","p".."t","v".."z"
+		);
+		my %map = map { ( $charlist[$_], $_) } 0 .. $#charlist;
+		my @chars = reverse split //, substr($fn, $index-4, 4);
+		$fn = 0;
+		for (my $i=0; $i <= 4; $i++ ) {
+			$fn += $map{ $chars[$i] } * 52 ** $i;
+		}
+		$fn = sprintf("%05X", $fn);
+	}
 	for (my $i = 0; $i < $hash_queue_depth; $i++) {
 		$p .= substr($fn, $i, 1);
 		$p .="/";
