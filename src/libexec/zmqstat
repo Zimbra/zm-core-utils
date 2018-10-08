@@ -133,6 +133,12 @@ sub processQ {
                                 } else {
                                         $qf{TIME} = $data;
                                 }
+                        } elsif ($rec eq "p") {
+                                if ($data > 0) {
+                                        seek($fh,$data,0) or return();
+                                }
+                        } elsif ($rec eq "E") {
+                                last;
                         } 
 		}
 		$fh->close();
