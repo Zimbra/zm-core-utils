@@ -356,7 +356,7 @@ sub doit {
             # ...: milter-discard: ...: ...; from=<> to=<> proto=... helo=<h>
             # postfix messages like /^$qid: key=value, .../
             if (    $ent{app} =~ /^postfix/
-                and $ent{msg} =~ /^([A-F0-9]+|NOQUEUE): (.*)/ )
+                and $ent{msg} =~ /^([A-F0-9]{6,}|[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-z]{10}z[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-y]+|NOQUEUE): (.*)/ )
             {
                 my ( $qid, $msg ) = ( $1, $2 );
                 my $key  = $qid . ":" . $ent{host};

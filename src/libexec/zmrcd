@@ -59,9 +59,11 @@ my %SIMPLE_COMMANDS = (
    "downloadcsr"      => "cat /opt/zimbra/ssl/zimbra/commercial/commercial.csr"
 );
 
+my $REGEX_POSTFIX_QID = qr{(?:[A-F0-9]{6,}|[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-z]{10}z[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-y]+)};
+
 my %REGEX_CHECKED_COMMANDS = (
   "zmqaction" => {
-    regex => '(hold|release|requeue|delete)\s+(incoming|deferred|corrupt|active|maildrop|hold)\s+[A-FL0-9,]+', # A-F allows hex, L allows ALL
+    regex => qr{(hold|release|requeue|delete)\s+(incoming|deferred|corrupt|active|maildrop|hold)\s+(?:(?:${REGEX_POSTFIX_QID},)*+${REGEX_POSTFIX_QID}|ALL)},
     program => "/opt/zimbra/libexec/zmqaction"},
   "zmbackupldap" => {
     regex => '[a-zA-Z0-9\\/\\.\\-_:@ ]*',
