@@ -76,7 +76,7 @@ if [ x${BASE_URL} = 'x/' ]; then
   BASE_URL=""
 fi
 
-CP="/opt/zimbra/lib/jars/zimbracommon.jar:${SKIN_WORK_BASE}/WEB-INF/classes"
+CP="/opt/zimbra/lib/jars/zimbracommon.jar:${SKIN_WORK_BASE}/WEB-INF/lib/*"
 
 # Make sure source exists, and copy it to working dir
 if [ -d "$SKIN_SRC" ]; then
