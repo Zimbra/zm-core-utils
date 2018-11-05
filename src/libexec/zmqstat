@@ -35,6 +35,29 @@ my $queue_directory;
 
 my $qfiles = 0;
 
+# Map for Long Format Queue IDs
+my $ALPHACHARS = "BCDFGHJKLMNPQRSTVWXYZ";
+
+# Map of 52 characters for Long Format Queue IDs:
+# ASCII digits and Lower/Upper Case ASCII letters without AEIOU/aeiou
+my @CHARLIST = ( 0..9, split( //, $ALPHACHARS . lc($ALPHACHARS) ) );
+my %CHARMAP = map { ( $CHARLIST[$_], $_) } 0 .. $#CHARLIST;
+
+
+# Regexes for Postfix Queue IDs
+
+# Short Format character: ASCII uppercase A-F range plus ASCII digits
+my $SF_QID_CHAR = qr{[A-F0-9]};
+
+# Long Format time portion character:  ASCII digits and ASCII uppercase/lowercase consonants
+my $LF_QID_TIME_CHAR  = qr{[0-9BCDFGHJKLMNPQRSTVWXYZ]}i;
+
+# Long Format inode number portion character: ASCII digits and ASCII uppercase/lowercase consonants minus "z"
+my $LF_QID_INODE_CHAR = qr{[0-9BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxy]};
+
+my $REGEX_POSTFIX_QID = qr{(?:${SF_QID_CHAR}{6,}+|${LF_QID_TIME_CHAR}{10,}z${LF_QID_INODE_CHAR}++)};
+
+
 sub getLocalConfig {
 	my $key = shift;
 	if (defined ($ENV{zmsetvars})) {
@@ -80,16 +103,10 @@ sub getHashPath {
 	my $fn = shift;
 	my $p = "";
 	if ( (my $index = rindex($fn, "z") ) != -1 ) {
-		my @charlist = (
-			0..9,
-			"B".."D","F".."H","J".."N","P".."T","V".."Z",
-			"b".."d","f".."h","j".."n","p".."t","v".."z"
-		);
-		my %map = map { ( $charlist[$_], $_) } 0 .. $#charlist;
-		my @chars = reverse split //, substr($fn, $index-4, 4);
+		my @chars = reverse( split( //, substr($fn, $index-4, 4) ) );
 		$fn = 0;
 		for (my $i=0; $i <= 4; $i++ ) {
-			$fn += $map{ $chars[$i] } * 52 ** $i;
+			$fn += $CHARMAP{ $chars[$i] } * 52 ** $i;
 		}
 		$fn = sprintf("%05X", $fn);
 	}
@@ -102,7 +119,7 @@ sub getHashPath {
 
 sub processQ {
 	if (! -f $_ ) {return;}
-	if (! m{(?:^|/)(?:[A-F0-9]{6,}|[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-z]{10}z[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-y]+)$} ) { return; }
+	if (! m{(?:^|/)${REGEX_POSTFIX_QID}$}o ) { return; }
 	$qfiles++;
 	my ($cdir) = ($File::Find::dir =~ m|([^/]*)|);
 	#print STDERR "Processing $cdir - $_\n";
