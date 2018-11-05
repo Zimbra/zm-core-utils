@@ -38,6 +38,21 @@ my $state_file = "/opt/zimbra/log/zmlogprocess.state";
 $logger_directory = getLocalConfig("logger_data_directory");
 $log_file = '/var/log/zimbra.log';
 
+
+# Regexes for Postfix Queue IDs
+
+# Short Format character: ASCII uppercase A-F range plus ASCII digits
+my $SF_QID_CHAR = qr{[A-F0-9]};
+
+# Long Format time portion character:  ASCII digits and ASCII uppercase/lowercase consonants
+my $LF_QID_TIME_CHAR  = qr{[0-9BCDFGHJKLMNPQRSTVWXYZ]}i;
+
+# Long Format inode number portion character: ASCII digits and ASCII uppercase/lowercase consonants minus "z"
+my $LF_QID_INODE_CHAR = qr{[0-9BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxy]};
+
+my $REGEX_POSTFIX_QID = qr{(?:${SF_QID_CHAR}{6,}+|${LF_QID_TIME_CHAR}{10,}z${LF_QID_INODE_CHAR}++)};
+
+
 sub gethostmap() {
     my $dbh = DBI->connect(
             "dbi:SQLite:dbname=$logger_directory/logger.sqlitedb", "", "");
@@ -246,7 +261,7 @@ sub run() {
                 }
             }
         } elsif ($app =~ /^postfix/o) {
-            if ($msg =~ /^([A-F0-9]{6,}|[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-z]{10}z[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-y]+):/) {
+            if ($msg =~ /^(${REGEX_POSTFIX_QID}):/o) {
                 my $qid = $1;
             	counter_qid_add(\%host_qid_data, $host, $qid, $log_date);
                 counter_increment(\%host_data, $host, 'mta_count')

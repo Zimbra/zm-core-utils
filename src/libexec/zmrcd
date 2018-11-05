@@ -59,7 +59,21 @@ my %SIMPLE_COMMANDS = (
    "downloadcsr"      => "cat /opt/zimbra/ssl/zimbra/commercial/commercial.csr"
 );
 
-my $REGEX_POSTFIX_QID = qr{(?:[A-F0-9]{6,}|[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-z]{10}z[0-9B-DF-HJ-NP-TV-Zb-df-hj-np-tv-y]+)};
+
+# Regexes for Postfix Queue IDs
+
+# Short Format character: ASCII uppercase A-F range plus ASCII digits
+my $SF_QID_CHAR = qr{[A-F0-9]};
+
+# Long Format time portion character:  ASCII digits and ASCII uppercase/lowercase consonants
+my $LF_QID_TIME_CHAR  = qr{[0-9BCDFGHJKLMNPQRSTVWXYZ]}i;
+
+# Long Format inode number portion character: ASCII digits and ASCII uppercase/lowercase consonants minus "z"
+my $LF_QID_INODE_CHAR = qr{[0-9BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxy]};
+
+my $REGEX_POSTFIX_QID = qr{(?:${SF_QID_CHAR}{6,}+|${LF_QID_TIME_CHAR}{10,}z${LF_QID_INODE_CHAR}++)};
+
+
 
 my %REGEX_CHECKED_COMMANDS = (
   "zmqaction" => {
