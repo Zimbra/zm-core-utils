@@ -74,7 +74,6 @@ my $LF_QID_INODE_CHAR = qr{[0-9BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxy]};
 my $REGEX_POSTFIX_QID = qr{(?:${SF_QID_CHAR}{6,}+|${LF_QID_TIME_CHAR}{10,}z${LF_QID_INODE_CHAR}++)};
 
 
-
 my %REGEX_CHECKED_COMMANDS = (
   "zmqaction" => {
     regex => qr{(hold|release|requeue|delete)\s+(incoming|deferred|corrupt|active|maildrop|hold)\s+(?:(?:${REGEX_POSTFIX_QID},)*+${REGEX_POSTFIX_QID}|ALL)},
