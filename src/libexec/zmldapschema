@@ -105,6 +105,13 @@ installOpenDKIMSchema() {
     /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{6\}opendkim.ldif
 }
 
+installLegacySchema() {
+  echo "Installing Legacy schema..."
+  cp -f /opt/zimbra/common/etc/openldap/zimbra/schema/cn\=\{10\}legacyattribs.ldif /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{10\}legacyattribs.ldif
+  chown ${zimbra_user}:${zimbra_user} /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{10\}legacyattribs.ldif
+  chmod 600 /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/cn\=\{10\}legacyattribs.ldif
+}
+
 cleanup() {
   rm -f /opt/zimbra/data/ldap/config/cn\=config/cn\=schema/*.orig
 }
@@ -118,4 +125,5 @@ installZimbraSchema
 installAmavisSchema
 installDynlistSchema
 installOpenDKIMSchema
+installLegacySchema
 cleanup
