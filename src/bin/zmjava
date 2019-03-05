@@ -56,5 +56,5 @@ exec ${zimbra_java_home}/bin/java ${java_options} \
      -client ${zimbra_zmjava_options} \
      -Dzimbra.home=/opt/zimbra \
      -Djava.library.path=${zimbra_zmjava_java_library_path} \
-     -classpath "${zimbra_zmjava_java_ext_dirs}:/opt/zimbra/lib/jars/*" \
+     -classpath "${zimbra_zmjava_java_ext_dirs}:/opt/zimbra/lib/jars/*:/opt/zimbra/conf" \
      "$@"
