@@ -135,6 +135,21 @@ my $LOGFILE = "/var/log/zimbra.log";
 my $VERSION = "1.05";
 my $Prog    = basename($0);
 
+
+# Regexes for Postfix Queue IDs
+
+# Short Format character: ASCII uppercase A-F range plus ASCII digits
+my $SF_QID_CHAR = qr{[A-F0-9]};
+
+# Long Format time portion character:  ASCII digits and ASCII uppercase/lowercase consonants
+my $LF_QID_TIME_CHAR  = qr{[0-9BCDFGHJKLMNPQRSTVWXYZ]}i;
+
+# Long Format inode number portion character: ASCII digits and ASCII uppercase/lowercase consonants minus "z"
+my $LF_QID_INODE_CHAR = qr{[0-9BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxy]};
+
+my $REGEX_POSTFIX_QID = qr{(?:${SF_QID_CHAR}{6,}+|${LF_QID_TIME_CHAR}{10,}z${LF_QID_INODE_CHAR}++)};
+
+
 {
     my %mon = (
         Jan => '01',
@@ -356,7 +371,7 @@ sub doit {
             # ...: milter-discard: ...: ...; from=<> to=<> proto=... helo=<h>
             # postfix messages like /^$qid: key=value, .../
             if (    $ent{app} =~ /^postfix/
-                and $ent{msg} =~ /^([A-F0-9]+|NOQUEUE): (.*)/ )
+                and $ent{msg} =~ /^(${REGEX_POSTFIX_QID}|NOQUEUE): (.*)/o )
             {
                 my ( $qid, $msg ) = ( $1, $2 );
                 my $key  = $qid . ":" . $ent{host};
