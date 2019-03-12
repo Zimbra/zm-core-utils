@@ -48,6 +48,10 @@ if [ x${zimbra_zmjava_java_library_path} = "x" ]; then
   zimbra_zmjava_java_library_path=/opt/zimbra/lib
 fi
 
+if [ x${zimbra_zmjava_java_ext_dirs} = "x" ]; then
+  zimbra_zmjava_java_ext_dirs=${JRE_EXT_DIR}${PATHSEP}/opt/zimbra/lib/jars${PATHSEP}${ZIMBRA_EXT_DIR}
+fi
+
 if [ ! -z "${EXT_JAR_PATH}" ]; then
   zimbra_zmjava_java_ext_dirs=${zimbra_zmjava_java_ext_dirs}${PATHSEP}${EXT_JAR_PATH}
 fi
