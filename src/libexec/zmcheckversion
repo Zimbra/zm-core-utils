@@ -16,6 +16,6 @@
 # ***** END LICENSE BLOCK *****
 # 
 
-EXT_JAR_PATH=/opt/zimbra/lib/ext/zimbraadminversioncheck/zimbraadminversioncheck.jar
-export EXT_JAR_PATH
-exec `dirname $0`/../bin/zmjava com.zimbra.cs.versioncheck.VersionCheckUtil "$@"
+export EXT_JAR_PATH="/opt/zimbra/lib/ext/zimbraadminversioncheck/zimbraadminversioncheck.jar"
+exec `dirname $0`/../bin/zmjava  com.zimbra.cs.versioncheck.VersionCheckUtil "$@"
+
