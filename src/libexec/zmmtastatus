@@ -21,7 +21,7 @@ use Getopt::Std;
 use File::Basename;
 
 my $progname = basename($0);
-# Need to be root to read the master.pid
+# Need to be root to run "postfix status"
 if ($> != 0) {
   print "$0 must be run as root.\n";
   exit 1;
@@ -38,25 +38,18 @@ my $verbose = $options{v} ? 1 : 0;
 $verbose = 1 if $debug;
 
 
-my $pidFile="/opt/zimbra/data/postfix/spool/pid/master.pid";
-my $postfixMaster="/opt/zimbra/common/libexec/master";
+my $postfix="/opt/zimbra/common/sbin/postfix";
 
 exit (mtaIsRunning() ? 0 : 1);
 
 sub mtaIsRunning {
-  if (-f "$pidFile") {
-    my $pid = qx(cat $pidFile);
-    $pid =~ s/^\s+//;
-    chomp $pid;
-    if ($pid ne "") {
-      print "MTA process $pid is "  if $verbose;
-      if (readlink("/proc/$pid/exe") eq $postfixMaster) {
-        print "running.\n" if $verbose;
-        return 1;
-      } else {
-        print "not running.\n" if $verbose;
-      }
-    }
+  print "MTA process is " if $verbose;
+  system("$postfix status 2> /dev/null");
+  if ($? == 0) {
+    print "running.\n" if $verbose;
+    return 1;
+  } else {
+    print "not running.\n" if $verbose;
   }
   return undef;
 }
