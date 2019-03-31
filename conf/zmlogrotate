@@ -114,6 +114,7 @@
     endscript
     rotate 7
     compress
+    delaycompress
     #su zimbra zimbra
 }
 
