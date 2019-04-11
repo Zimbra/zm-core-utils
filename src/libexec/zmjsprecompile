@@ -24,7 +24,7 @@ fi
 zimbra_java_home=/opt/zimbra/common/lib/jvm/java
 jspc_src_dir=/opt/zimbra/mailboxd/webapps/zimbra
 jspc_build_dir=/opt/zimbra/mailboxd/work/zimbra/jsp
-jspc_class_path="/opt/zimbra/jetty/lib:/opt/zimbra/jetty/lib/apache-jsp:/opt/zimbra/jetty/lib/apache-jstl:/opt/zimbra/lib/jars-ant:/opt/zimbra/jetty/lib/ext:/opt/zimbra/jetty/lib/plus:/opt/zimbra/jetty/lib/naming:/opt/zimbra/lib/ext:/opt/zimbra/jetty/common/lib:/opt/zimbra/jetty/webapps/zimbra/WEB-INF/lib"
+jspc_class_path="/opt/zimbra/lib/jars/*:/opt/zimbra/common/jetty_home/lib/*:/opt/zimbra/common/jetty_home/lib/apache-jsp/*:/opt/zimbra/common/jetty_home/lib/apache-jstl/*:/opt/zimbra/lib/jars/*:/opt/zimbra/jetty/lib/ext/*:/opt/zimbra/jetty/lib/plus/*:/opt/zimbra/jetty/lib/naming/*:/opt/zimbra/lib/ext/*:/opt/zimbra/jetty/common/lib/*:/opt/zimbra/jetty/webapps/zimbra/WEB-INF/lib/*"
 
 extensions="backup clamscanner network zimbra-license zimbrahsm zimbrasync"
 ext_dir="/opt/zimbra/lib/ext-common"
@@ -34,7 +34,7 @@ for i in $extensions; do
   fi
 done
 
-for i in `ls /opt/zimbra/jetty/lib/apache-jsp/*.jar`; do
+for i in `ls /opt/zimbra/common/jetty_home/lib/apache-jsp/*.jar`; do
   if [ x"$class_path" = "x" ]; then
     class_path="$i"
   else
@@ -42,7 +42,7 @@ for i in `ls /opt/zimbra/jetty/lib/apache-jsp/*.jar`; do
   fi
 done
 
-for i in `ls /opt/zimbra/jetty/lib/apache-jstl/*.jar`; do
+for i in `ls /opt/zimbra/common/jetty_home/lib/apache-jstl/*.jar`; do
   if [ x"$class_path" = "x" ]; then
     class_path="$i"
   else
@@ -61,7 +61,7 @@ java_cmd="${zimbra_java_home}/bin/java $java_options \
   -client -Xmx256m \
   -Dzimbra.home=/opt/zimbra \
   -Djava.library.path=/opt/zimbra/lib \
-  -Djava.ext.dirs=${jspc_class_path}"
+  -classpath ${jspc_class_path}:${class_path}"
 
 if [ -d "${jspc_build_dir}" ]; then
   rm -rf ${jspc_build_dir}
@@ -69,7 +69,7 @@ fi
 mkdir ${jspc_build_dir}
 
 compile_jsp() {
-  ${java_cmd} -classpath ${class_path} org.apache.jasper.JspC -v -trimSpaces -d ${jspc_build_dir} -webapp ${jspc_src_dir} -uriroot ${jspc_src_dir} -compile
+  ${java_cmd} org.apache.jasper.JspC -v -trimSpaces -d ${jspc_build_dir} -webapp ${jspc_src_dir} -uriroot ${jspc_src_dir} -compile
   return $?
 }
 

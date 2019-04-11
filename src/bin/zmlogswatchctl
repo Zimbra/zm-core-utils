@@ -44,12 +44,11 @@ checkrunning()
   if [ "x$pid" = "x" ]; then
     running=0
   else
-    kill -0 $pid 2> /dev/null
-    if [ $? != 0 ]; then
+    if ps --no-headers -p $pid -o cmd 2>/dev/null |grep swatchdog >/dev/null 2>&1; then
+      running=1
+    else
       pid=""
       running=0
-    else
-      running=1
     fi
   fi
 }
@@ -108,8 +107,7 @@ case "$1" in
           if [ -z "$zmrrdfetchpid" ]; then
               break;
           fi
-          kill -0 $zmrrdfetchpid 2> /dev/null
-          if [ $? != 0 ]; then
+          if ! ps --no-headers -p $zmrrdfetchpid -o cmd 2>/dev/null |grep zmrrdfetch >/dev/null 2>&1; then
               rm -f ${zmrrdfetchpidfile}
               break;
           fi
@@ -117,14 +115,12 @@ case "$1" in
           sleep 1
       done
       if [ -n "$zmrrdfetchpid" ]; then
-          kill -0 $zmrrdfetchpid 2> /dev/null
-          if [ $? = 0 ]; then
+          if ps --no-headers -p $zmrrdfetchpid -o cmd 2>/dev/null |grep zmrrdfetch >/dev/null 2>&1; then
               kill -9 $zmrrdfetchpid
           fi
       fi
       for ((i = 0; i < 30; i++)); do
-        kill -0 $pid 2> /dev/null
-        if [ $? != 0 ]; then
+        if ! ps --no-headers -p $pid -o cmd 2>/dev/null |grep swatchdog >/dev/null 2>&1; then
           rm -rf ${pidfile}
           break
         fi
