@@ -59,16 +59,17 @@ else
     #JRE_EXT_DIR=${zimbra_java_home}/lib/ext
 fi
 
-jardirs=${JRE_EXT_DIR}:/opt/zimbra/mailboxd/lib:/opt/zimbra/mailboxd/common/lib:/opt/zimbra/lib/jars
+jardirs=${JRE_EXT_DIR}:/opt/zimbra/mailboxd/lib/*:/opt/zimbra/mailboxd/common/lib/*:/opt/zimbra/lib/jars/*
 if [ -e /opt/zimbra/lib/ext-common ]; then
-    jardirs=${jardirs}:/opt/zimbra/lib/ext-common
+    jardirs=${jardirs}:/opt/zimbra/lib/ext-common/*
 fi
 for jd in `find /opt/zimbra/lib/ext -type d` ; do
     if [ ${jd} != /opt/zimbra/lib/ext ]; then
-        jardirs="${jardirs}:${jd}"
+        jardirs="${jardirs}:${jd}/*"
     fi
 done
 
+jardirs="${jardirs}:/opt/zimbra/jetty/common/lib/*:/opt/zimbra/jetty/webapps/service/WEB-INF/lib/*"
 #
 # Memory for use by JVM
 #
@@ -102,7 +103,7 @@ ${zimbra_java_home}/bin/java \
     ${xms_xmx_options} ${sanitized_options} \
     -Dzimbra.config=/opt/zimbra/conf/localconfig.xml \
     -Djava.library.path=/opt/zimbra/lib \
-    -Djava.ext.dirs=${jardirs} \
+    -classpath ${jardirs} \
     com.zimbra.cs.redolog.util.PlaybackUtil "$@"
 rc=$?
 rm -f $ropid
