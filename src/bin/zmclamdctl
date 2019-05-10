@@ -50,13 +50,12 @@ checkrunning() {
   if [ "x$cpid" = "x" ]; then
     running=0
   else
-    kill -0 $cpid 2> /dev/null
-    if [ $? != 0 ]; then
+    if ps --no-headers -p $cpid -o cmd 2>/dev/null | grep clamd >/dev/null 2>&1; then
+      running=1
+    else
       rm $pidfile
       cpid=""
       running=0
-    else
-      running=1
     fi
   fi
 }

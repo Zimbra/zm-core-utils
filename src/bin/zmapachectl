@@ -82,8 +82,7 @@ case "$1" in
       echo "apache is not running."
       exit 1
     fi
-		kill -0 $pid
-    if [ $? = 0 ]; then
+    if ps --no-headers -p $pid -o cmd 2>/dev/null |grep httpd >/dev/null 2>&1; then
       echo "apache is running."
       exit 0
     else 
