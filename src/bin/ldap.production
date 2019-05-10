@@ -24,8 +24,8 @@ mkdir -p "/opt/zimbra/data/ldap/state/run/"
 source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars
 
-if [ x$ldap_is_master = "xfalse" ]; then
-    if [ "x$ldap_url" = "x$ldap_master_url" -a "x$1" != "xstop" ]; then
+if [ "x$ldap_is_master" = "xfalse" ]; then
+    if [ "x$ldap_url" = "x$ldap_master_url" ] && [ "x$1" != "xstop" ]; then
         echo "ldap_url and ldap_master_url cannot be the same on an ldap replica"
         exit 1
     fi
@@ -34,7 +34,7 @@ fi
 getpid()
 {
     if [ -f $PIDFILE ]; then
-        PID=`cat $PIDFILE`
+        PID=$(cat $PIDFILE)
     fi
 }
 
@@ -44,12 +44,11 @@ checkrunning()
     if [ "x$PID" = "x" ]; then
         RUNNING=0
     else
-        ps --no-headers -p $PID -o cmd 2>/dev/null |grep slapd >/dev/null 2>&1
-        if [ $? != 0 ]; then
+        if ps --no-headers -p "$PID" -o cmd 2>/dev/null |grep slapd >/dev/null 2>&1 ; then
+            RUNNING=1
+        else
             PID=""
             RUNNING=0
-        else
-            RUNNING=1
         fi
     fi
 }
@@ -72,7 +71,7 @@ checkListening()
 doDebugStart() {
     TIMEOUT=60 # timelimit for command
     sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 -u zimbra -h "${bind_url} ldapi:///" \
-            -F /opt/zimbra/data/ldap/config -d 1 2>&1 | egrep "failed|error" &
+            -F /opt/zimbra/data/ldap/config -d 1 2>&1 | grep -e "failed" -e "error" &
     cmd_pid=$!
     sleep $TIMEOUT | (
         read nothing # wait on sleep to finish
@@ -96,12 +95,12 @@ start()
     # Our ldap url should be the first in the list in localconfig
     bind_url=$ldap_bind_url
     if [ x"$bind_url" = "x" ]; then
-        bind_url=$(echo ${ldap_url} | awk '{print $1}')
+        bind_url=$(echo "${ldap_url}" | awk '{print $1}')
     fi
     for ((i =0; i <= 30; i++)); do
         checkrunning
         if [ $RUNNING = 0 ]; then
-            if (($i % 5 == 0)); then
+            if ((i % 5 == 0)); then
                 sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 \
                 -u zimbra -h "${bind_url} ldapi:///" -F /opt/zimbra/data/ldap/config
             fi
@@ -140,18 +139,16 @@ stop()
     echo -n "Killing slapd with pid $PID"
     kill -TERM $PID
     for ((i =0; i < 1500; i++)); do
-        sleep 1
-        kill -0 $PID 2> /dev/null
-        if [ $? != 0 ]; then
+        if ! kill -0 $PID 2> /dev/null; then
             echo " done."
             exit 0
         fi
-        if (($i % 5 == 0)); then
+        if ((i % 5 == 0)); then
             echo -n "."
         fi
+        sleep 1
     done
-    kill -TERM $PID
-    if [ $? = 0 ]; then
+    if kill -TERM $PID; then
         echo " gave up waiting!"
         exit 1
     fi
