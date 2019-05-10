@@ -85,44 +85,43 @@ doDebugStart() {
     exit 1
 }
 
+
 start()
 {
     checkrunning
-    if [ $RUNNING = 0 ]; then
-        # Our ldap url should be the first in the list in localconfig
-        bind_url=$ldap_bind_url
-        if [ x"$bind_url" = "x" ]; then
-            bind_url=$(echo ${ldap_url} | awk '{print $1}')
-        fi
-        sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 \
-            -u zimbra -h "${bind_url} ldapi:///" -F /opt/zimbra/data/ldap/config
-        sleep 5
-        for ((i =0; i < 6; i++)); do
-            checkrunning
-            if [ $RUNNING = 0 ]; then
-                sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 \
-                    -u zimbra -h "${bind_url} ldapi:///" -F /opt/zimbra/data/ldap/config
-            else
-                break
-            fi
-            sleep 5
-        done
-        if [ "x$PID" = "x" ]; then
-            echo "Failed to start slapd.  Attempting debug start to determine error."
-            doDebugStart
-        else
-            echo "Started slapd: pid $PID"
-        fi
-    else
+    if [ $RUNNING != 0 ]; then
         echo "slapd already running: pid $PID"
         exit 1
     fi
-    for ((i =0; i < 6; i++)); do
+    # Our ldap url should be the first in the list in localconfig
+    bind_url=$ldap_bind_url
+    if [ x"$bind_url" = "x" ]; then
+        bind_url=$(echo ${ldap_url} | awk '{print $1}')
+    fi
+    for ((i =0; i <= 30; i++)); do
+        checkrunning
+        if [ $RUNNING = 0 ]; then
+            if (($i % 5 == 0)); then
+                sudo /opt/zimbra/libexec/zmslapd -l LOCAL0 \
+                -u zimbra -h "${bind_url} ldapi:///" -F /opt/zimbra/data/ldap/config
+            fi
+        else
+            break
+        fi
+        sleep 1
+    done
+    if [ "x$PID" = "x" ]; then
+        echo "Failed to start slapd.  Attempting debug start to determine error."
+        doDebugStart
+    else
+        echo "Started slapd: pid $PID"
+    fi
+    for ((i =0; i < 30; i++)); do
         checkListening
         if [ $LISTENING = 1 ]; then
             break
         fi
-        sleep 5
+        sleep 1
     done
     if [ $LISTENING = 0 ]; then
         echo "Error: Unable to check that slapd is listening to connections"
@@ -133,29 +132,30 @@ start()
 stop()
 {
     checkrunning
+
     if [ $RUNNING = 0 ]; then
         echo "slapd not running"
         exit 0
-    else
-        echo -n "Killing slapd with pid $PID"
-        kill -TERM $PID
-        for ((i =0; i < 300; i++)); do
-            sleep 5
-            kill -0 $PID 2> /dev/null
-            if [ $? != 0 ]; then
-                echo " done."
-                exit 0
-            fi
-            echo -n "."
-        done
-        kill -TERM $PID
-        if [ $? = 0 ]; then
-            echo " gave up waiting!"
-            exit 1
-        else
-            echo " done."
-        fi
     fi
+    echo -n "Killing slapd with pid $PID"
+    kill -TERM $PID
+    for ((i =0; i < 1500; i++)); do
+        sleep 1
+        kill -0 $PID 2> /dev/null
+        if [ $? != 0 ]; then
+            echo " done."
+            exit 0
+        fi
+        if (($i % 5 == 0)); then
+            echo -n "."
+        fi
+    done
+    kill -TERM $PID
+    if [ $? = 0 ]; then
+        echo " gave up waiting!"
+        exit 1
+    fi
+    echo " done."
     exit 0
 }
 
