@@ -44,7 +44,7 @@ checkrunning()
     if [ "x$PID" = "x" ]; then
         RUNNING=0
     else
-        kill -0 $PID
+        ps --no-headers -p $PID -o cmd 2>/dev/null |grep slapd >/dev/null 2>&1
         if [ $? != 0 ]; then
             PID=""
             RUNNING=0
