@@ -188,7 +188,7 @@ sub enableSyncProv {
     ],
   );
   $mesg->code && die "Add Failed: ". $mesg->error . "\n";
-  $mesg=>$ldap->add(
+  $mesg=$ldap->add(
     'olcOverlay={0}syncprov,olcDatabase={3}mdb,cn=config',
     attr => [
       objectClass=>['olcOverlayConfig','olcSyncProvConfig'],
@@ -198,7 +198,7 @@ sub enableSyncProv {
     ],
   );
   $mesg->code && die "Add Failed: ". $mesg->error . "\n";
-  $mesg=>$ldap->add(
+  $mesg=$ldap->add(
     'olcOverlay={1}accesslog,olcDatabase={3}mdb,cn=config',
     attr => [
       objectClass=>['olcOverlayConfig','olcAccessLogConfig'],

@@ -139,14 +139,14 @@ if(lc($ldap_is_master) eq "true") {
       olcSpReloadHint=>"TRUE",
     ],
   );
-  $mesg=>$ldap->modify(
+  $mesg=$ldap->modify(
     'olcOverlay=syncprov,olcDatabase={3}mdb,cn=config',
     add => [
       olcSpCheckpoint=>'20 10',
       olcSpSessionlog=>'10000000',
     ],
   );
-  $mesg=>$ldap->add(
+  $mesg=$ldap->add(
     'olcOverlay={1}accesslog,olcDatabase={3}mdb,cn=config',
     attr => [
       objectClass=>['olcOverlayConfig','olcAccessLogConfig'],
