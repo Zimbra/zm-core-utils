@@ -60,7 +60,7 @@ foreach my $master (@masters) {
                  ) or die "start_tls: $@";
         if($mesgp->code) {
           $mstatus{$master}[0]=3;
-          $mstatus{$master}[1]="Could not execute StartTLS ($master)";
+          $mstatus{$master}[1]="Could not execute StartTLS";
         }
       }
     }
@@ -102,7 +102,7 @@ foreach my $master (@masters) {
   
   if (!@csns) {
     $mstatus{$master}[0]=5;
-    $mstatus{$master}[1]="Not a replicated master ($master)\n";
+    $mstatus{$master}[1]="Not a replicated master\n";
   }
   $mstatus{$master}[0]=0;
   $mstatus{$master}[1]="CSNs Retrieved";

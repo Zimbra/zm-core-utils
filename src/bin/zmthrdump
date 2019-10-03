@@ -61,10 +61,6 @@ usage() if ($opts{'h'});
 
 my $id = getpwuid($<);
 chomp $id;
-if ($id ne "zimbra") {
-    print STDERR "Error: must be run as zimbra user\n";
-    exit (1);
-}
 
 $log_file = $opts{'f'} if (exists $opts{'f'} && defined $opts{'f'});
 usage() if (exists $opts{'f'} && !defined $opts{'f'});

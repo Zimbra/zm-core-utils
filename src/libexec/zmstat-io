@@ -72,7 +72,7 @@ sub getHeading($) {
         || die "Unable to execute command \"$cmd\": $!";
 
     # Look for the beginning of either CPU section or device section.
-    while ($line !~ /^avg-cpu/ && $line !~ /^Device:/) {
+    while ($line !~ /^avg-cpu/ && $line !~ /^Device/) {
         $line = readLine(*HEADING, 1);
     }
 
@@ -83,10 +83,10 @@ sub getHeading($) {
     }
 
     # Process the device stat lines.
-    while ($line !~ /^Device:/) {
+    while ($line !~ /^Device/) {
         $line = readLine(*HEADING, 1);
     }
-    $line =~ s/^Device:\s+//;
+    $line =~ s/^Device\s+//;
     my @devs;
     my @dev_cols = split('\s+', $line);
     $line = readLine(*HEADING, 1);
@@ -216,7 +216,7 @@ while (1) {
         $iostatFH = runIOSTAT($iostatOpts, $interval);
     }
 
-    if ($isMac || ($line =~ /^avg-cpu/ || $line =~ /^Device:/)) {
+    if ($isMac || ($line =~ /^avg-cpu/ || $line =~ /^Device/)) {
         my @vals;
         my $tstamp = getTstamp();
         my $currDate = getDate();
@@ -247,7 +247,7 @@ while (1) {
                 $line =~ s/^\s+//;  # Remove leading whitespaces.
                 push(@vals, split('\s+', $line));
             }
-            while (defined($line) && $line !~ /^Device:/) {
+            while (defined($line) && $line !~ /^Device/) {
                 $line = readLine($iostatFH, 1);
             }
             $line = readLine($iostatFH, 1);
