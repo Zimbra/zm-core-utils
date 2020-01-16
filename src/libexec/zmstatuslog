@@ -17,6 +17,8 @@
 # 
 
 use strict;
+use JSON::PP;
+use Data::Dumper;
 
 use lib "/opt/zimbra/common/lib/perl5";
 use  Zimbra::Util::Common;
@@ -60,6 +62,10 @@ sub logStatus {
 	open STATUS, "/opt/zimbra/bin/zmcontrol status |" or die "Can't get status: $!";
 	@status = <STATUS>;
 	close STATUS;
+
+	my $ismailboxrunning = '';
+	my $isaloggerserver = '';
+
 	foreach my $s (@status) {
 		if ($s =~ /is not/) {
 			next;
@@ -71,9 +77,34 @@ sub logStatus {
 		}
 		$s =~ s/ webapp//;
 		my ($service, $stat) = split ' ', $s, 2;
+
+		if (( $service eq 'mailbox' ) && ( $stat eq 'Running' )) {
+			$ismailboxrunning = 'found';
+		}
+
+		if (( $service eq 'logger' ) && ( $stat eq 'Running' )) {
+			$isaloggerserver = 'found';
+		}
+
 		Zimbra::Mon::Logger::LogStats( "info", "$dt, STATUS: ${hostname}: $service: $stat" );
 	}
-  alarm(0);
+
+	if (($ismailboxrunning) && ($isaloggerserver)) {
+		if ( -e '/opt/zimbra/bin/zxsuite' ) {
+			my $docs_status = `/opt/zimbra/bin/zxsuite --json docs status`;
+			my $docs_hash = JSON::PP->new->utf8->decode($docs_status);
+			my $list_servers = $docs_hash->{'response'};
+			foreach my $server (@{$list_servers->{servers}}) {
+				my $status = 'Stopped';
+				if ( $server->{'status'} eq "online" ) {
+					$status = 'Running';
+				}
+				Zimbra::Mon::Logger::LogStats( "info", "$dt, STATUS: $server->{'name'}: docs: $status" );
+			}
+		}
+	}
+
+	alarm(0);
 }
 
 sub checkPid {
