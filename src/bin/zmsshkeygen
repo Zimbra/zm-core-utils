@@ -47,6 +47,12 @@ fi
 ssh-keygen -f ${keyfile} -b 2048 -N '' \
 	-t ${keytype} -C ${zimbra_server_hostname}
 
+# Starting with OpenSSH 7.8 by default, the key is created with the OpenSSH private key format instead of the OpenSSL PEM format.
+# Check the format of KEY, and create KEY in OpenSSL PEM format.
+grep "BEGIN OPENSSH PRIVATE KEY" ${keyfile} > /dev/null 2>&1
+  if [ $? = 0 ]; then
+     ssh-keygen -m PEM -f ${keyfile}  -b 2048 -N '' \ -t ${keytype} -C ${zimbra_server_hostname}
+  fi
 pubkey=`cat ${keyfile}.pub`
 
 ${zmprov} ms ${zimbra_server_hostname} ${keyattr} "${pubkey}"
