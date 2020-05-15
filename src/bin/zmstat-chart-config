@@ -91,7 +91,7 @@ sub getDiskInfo() {
             return;
         }
         my $line = '';
-        while ($line !~ /^Device:/) {
+        while ($line !~ /^Device/) {
             $line = readLine(*IOSTAT, 1);
         }
         while (defined($line = readLine(*IOSTAT, 1))) {
