@@ -677,6 +677,14 @@ if [[ "x$PLAT" == "xRHEL7_64" && ! -d /opt/zimbra/.cache ]]; then
   chmod 775 /opt/zimbra/.cache
 fi
 
+# Fix permissions for default openldap configuration files
+for i in slapd.conf slapd.conf.default slapd.ldif slapd.ldif.default;
+do
+  if [ -f /opt/zimbra/common/etc/openldap/${i} ]; then
+    chown -f ${root_user}:${root_group} /opt/zimbra/common/etc/openldap/${i}
+    chmod 644 /opt/zimbra/common/etc/openldap/${i}
+  fi
+done
 
 exit 0
 
