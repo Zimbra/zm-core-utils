@@ -16,11 +16,11 @@
 # ***** END LICENSE BLOCK *****
 # 
 
+use lib "/opt/zimbra/common/lib/perl5";
 use strict;
 use JSON::PP;
 use Data::Dumper;
 
-use lib "/opt/zimbra/common/lib/perl5";
 use  Zimbra::Util::Common;
 use Zimbra::Mon::Logger;
 
