@@ -316,6 +316,9 @@ sub updateSyslog {
         if ($platform eq "RHEL7_64") {
       		s/#su zimbra zimbra/su zimbra zimbra/;
       	}
+	if ($platform eq "RHEL8_64") {
+		s/syslog\*.pid/rsyslogd.pid/g;
+	}
       }
       s/USER/zimbra/;
       s/GROUP/zimbra/;
