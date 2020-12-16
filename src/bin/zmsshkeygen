@@ -38,6 +38,7 @@ rm -f ${keyfile}
 
 keytype=${1:-rsa}
 
+
 if [ $keytype != "rsa" ]; then
 	echo "Bad keytype: $keytype"
 	echo ""
@@ -53,6 +54,13 @@ grep "BEGIN OPENSSH PRIVATE KEY" ${keyfile} > /dev/null 2>&1
   if [ $? = 0 ]; then
      ssh-keygen -p -m PEM -f ${keyfile}  -b 2048 -N '' -t ${keytype} -C ${zimbra_server_hostname}
   fi
+
+# Convert PRIVATE KEY TO RSA PRIVATE KEY FORMAT
+grep "BEGIN PRIVATE KEY" ${keyfile} > /dev/null 2>&1
+  if [ $? = 0 ]; then
+      /opt/zimbra/common/bin/openssl rsa -in ${keyfile} -out ${keyfile}
+  fi
+
 pubkey=`cat ${keyfile}.pub`
 
 ${zmprov} ms ${zimbra_server_hostname} ${keyattr} "${pubkey}"
