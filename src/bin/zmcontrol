@@ -455,56 +455,68 @@ sub getCachedServices {
 }
 
 sub getEnabledServices {
-  my $ldap_master_url=getLocalConfig("ldap_master_url");
+  my $ldap_url=getLocalConfig("ldap_url");
   my $ldap_dn=getLocalConfig("zimbra_ldap_userdn");
   my $ldap_pass=getLocalConfig("zimbra_ldap_password");
   my $require_tls=getLocalConfig("zimbra_require_interprocess_security");
   my $ldap_starttls_supported=getLocalConfig("ldap_starttls_supported");
 
+  my $success = 0;
 
   my %s = ();
   $s{"zmconfigd"} = "zmconfigd";
 
-  my @ldap_masters=split(/ /, $ldap_master_url);
-  my $master_ref=\@ldap_masters;
+  my @ldap_servers=split(/ /, $ldap_url);
   my ($ldap, $result);
-  unless ($ldap = Net::LDAP->new( $master_ref, timeout =>30 )) {
-    warn "Connect: Unable to determine enabled services from ldap.\n";
-    return getCachedServices();
-  }
-  if ( $ldap_starttls_supported ) {
-    my $type="none";
-    if ($require_tls) {
-      $type="require";
+  foreach my $ldapserver (@ldap_servers) {
+    local $SIG{ALRM} = sub { die "LDAP timeout"; };
+    eval {
+      alarm(10);
+      unless ($ldap = Net::LDAP->new( $ldapserver, timeout =>5 )) {
+        die "Connect: Unable to determine enabled services from ldap.($!)\n";
+      }
+      if ( $ldap_starttls_supported ) {
+        my $type="none";
+        if ($require_tls) {
+          $type="require";
+        }
+        my $result = $ldap->start_tls(
+             verify => "$type",
+             capath => "/opt/zimbra/conf/ca",
+           );
+        if ($result->code) {
+          die "Unable to start TLS: ". $result->error . " when connecting to ldap server.\n";
+        }
+      }
+      unless ($result = $ldap->bind($ldap_dn, password => $ldap_pass)) {
+        die "Bind: Unable to determine enabled services from ldap.($!)\n";
+      }
+      $result = $ldap->search(base => "cn=servers,cn=zimbra", filter => "cn=$localHostName", attrs => ['zimbraServiceEnabled']);
+      if ($result->code) {
+        die "Search error: Unable to determine enabled services from ldap.\n";
+      }
+      my $size = $result->count;
+      if($size != 1) {
+        die "Size error: Unable to determine enabled services from ldap.\n";
+      }
+      my $entry = $result->entry(0);
+      foreach my $value ($entry->get_value('zimbraServiceEnabled')) {
+        $s{$value} = $value;
+      }
+      $result = $ldap->unbind;
+      alarm(0);
+      $success = 1;
+      last;
+    };
+    alarm(0);
+    if($@) {
+      warn "$@\n";
     }
-    my $result = $ldap->start_tls(
-         verify => "$type",
-         capath => "/opt/zimbra/conf/ca",
-       );
-    if ($result->code) {
-      warn "Unable to start TLS: ". $result->error . " when connecting to ldap master.\n";
-      return ();
-    }
   }
-  unless ($result = $ldap->bind($ldap_dn, password => $ldap_pass)) {
-    warn "Bind: Unable to determine enabled services from ldap.\n";
+  if($success == 0) {
+    warn "Unable to determine enabled services from ldap.\n";
     return getCachedServices();
   }
-  $result = $ldap->search(base => "cn=servers,cn=zimbra", filter => "cn=$localHostName", attrs => ['zimbraServiceEnabled']);
-  if ($result->code) {
-    warn "Search error: Unable to determine enabled services from ldap.\n";
-    return getCachedServices();
-  }
-  my $size = $result->count;
-  if($size != 1) {
-    warn "Size error: Unable to determine enabled services from ldap.\n";
-    return getCachedServices();
-  }
-  my $entry = $result->entry(0); 
-  foreach my $value ($entry->get_value('zimbraServiceEnabled')) {
-    $s{$value} = $value;
-  }
-  $result = $ldap->unbind;
 
   if (scalar keys %s > 0) {
     open (CACHE, ">$cache_file");
