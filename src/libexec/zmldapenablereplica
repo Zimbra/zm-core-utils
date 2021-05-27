@@ -55,6 +55,7 @@ my $localxml = XMLin("/opt/zimbra/conf/localconfig.xml");
 my $ldap_root_password = $localxml->{key}->{ldap_root_password}->{value};
 chomp($ldap_root_password);
 my $ldap_replication_password = $localxml->{key}->{ldap_replication_password}->{value};
+my $ldap_replication_retry = $localxml->{key}->{ldap_replication_retry}->{value};
 my $ldap_starttls_supported = $localxml->{key}->{ldap_starttls_supported}->{value};
 my $zimbra_require_interprocess_security = $localxml->{key}->{zimbra_require_interprocess_security}->{value};
 my $zimbra_server_hostname = $localxml->{key}->{zimbra_server_hostname}->{value};
@@ -232,7 +233,7 @@ sub createLdapConfig {
     $mesg = $ldap->modify(
       $bdn,
       add=>[
-        olcSyncrepl=>"rid=100 provider=$lmr bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"60 +\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30",
+        olcSyncrepl=>"rid=100 provider=$lmr bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"$ldap_replication_retry\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30",
         olcUpdateRef=>"$lmr",
       ],
     );
@@ -240,7 +241,7 @@ sub createLdapConfig {
     $mesg = $ldap->modify(
       $bdn,
       add=>[
-        olcSyncrepl=>"rid=100 provider=$lmr bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password starttls=critical filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"60 +\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30",
+        olcSyncrepl=>"rid=100 provider=$lmr bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password starttls=critical filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"$ldap_replication_retry\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30",
         olcUpdateRef=>"$lmr",
       ],
     );
@@ -248,7 +249,7 @@ sub createLdapConfig {
     $mesg = $ldap->modify(
       $bdn,
       add=>[
-        olcSyncrepl=>"rid=100 provider=$lmr bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"60 +\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30",
+        olcSyncrepl=>"rid=100 provider=$lmr bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"$ldap_replication_retry\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30",
         olcUpdateRef=>"$lmr",
       ],
     );
