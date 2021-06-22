@@ -224,7 +224,7 @@ sub run() {
     my $state  = updateState();
     open(LOG, "<$log_file") || die $!;
 
-    my $logregex = qr/(^.{15}) ((\d+\.\d+\.\d+\.\d+) \S+|(\S+)) ([^[]+)(\[(\d+)\])?: (.*)$/o;
+    my $logregex = qr/^(.{15}|\S+) ((\d+\.\d+\.\d+\.\d+) \S+|(\S+)) ([^[]+)(\[(\d+)\])?: (.*)$/o;
     my %host_data;
     my %host_qid_data; # hostname -> { qid -> { first, last } }
     init_counters(\%host_data);
