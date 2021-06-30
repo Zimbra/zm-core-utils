@@ -124,7 +124,7 @@ start_docservice_service()
 }
 
 stop_all(){
-    echo -n "Stopping Onlyoffice services....."
+    echo "Stopping Onlyoffice services....."
     stop_converter_service
     stop_spellchecker_service
     stop_docservice_service
@@ -132,7 +132,7 @@ stop_all(){
 
 stop_converter_service()
 {
-  echo -n "Stopping Onlyoffice stop_converter_service....."
+  echo  "Stopping Onlyoffice converter.....\n"
   # If converter is not running, the pid will be -1
   PID_SET=$(cat ${PROCESSID_FILE} | jq '.converter')
 
@@ -149,7 +149,7 @@ stop_converter_service()
 
 stop_spellchecker_service()
 {
-echo -n "Stopping Onlyoffice stop_spellchecker_service....."
+  echo  "Stopping Onlyoffice spellchecker....."
   # If spellchecker is not running, the pid will be -1
   PID_SET=$(cat ${PROCESSID_FILE} | jq '.spellchecker')
 
@@ -166,7 +166,7 @@ echo -n "Stopping Onlyoffice stop_spellchecker_service....."
 }
 stop_docservice_service()
 {
-echo -n "Stopping Onlyoffice stop_docservice_service....."
+  echo  "Stopping Onlyoffice docservice....."
   # If docservice is not running, the pid will be -1
   PID_SET=$(cat ${PROCESSID_FILE} | jq '.docservice')
 
@@ -184,6 +184,7 @@ echo -n "Stopping Onlyoffice stop_docservice_service....."
 
 case "$1" in 
   start)
+    echo "Starting ..."
     /opt/zimbra/bin/mysql.server start norewrite>/dev/null 2>&1
     R=$?
       if [ $R -ne "0" ]; then
@@ -220,6 +221,7 @@ case "$1" in
     stop_all
 
     #start
+    echo "Starting ..."
     /opt/zimbra/bin/mysql.server start norewrite>/dev/null 2>&1
     R=$?
     if [ $R -ne "0" ]; then
