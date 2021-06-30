@@ -132,7 +132,7 @@ stop_all(){
 
 stop_converter_service()
 {
-  echo  "Stopping Onlyoffice converter.....\n"
+  echo  "Stopping Onlyoffice converter....."
   # If converter is not running, the pid will be -1
   PID_SET=$(cat ${PROCESSID_FILE} | jq '.converter')
 
