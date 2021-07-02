@@ -19,6 +19,8 @@
 source `dirname $0`/zmshutil || exit 1
 zmsetvars
 
+ZMJQ="/opt/zimbra/onlyoffice/bin/jq"
+
 MYSQL="/opt/zimbra/bin/mysql -u zimbra --password=${zimbra_mysql_password}"
 PROCESSID_FILE="/opt/zimbra/onlyoffice/bin/process_id.json"
 ONLYOFFICE_NODE_CONFIG_DIR="/opt/zimbra/onlyoffice/documentserver/server/Common/config/"
@@ -73,7 +75,7 @@ start_converter_service()
 {
 
   # If converter is not running, the pid will be -1
-  PID_SET=$(cat ${PROCESSID_FILE} | jq '.converter')
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.converter')
 
   if [ $PID_SET -eq -1 ]
   then
@@ -81,7 +83,7 @@ start_converter_service()
 
     CONVERTER_PID_NOW=$!
 
-    content=$(jq --argjson PID_NOW "$CONVERTER_PID_NOW" '.converter=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    content=$(${ZMJQ} --argjson PID_NOW "$CONVERTER_PID_NOW" '.converter=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
     echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
 
   fi
@@ -91,7 +93,7 @@ start_spellchecker_service()
 {
 
   # If spellchecker is not running, the pid will be -1
-  PID_SET=$(cat ${PROCESSID_FILE} | jq '.spellchecker')
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.spellchecker')
 
   if [ $PID_SET -eq -1 ]
   then
@@ -99,7 +101,7 @@ start_spellchecker_service()
 
     SPELL_PID_NOW=$!
 
-    content=$(jq --argjson PID_NOW "$SPELL_PID_NOW" '.spellchecker=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    content=$(${ZMJQ} --argjson PID_NOW "$SPELL_PID_NOW" '.spellchecker=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
     echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
 
   fi
@@ -109,7 +111,7 @@ start_docservice_service()
 {
 
   # If docservice is not running, the pid will be -1
-  PID_SET=$(cat ${PROCESSID_FILE} | jq '.docservice')
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.docservice')
 
   if [ $PID_SET -eq -1 ]
   then
@@ -117,7 +119,7 @@ start_docservice_service()
 
     DOC_PID_NOW=$!
 
-    content=$(jq --argjson PID_NOW "$DOC_PID_NOW" '.docservice=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    content=$(${ZMJQ} --argjson PID_NOW "$DOC_PID_NOW" '.docservice=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
     echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
 
   fi
@@ -134,14 +136,14 @@ stop_converter_service()
 {
   echo  "Stopping Onlyoffice converter....."
   # If converter is not running, the pid will be -1
-  PID_SET=$(cat ${PROCESSID_FILE} | jq '.converter')
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.converter')
 
   if [ $PID_SET -ne -1 ]
   then
     kill -9 ${PID_SET}
     CONVERTER_PID_NOW=-1
 
-    content=$(jq --argjson PID_NOW "$CONVERTER_PID_NOW" '.converter=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    content=$(${ZMJQ} --argjson PID_NOW "$CONVERTER_PID_NOW" '.converter=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
     echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
 
   fi
@@ -151,14 +153,14 @@ stop_spellchecker_service()
 {
   echo  "Stopping Onlyoffice spellchecker....."
   # If spellchecker is not running, the pid will be -1
-  PID_SET=$(cat ${PROCESSID_FILE} | jq '.spellchecker')
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.spellchecker')
 
   if [ $PID_SET -ne -1 ]
   then
     kill -9 ${PID_SET}
     SPELL_PID_NOW=-1
 
-    content=$(jq --argjson PID_NOW "$SPELL_PID_NOW" '.spellchecker=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    content=$(${ZMJQ} --argjson PID_NOW "$SPELL_PID_NOW" '.spellchecker=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
     echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
 
   fi
@@ -168,14 +170,14 @@ stop_docservice_service()
 {
   echo  "Stopping Onlyoffice docservice....."
   # If docservice is not running, the pid will be -1
-  PID_SET=$(cat ${PROCESSID_FILE} | jq '.docservice')
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.docservice')
 
   if [ $PID_SET -ne -1 ]
   then
     kill -9 ${PID_SET}
     DOC_PID_NOW=-1
 
-    content=$(jq --argjson PID_NOW "$DOC_PID_NOW" '.docservice=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    content=$(${ZMJQ} --argjson PID_NOW "$DOC_PID_NOW" '.docservice=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
     echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
 
   fi
@@ -243,7 +245,7 @@ case "$1" in
     fi
 
     #converter
-    PID_SET=$(cat ${PROCESSID_FILE} | jq '.converter')
+    PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.converter')
     if [ $PID_SET -ne -1 ]
     then  
       if ps -p $PID_SET > /dev/null
@@ -257,7 +259,7 @@ case "$1" in
     fi 
 
     #spellchecker
-    PID_SET=$(cat ${PROCESSID_FILE} | jq '.spellchecker')
+    PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.spellchecker')
     if [ $PID_SET -ne -1 ]
     then  
       if ps -p $PID_SET > /dev/null
@@ -271,7 +273,7 @@ case "$1" in
     fi 
 
     #docservice
-    PID_SET=$(cat ${PROCESSID_FILE} | jq '.docservice')
+    PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.docservice')
     if [ $PID_SET -ne -1 ]
     then  
       if ps -p $PID_SET > /dev/null
