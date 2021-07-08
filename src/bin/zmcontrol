@@ -65,6 +65,7 @@ my %startorder = (
 	"cbpolicyd"	=> 120,
 	"snmp" 		=> 130,
 	"spell" 	=> 140,
+	"onlyoffice" 	=> 145,
 	"mta" 		=> 150,
 	"stats"		=> 160,
 	"service"	=> 170,
@@ -91,6 +92,7 @@ my %stoporder = (
 	"cbpolicyd"	=> 110,
 	"snmp" 		=> 120,
 	"spell" 	=> 130,
+	"onlyoffice" 	=> 135,
 	"mta" 		=> 140,
 	"stats"		=> 150,
 	"service"	=> 160,
@@ -127,6 +129,7 @@ my %allservices = (
 	"cbpolicyd" => "/opt/zimbra/bin/zmcbpolicydctl",
 	"vmware-ha" => "/opt/zimbra/bin/zmhactl",
 	"imapd" => "/opt/zimbra/bin/zmimapdctl",
+	"onlyoffice" => "/opt/zimbra/bin/zmonlyofficectl",
 );
 
 my %rewrites = ( 
