@@ -85,7 +85,17 @@ start_converter_service()
 
     content=$(${ZMJQ} --argjson PID_NOW "$CONVERTER_PID_NOW" '.converter=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
     echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+  else
+    # check if running
+    if ! ps -p $PID_SET > /dev/null
+    then
+      LD_LIBRARY_PATH=${ONLYOFFICE_CONVERTER_LD_LIBRARY_PATH} NODE_ENV=${ONLYOFFICE_NODE_ENV} NODE_CONFIG_DIR=${ONLYOFFICE_NODE_CONFIG_DIR} /opt/zimbra/onlyoffice/documentserver/server/FileConverter/converter &
 
+      CONVERTER_PID_NOW=$!
+
+      content=$(${ZMJQ} --argjson PID_NOW "$CONVERTER_PID_NOW" '.converter=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+      echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+    fi
   fi
 }
 
@@ -103,7 +113,17 @@ start_spellchecker_service()
 
     content=$(${ZMJQ} --argjson PID_NOW "$SPELL_PID_NOW" '.spellchecker=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
     echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+  else
+    # check if running
+    if ! ps -p $PID_SET > /dev/null
+    then
+      NODE_ENV=${ONLYOFFICE_NODE_ENV} NODE_CONFIG_DIR=${ONLYOFFICE_NODE_CONFIG_DIR} /opt/zimbra/onlyoffice/documentserver/server/SpellChecker/spellchecker &
 
+      SPELL_PID_NOW=$!
+
+      content=$(${ZMJQ} --argjson PID_NOW "$SPELL_PID_NOW" '.spellchecker=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+      echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+    fi
   fi
 
 }
@@ -121,7 +141,17 @@ start_docservice_service()
 
     content=$(${ZMJQ} --argjson PID_NOW "$DOC_PID_NOW" '.docservice=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
     echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+  else
+    # check if running
+    if ! ps -p $PID_SET > /dev/null
+    then
+      NODE_ENV=${ONLYOFFICE_NODE_ENV} NODE_CONFIG_DIR=${ONLYOFFICE_NODE_CONFIG_DIR} /opt/zimbra/onlyoffice/documentserver/server/DocService/docservice &
 
+      DOC_PID_NOW=$!
+
+      content=$(${ZMJQ} --argjson PID_NOW "$DOC_PID_NOW" '.docservice=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+      echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+    fi
   fi
 }
 
@@ -200,12 +230,6 @@ case "$1" in
   stop)
 
     flushDirtyPages
-
-    /opt/zimbra/bin/mysql.server stop
-    R=$?
-    if [ $R -ne "0" ]; then
-      STATUS=$R
-    fi
     #stop the onlyoffice services
     stop_all
     exit $STATUS
@@ -214,11 +238,6 @@ case "$1" in
 
     #stop
     flushDirtyPages
-    /opt/zimbra/bin/mysql.server stop
-    R=$?
-    if [ $R -ne "0" ]; then
-      STATUS=$R
-    fi
     #stop the onlyoffice services
     stop_all
 
@@ -235,13 +254,10 @@ case "$1" in
   ;;
   status)
 
-    /opt/zimbra/bin/mysqladmin status > /dev/null 2>&1
-    R=$?
-    if [ $R -ne "0" ]; then
+    # make sure mysql is running
+    /opt/zimbra/bin/mysql.server status > /dev/null 2>&1
+    if [ $? != 0 ]; then
       echo "mysql is not running."
-      if [ x"$i" != "xzmconfigdctl" ]; then
-        STATUS=$R
-      fi
     fi
 
     #converter
