@@ -258,6 +258,7 @@ case "$1" in
     /opt/zimbra/bin/mysql.server status > /dev/null 2>&1
     if [ $? != 0 ]; then
       echo "mysql is not running."
+      STATUS=1
     fi
 
     #converter
@@ -269,9 +270,11 @@ case "$1" in
          echo "onlyoffice - converter is running."   
       else
          echo "onlyoffice - converter is not running."   
+         STATUS=1
       fi
     else
-         echo "onlyoffice - converter is not running."   
+         echo "onlyoffice - converter is not running."
+         STATUS=1
     fi 
 
     #spellchecker
@@ -282,10 +285,12 @@ case "$1" in
       then
          echo "onlyoffice - spellchecker is running."   
       else
-         echo "onlyoffice - spellchecker is not running."   
+         echo "onlyoffice - spellchecker is not running."
+         STATUS=1
       fi
     else
-         echo "onlyoffice - spellchecker is not running."   
+         echo "onlyoffice - spellchecker is not running."
+         STATUS=1
     fi 
 
     #docservice
@@ -296,10 +301,12 @@ case "$1" in
       then
          echo "onlyoffice - docservice is running."   
       else
-         echo "onlyoffice - docservice is not running."   
+         echo "onlyoffice - docservice is not running."
+         STATUS=1
       fi
     else
-         echo "onlyoffice - docservice is not running."   
+         echo "onlyoffice - docservice is not running."
+         STATUS=1
     fi
 
 
