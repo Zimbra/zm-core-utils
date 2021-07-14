@@ -372,7 +372,7 @@ sub doShutdown {
 		if ($_ eq "mta" && !(-x "/opt/zimbra/common/sbin/postfix") ) { next; }
 		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
 		if ($_ eq "mailbox" && !(-d "/opt/zimbra/db/data") ) { next; }
-		if ($_ eq "convertd" && !(-l "/opt/zimbra/keyview") ) { next; }
+		if ($_ eq "convertd" && !(-l "/opt/zimbra/convertd") ) { next; }
                 if ($_ eq "vmware-ha" && !(-x "/opt/zimbra/bin/zmhactl") ) { next; }
 		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
 			print "\tStopping $_ webapp...";
