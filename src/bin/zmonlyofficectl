@@ -1,0 +1,319 @@
+#!/bin/bash
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2016, 2021 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+# 
+
+source `dirname $0`/zmshutil || exit 1
+zmsetvars
+
+ZMJQ="/opt/zimbra/onlyoffice/bin/jq"
+
+MYSQL="/opt/zimbra/bin/mysql -u zimbra --password=${zimbra_mysql_password}"
+PROCESSID_FILE="/opt/zimbra/onlyoffice/bin/process_id.json"
+ONLYOFFICE_NODE_CONFIG_DIR="/opt/zimbra/onlyoffice/documentserver/server/Common/config/"
+ONLYOFFICE_CONVERTER_LD_LIBRARY_PATH="/opt/zimbra/onlyoffice/documentserver/server/FileConverter/bin"
+ONLYOFFICE_NODE_ENV="onlyofficeconfig"
+
+
+STATUS=0
+
+flushDirtyPages() {
+  # make sure mysql is running
+  /opt/zimbra/bin/mysql.server status > /dev/null 2>&1
+  if [ $? != 0 ]; then
+    return
+  fi
+
+  # make sure innodb is enabled
+  local innodb_status=$(echo "show engines;" | ${MYSQL} | grep InnoDB | cut -f2)
+  if [ "$innodb_status" = "DISABLED" ]; then
+    return
+  fi
+
+  # set max_dirty_pages=0 so mysql starts flushing dirty pages to disk.
+  ${MYSQL} -e "set global innodb_max_dirty_pages_pct=0;"
+  if [ $? != 0 ]; then
+    return
+  fi
+
+  # wait for 600 seconds or until there are no more dirty pages
+  local i=0
+  while [ $i -lt 600 ]; do
+    local pages=$(${MYSQL} -e "show engine innodb status\G" | grep '^Modified db pages' | grep -Eo '[0-9]+$')
+    local total_pages=$(echo $pages | sed 's/ / + /g')
+    total_pages=$(( $total_pages ))
+
+    if [ "$total_pages" = "0" ]; then
+      break
+    fi
+    #echo -ne "$pages\r"
+    i=$((i+1))
+    sleep 1
+  done
+}
+
+start_all(){
+    start_converter_service
+    start_spellchecker_service
+    start_docservice_service
+}
+
+start_converter_service()
+{
+
+  # If converter is not running, the pid will be -1
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.converter')
+
+  if [ $PID_SET -eq -1 ]
+  then
+    LD_LIBRARY_PATH=${ONLYOFFICE_CONVERTER_LD_LIBRARY_PATH} NODE_ENV=${ONLYOFFICE_NODE_ENV} NODE_CONFIG_DIR=${ONLYOFFICE_NODE_CONFIG_DIR} /opt/zimbra/onlyoffice/documentserver/server/FileConverter/converter &
+
+    CONVERTER_PID_NOW=$!
+
+    content=$(${ZMJQ} --argjson PID_NOW "$CONVERTER_PID_NOW" '.converter=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+  else
+    # check if running
+    if ! ps -p $PID_SET > /dev/null
+    then
+      LD_LIBRARY_PATH=${ONLYOFFICE_CONVERTER_LD_LIBRARY_PATH} NODE_ENV=${ONLYOFFICE_NODE_ENV} NODE_CONFIG_DIR=${ONLYOFFICE_NODE_CONFIG_DIR} /opt/zimbra/onlyoffice/documentserver/server/FileConverter/converter &
+
+      CONVERTER_PID_NOW=$!
+
+      content=$(${ZMJQ} --argjson PID_NOW "$CONVERTER_PID_NOW" '.converter=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+      echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+    fi
+  fi
+}
+
+start_spellchecker_service()
+{
+
+  # If spellchecker is not running, the pid will be -1
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.spellchecker')
+
+  if [ $PID_SET -eq -1 ]
+  then
+    NODE_ENV=${ONLYOFFICE_NODE_ENV} NODE_CONFIG_DIR=${ONLYOFFICE_NODE_CONFIG_DIR} /opt/zimbra/onlyoffice/documentserver/server/SpellChecker/spellchecker &
+
+    SPELL_PID_NOW=$!
+
+    content=$(${ZMJQ} --argjson PID_NOW "$SPELL_PID_NOW" '.spellchecker=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+  else
+    # check if running
+    if ! ps -p $PID_SET > /dev/null
+    then
+      NODE_ENV=${ONLYOFFICE_NODE_ENV} NODE_CONFIG_DIR=${ONLYOFFICE_NODE_CONFIG_DIR} /opt/zimbra/onlyoffice/documentserver/server/SpellChecker/spellchecker &
+
+      SPELL_PID_NOW=$!
+
+      content=$(${ZMJQ} --argjson PID_NOW "$SPELL_PID_NOW" '.spellchecker=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+      echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+    fi
+  fi
+
+}
+start_docservice_service()
+{
+
+  # If docservice is not running, the pid will be -1
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.docservice')
+
+  if [ $PID_SET -eq -1 ]
+  then
+    NODE_ENV=${ONLYOFFICE_NODE_ENV} NODE_CONFIG_DIR=${ONLYOFFICE_NODE_CONFIG_DIR} /opt/zimbra/onlyoffice/documentserver/server/DocService/docservice &
+
+    DOC_PID_NOW=$!
+
+    content=$(${ZMJQ} --argjson PID_NOW "$DOC_PID_NOW" '.docservice=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+  else
+    # check if running
+    if ! ps -p $PID_SET > /dev/null
+    then
+      NODE_ENV=${ONLYOFFICE_NODE_ENV} NODE_CONFIG_DIR=${ONLYOFFICE_NODE_CONFIG_DIR} /opt/zimbra/onlyoffice/documentserver/server/DocService/docservice &
+
+      DOC_PID_NOW=$!
+
+      content=$(${ZMJQ} --argjson PID_NOW "$DOC_PID_NOW" '.docservice=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+      echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+    fi
+  fi
+}
+
+stop_all(){
+    echo "Stopping Onlyoffice services....."
+    stop_converter_service
+    stop_spellchecker_service
+    stop_docservice_service
+}
+
+stop_converter_service()
+{
+  echo  "Stopping Onlyoffice converter....."
+  # If converter is not running, the pid will be -1
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.converter')
+
+  if [ $PID_SET -ne -1 ]
+  then
+    kill -9 ${PID_SET}
+    CONVERTER_PID_NOW=-1
+
+    content=$(${ZMJQ} --argjson PID_NOW "$CONVERTER_PID_NOW" '.converter=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+
+  fi
+}
+
+stop_spellchecker_service()
+{
+  echo  "Stopping Onlyoffice spellchecker....."
+  # If spellchecker is not running, the pid will be -1
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.spellchecker')
+
+  if [ $PID_SET -ne -1 ]
+  then
+    kill -9 ${PID_SET}
+    SPELL_PID_NOW=-1
+
+    content=$(${ZMJQ} --argjson PID_NOW "$SPELL_PID_NOW" '.spellchecker=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+
+  fi
+
+}
+stop_docservice_service()
+{
+  echo  "Stopping Onlyoffice docservice....."
+  # If docservice is not running, the pid will be -1
+  PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.docservice')
+
+  if [ $PID_SET -ne -1 ]
+  then
+    kill -9 ${PID_SET}
+    DOC_PID_NOW=-1
+
+    content=$(${ZMJQ} --argjson PID_NOW "$DOC_PID_NOW" '.docservice=$PID_NOW' /opt/zimbra/onlyoffice/bin/process_id.json)
+    echo "${content}" > /opt/zimbra/onlyoffice/bin/process_id.json
+
+  fi
+}
+
+
+case "$1" in 
+  start)
+    echo "Starting ..."
+    /opt/zimbra/bin/mysql.server start norewrite>/dev/null 2>&1
+    R=$?
+      if [ $R -ne "0" ]; then
+        STATUS=$R
+      fi
+    # start onlyoffice services
+    start_all
+
+    exit $STATUS
+  ;;
+  stop)
+
+    flushDirtyPages
+    #stop the onlyoffice services
+    stop_all
+    exit $STATUS
+  ;;
+  restart|reload)
+
+    #stop
+    flushDirtyPages
+    #stop the onlyoffice services
+    stop_all
+
+    #start
+    echo "Starting ..."
+    /opt/zimbra/bin/mysql.server start norewrite>/dev/null 2>&1
+    R=$?
+    if [ $R -ne "0" ]; then
+      STATUS=$R
+    fi
+    # start onlyoffice services
+    start_all
+    exit $STATUS
+  ;;
+  status)
+
+    # make sure mysql is running
+    /opt/zimbra/bin/mysql.server status > /dev/null 2>&1
+    if [ $? != 0 ]; then
+      echo "mysql is not running."
+      STATUS=1
+    fi
+
+    #converter
+    PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.converter')
+    if [ $PID_SET -ne -1 ]
+    then  
+      if ps -p $PID_SET > /dev/null
+      then
+         echo "onlyoffice - converter is running."   
+      else
+         echo "onlyoffice - converter is not running."   
+         STATUS=1
+      fi
+    else
+         echo "onlyoffice - converter is not running."
+         STATUS=1
+    fi 
+
+    #spellchecker
+    PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.spellchecker')
+    if [ $PID_SET -ne -1 ]
+    then  
+      if ps -p $PID_SET > /dev/null
+      then
+         echo "onlyoffice - spellchecker is running."   
+      else
+         echo "onlyoffice - spellchecker is not running."
+         STATUS=1
+      fi
+    else
+         echo "onlyoffice - spellchecker is not running."
+         STATUS=1
+    fi 
+
+    #docservice
+    PID_SET=$(cat ${PROCESSID_FILE} | ${ZMJQ} '.docservice')
+    if [ $PID_SET -ne -1 ]
+    then  
+      if ps -p $PID_SET > /dev/null
+      then
+         echo "onlyoffice - docservice is running."   
+      else
+         echo "onlyoffice - docservice is not running."
+         STATUS=1
+      fi
+    else
+         echo "onlyoffice - docservice is not running."
+         STATUS=1
+    fi
+
+
+    exit $STATUS
+  ;;
+  *)
+    echo "$0 start|stop|restart|reload|status"
+    exit 1
+  ;;
+esac
