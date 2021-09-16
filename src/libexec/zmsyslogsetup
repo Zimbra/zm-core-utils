@@ -401,7 +401,7 @@ sub updateRsyslogd {
   if ( !-f "/var/log/zimbra-stats.log") {
     open(my $tlog, ">/var/log/zimbra-stats.log");
   }
-  if ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64" || $platform eq "UBUNTU14_64" || $platform eq "UBUNTU16_64" || $platform eq "UBUNTU18_64" ) {
+  if ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64" || $platform eq "UBUNTU14_64" || $platform eq "UBUNTU16_64" || $platform eq "UBUNTU18_64" || $platform eq "UBUNTU20_64" ) {
     my $junk;
     ($junk, $junk, $uid, $junk) = getpwnam("syslog");
     $gid = getgrnam("adm");
@@ -418,14 +418,14 @@ sub updateRsyslogd {
     local @ARGV=("/etc/logrotate.d/zimbra");
     while (<>) {
       s/kill\s+\-HUP\s+.+syslog\*\.pid.+\/dev\/null/\/usr\/sbin\/service rsyslog restart >\/dev\/null/g;
-      if ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64" || $platform eq "UBUNTU14_64" || $platform eq "UBUNTU16_64" || $platform eq "UBUNTU18_64" ) {
+      if ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64" || $platform eq "UBUNTU14_64" || $platform eq "UBUNTU16_64" || $platform eq "UBUNTU18_64" || $platform eq "UBUNTU20_64" ) {
         s/USER/syslog/;
         s/GROUP/adm/;
       } else {
         s/USER/zimbra/;
         s/GROUP/zimbra/;
       }
-      if ($platform eq "UBUNTU14_64" || $platform eq "UBUNTU16_64" || $platform eq "UBUNTU18_64") {
+      if ($platform eq "UBUNTU14_64" || $platform eq "UBUNTU16_64" || $platform eq "UBUNTU18_64" || $platform eq "UBUNTU20_64") {
       	s/#su zimbra zimbra/su zimbra zimbra/;
       }
       print;
@@ -446,7 +446,7 @@ if ( -f "/etc/syslog-ng/syslog-ng.conf" ||
   $edited=1;
 }
 
-if ( (-f "/etc/rsyslog.conf" && -d "/etc/rsyslog.d") && $edited == 0 && ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64" || $platform eq "UBUNTU14_64" || $platform eq "UBUNTU16_64" || $platform eq "UBUNTU18_64" )) {
+if ( (-f "/etc/rsyslog.conf" && -d "/etc/rsyslog.d") && $edited == 0 && ($platform eq "UBUNTU10_64" || $platform eq "UBUNTU12_64" || $platform eq "UBUNTU14_64" || $platform eq "UBUNTU16_64" || $platform eq "UBUNTU18_64" || $platform eq "UBUNTU20_64" )) {
   &updateRsyslogd;
   $edited=1;
 }
