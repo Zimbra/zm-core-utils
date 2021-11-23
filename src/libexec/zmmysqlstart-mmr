@@ -1,0 +1,154 @@
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2010, 2011, 2013, 2014, 2015, 2016 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+# 
+
+if [ x`whoami` != "xzimbra" ]; then
+  echo "Error: must be run as user zimbra"
+  exit 1
+fi
+
+source /opt/zimbra/bin/zmshutil || exit 1
+zmsetvars -f
+
+#
+# Sanity checks
+#
+zmassert -x /opt/zimbra/common/bin/mysqladmin
+zmassert -x /opt/zimbra/common/bin/mysql
+zmassert -x /opt/zimbra/bin/zmlocalconfig
+zmassert -x /opt/zimbra/bin/zmcontrol
+zmassert -r ${zimbra_db_directory}/db.sql
+if [ ! -x /opt/zimbra/common/bin/mysql ]; then
+  echo "Mysql not found on this host"
+  exit 1
+fi
+
+validate_input(){
+	input_value=$1
+    if [ -z "$input_value" ]
+    then
+		echo "Error: You have entered empty value"
+		exit 1
+	fi
+}
+
+check_server_id(){
+	mysql_mycnf="`zmlocalconfig -s -m nokey mysql_mycnf`"
+	server_id="`/opt/zimbra/libexec/zminiutil --section=mysqld --key=binlog_format --get --key=server-id $mysql_mycnf`"
+	maridb_master=$1
+	if [ -z "$server_id" ]
+	then
+		echo "Error: Server ID is not yet configured for $maridb_master"
+		echo "Info: First run /opt/zimbra/libexec/zmmysqlenable-mmr on $maridb_master to configure Server ID" 
+		exit 1
+	fi
+}
+
+get_required_passwords(){
+	mysql_master_host=$1
+	mysql_master_port=$2
+	read -p "Please provide zimbra_mysql_password of $mysql_master_host: " mysql_master_password
+	validate_input $mysql_master_password
+	read -p "Please provide mysql_replicator_password of $mysql_master_host: " mysql_master_replicator_password
+	validate_input $mysql_master_replicator_password
+}
+get_master_log_file(){
+	mysql_master_host=$1
+	mysql_master_port=$2
+	mysql_master_password=$3
+	master_log_file="`mysql 2>/dev/null -h $mysql_master_host -P $mysql_master_port -u zimbra --password=$mysql_master_password -e "show master status" -s | tail -n 1 | awk {'print $1'}`"
+    if [ $? != 0 ]; then
+		echo "Error: Failed to get master_log_file of $master_log_file"
+		exit 1
+	fi	
+}
+
+get_master_log_pos(){
+    mysql_master_host=$1
+	mysql_master_port=$2
+	mysql_master_password=$3
+    master_log_pos="`mysql 2>/dev/null -h $mysql_master_host -P $mysql_master_port -u zimbra --password=$mysql_master_password -e "show master status" -s | tail -n 1 | awk {'print $2'}`"
+    if [ $? != 0 ]; then
+		echo "Error: Failed to get master_log_pos of $master_log_file"
+		exit 1
+	fi
+}
+
+configure_binary_log_position(){
+	mysql_master_host=$1
+	mysql_master_port=$2
+	mysql_master_replicator_password=$3
+	master_log_file=$4
+	master_log_pos=$5
+	mysql -e "CHANGE MASTER TO MASTER_HOST = '$mysql_master_host', MASTER_USER = 'zmreplicator', MASTER_PASSWORD = '$mysql_master_replicator_password', MASTER_PORT = $mysql_master_port, MASTER_LOG_FILE = '$master_log_file', MASTER_LOG_POS = $master_log_pos; 
+"   
+    if [ $? != 0 ]; then
+	   echo "Error: Failed to configure binary log positions"
+	   exit 1
+   else
+	   echo "Info: Configured binary log positions successfully" 
+    fi
+
+}
+stop_slave(){
+	echo "Info: Stopping mysql slave process"
+    mysql -e "stop slave;"
+    if [ $? != 0 ]; then
+		echo "Error: Failed to stop mysql slave process"
+		exit 1
+	else
+		echo "Info: Mysql slave process stopped successfully"
+	fi
+}
+
+start_slave(){
+	echo "Info: Starting mysql slave process"
+    mysql -e "start slave;"
+    if [ $? != 0 ]; then
+		echo "Error: Failed to start mysql slave process"
+		exit 1
+	else
+		echo "Info: Mysql slave process started successfully"
+	fi
+}
+maridb_master1_host="`zmlocalconfig -s -m nokey maridb_master1| cut -f1 -d :`"
+maridb_master1_port="`zmlocalconfig -s -m nokey maridb_master1| cut -f2 -d :`"
+maridb_master2_host="`zmlocalconfig -s -m nokey maridb_master2| cut -f1 -d :`"
+maridb_master2_port="`zmlocalconfig -s -m nokey maridb_master2| cut -f2 -d :`"
+ip_address=$(hostname -I)
+ip_address=(${ip_address//" "/ })
+for ip in "${ip_address[@]}";
+do
+  if [ "$ip" == "$maridb_master1_host" ]; then
+	 check_server_id $maridb_master1_host
+	 get_required_passwords $maridb_master2_host $maridb_master2_port
+	 get_master_log_file $maridb_master2_host $maridb_master2_port $mysql_master_password
+	 get_master_log_pos $maridb_master2_host $maridb_master2_port $mysql_master_password
+	 stop_slave
+	 configure_binary_log_position $maridb_master2_host $maridb_master2_port $mysql_master_replicator_password $master_log_file $master_log_pos
+	 start_slave
+  fi
+  
+  if [ "$ip" == "$maridb_master2_host" ]; then
+	 check_server_id $maridb_master2_host
+ 	 get_required_passwords $maridb_master1_host $maridb_master1_port
+ 	 get_master_log_file $maridb_master1_host $maridb_master1_port $mysql_master_password
+ 	 get_master_log_pos $maridb_master1_host $maridb_master1_port $mysql_master_password
+ 	 stop_slave
+ 	 configure_binary_log_position $maridb_master1_host $maridb_master1_port $mysql_master_replicator_password $master_log_file $master_log_pos
+ 	 start_slave
+  fi	  
+done

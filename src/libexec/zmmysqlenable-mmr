@@ -1,0 +1,105 @@
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2010, 2011, 2013, 2014, 2015, 2016 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+# 
+
+if [ x`whoami` != "xzimbra" ]; then
+  echo "Error: must be run as user zimbra"
+  exit 1
+fi
+
+source /opt/zimbra/bin/zmshutil || exit 1
+zmsetvars -f
+
+#
+# Sanity checks
+#
+zmassert -x /opt/zimbra/common/bin/mysqladmin
+zmassert -x /opt/zimbra/common/bin/mysql
+zmassert -x /opt/zimbra/bin/zmlocalconfig
+zmassert -x /opt/zimbra/bin/zmcontrol
+zmassert -r ${zimbra_db_directory}/db.sql
+if [ ! -x /opt/zimbra/common/bin/mysql ]; then
+  echo "Mysql not found on this host"
+  exit 1
+fi
+
+configure_mysql_mycnf(){
+	 mysql_mycnf="`zmlocalconfig -s -m nokey mysql_mycnf`"
+	 backup_date=`date +%Y-%m-%d`
+	 /opt/zimbra/libexec/zminiutil --backup=.pre-${backup_date}-bind-address --section=mysqld --key=bind-address --unset $mysql_mycnf
+	 /opt/zimbra/libexec/zminiutil --backup=.pre-${backup_date}-server-id --section=mysqld --key=server-id --set --value=$2 $mysql_mycnf
+	 /opt/zimbra/libexec/zminiutil --backup=.pre-${backup_date}-log_bin --section=mysqld --key=log_bin --set --value=/opt/zimbra/log/mysql-bin.log $mysql_mycnf
+	 /opt/zimbra/libexec/zminiutil --backup=.pre-${backup_date}-binlog_format --section=mysqld --key=binlog_format --set --value=row $mysql_mycnf
+	 server_id="`/opt/zimbra/libexec/zminiutil --section=mysqld --key=binlog_format --get --key=server-id $mysql_mycnf`"
+	 if [ -z "$server_id" ]
+	 then
+	       echo "Error: Failed to configure Server ID $server_id for $1"
+		   exit 1
+	 else
+	       echo "Info: Server ID $server_id is configured for $1"
+	 fi
+}
+
+check_server_id(){
+	mysql_mycnf="`zmlocalconfig -s -m nokey mysql_mycnf`"
+	server_id="`/opt/zimbra/libexec/zminiutil --section=mysqld --key=binlog_format --get --key=server-id $mysql_mycnf`"
+	maridb_master=$1
+	if [ ! -z "$server_id" ]
+	then
+		echo "Error: Server ID $server_id is already configured for $maridb_master"
+		exit 1
+	fi
+}
+
+create_replication_user(){
+	mysql_replicator_password="`zmlocalconfig -s -m nokey mysql_replicator_password 2>/dev/null`"
+    if [ -z "$mysql_replicator_password" ]
+    then
+		zmlocalconfig -r -f -e mysql_replicator_password
+	fi
+	mysql_replicator_password="`zmlocalconfig -s -m nokey mysql_replicator_password`"
+	mysql -e "create user 'zmreplicator'@'%' identified by '$mysql_replicator_password';"
+	mysql -e "grant replication slave on *.* to 'zmreplicator'@'%';"
+	mysql -e "flush privileges;"
+}
+
+restart_mysql(){
+	mysql.server restart
+}
+maridb_master1="`zmlocalconfig -s -m nokey maridb_master1| cut -f1 -d :`"
+maridb_master2="`zmlocalconfig -s -m nokey maridb_master2| cut -f1 -d :`"
+ip_address=$(hostname -I)
+ip_address=(${ip_address//" "/ })
+for ip in "${ip_address[@]}";
+do
+  # Assign server-id=1 for maridb_master1
+  if [ "$ip" == "$maridb_master1" ]; then
+	 check_server_id $maridb_master1
+	 server_id=1
+     configure_mysql_mycnf $maridb_master1 $server_id
+	 create_replication_user
+	 restart_mysql
+  fi
+  
+  # Assign server-id=2 for maridb_master2
+  if [ "$ip" == "$maridb_master2" ]; then
+	 check_server_id $maridb_master2
+	 server_id=2
+	 configure_mysql_mycnf $maridb_master2 $server_id
+	 create_replication_user
+	 restart_mysql
+  fi	  
+done
