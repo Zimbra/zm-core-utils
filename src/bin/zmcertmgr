@@ -1511,9 +1511,9 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
 
         my $ssl = $self->Openssl;
         my $keydg =
-          $self->run("$ssl rsa -noout -modulus -in '$keyf' | $ssl sha256");
+          $self->run("$ssl pkey -pubout -in '$keyf' | $ssl sha256");
         my $crtdg =
-          $self->run("$ssl x509 -noout -modulus -in '$crtf' | $ssl sha256");
+          $self->run("$ssl x509 -noout -pubkey -in '$crtf' | $ssl sha256");
 
         # set @err unless hashes match
         my $info = "Certificate '$crtf' and private key '$keyf'";
