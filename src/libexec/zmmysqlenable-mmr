@@ -56,10 +56,10 @@ configure_mysql_mycnf(){
 check_server_id(){
 	mysql_mycnf="`zmlocalconfig -s -m nokey mysql_mycnf`"
 	server_id="`/opt/zimbra/libexec/zminiutil --section=mysqld --key=binlog_format --get --key=server-id $mysql_mycnf`"
-	maridb_master=$1
+	maridb_primary=$1
 	if [ ! -z "$server_id" ]
 	then
-		echo "Error: Server ID $server_id is already configured for $maridb_master"
+		echo "Error: Server ID $server_id is already configured for $maridb_primary"
 		exit 1
 	fi
 }
@@ -71,7 +71,7 @@ create_replication_user(){
 		zmlocalconfig -r -f -e mysql_replicator_password
 	fi
 	mysql_replicator_password="`zmlocalconfig -s -m nokey mysql_replicator_password`"
-	mysql -e "create user 'zmreplicator'@'%' identified by '$mysql_replicator_password';"
+	mysql -e "create user if not exists 'zmreplicator'@'%' identified by '$mysql_replicator_password';"
 	mysql -e "grant replication slave on *.* to 'zmreplicator'@'%';"
 	mysql -e "flush privileges;"
 }
@@ -79,26 +79,38 @@ create_replication_user(){
 restart_mysql(){
 	mysql.server restart
 }
-maridb_master1="`zmlocalconfig -s -m nokey maridb_master1| cut -f1 -d :`"
-maridb_master2="`zmlocalconfig -s -m nokey maridb_master2| cut -f1 -d :`"
+
+check_data_before_start(){
+	maridb_primary="`zmlocalconfig -s -m nokey $1 2>/dev/null`"
+    if [ -z "$maridb_primary" ]; then
+		echo "Error: $1 from zmlocalconfig not found"
+		echo "Error: please first set $1 using zmlocalconfig"
+		exit 1
+	fi
+}
+
+check_data_before_start maridb_primary1
+check_data_before_start maridb_primary2
+maridb_primary1="`zmlocalconfig -s -m nokey maridb_primary1| cut -f1 -d :`"
+maridb_primary2="`zmlocalconfig -s -m nokey maridb_primary2| cut -f1 -d :`"
 ip_address=$(hostname -I)
 ip_address=(${ip_address//" "/ })
 for ip in "${ip_address[@]}";
 do
-  # Assign server-id=1 for maridb_master1
-  if [ "$ip" == "$maridb_master1" ]; then
-	 check_server_id $maridb_master1
+  # Assign server-id=1 for maridb_primary1
+  if [ "$ip" == "$maridb_primary1" ]; then
+	 check_server_id $maridb_primary1
 	 server_id=1
-     configure_mysql_mycnf $maridb_master1 $server_id
+     configure_mysql_mycnf $maridb_primary1 $server_id
 	 create_replication_user
 	 restart_mysql
   fi
   
-  # Assign server-id=2 for maridb_master2
-  if [ "$ip" == "$maridb_master2" ]; then
-	 check_server_id $maridb_master2
+  # Assign server-id=2 for maridb_primary2
+  if [ "$ip" == "$maridb_primary2" ]; then
+	 check_server_id $maridb_primary2
 	 server_id=2
-	 configure_mysql_mycnf $maridb_master2 $server_id
+	 configure_mysql_mycnf $maridb_primary2 $server_id
 	 create_replication_user
 	 restart_mysql
   fi	  

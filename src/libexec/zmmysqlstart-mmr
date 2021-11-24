@@ -124,31 +124,42 @@ start_slave(){
 		echo "Info: Mysql slave process started successfully"
 	fi
 }
-maridb_master1_host="`zmlocalconfig -s -m nokey maridb_master1| cut -f1 -d :`"
-maridb_master1_port="`zmlocalconfig -s -m nokey maridb_master1| cut -f2 -d :`"
-maridb_master2_host="`zmlocalconfig -s -m nokey maridb_master2| cut -f1 -d :`"
-maridb_master2_port="`zmlocalconfig -s -m nokey maridb_master2| cut -f2 -d :`"
+
+check_data_before_start(){
+	maridb_primary="`zmlocalconfig -s -m nokey $1 2>/dev/null`"
+    if [ -z "$maridb_primary" ]; then
+		echo "Error: $1 from zmlocalconfig not found"
+		echo "Error: please first set $1 using zmlocalconfig"
+		exit 1
+	fi
+}
+check_data_before_start maridb_primary1
+check_data_before_start maridb_primary2
+maridb_primary1_host="`zmlocalconfig -s -m nokey maridb_primary1| cut -f1 -d :`"
+maridb_primary1_port="`zmlocalconfig -s -m nokey maridb_primary1| cut -f2 -d :`"
+maridb_primary2_host="`zmlocalconfig -s -m nokey maridb_primary2| cut -f1 -d :`"
+maridb_primary2_port="`zmlocalconfig -s -m nokey maridb_primary2| cut -f2 -d :`"
 ip_address=$(hostname -I)
 ip_address=(${ip_address//" "/ })
 for ip in "${ip_address[@]}";
 do
-  if [ "$ip" == "$maridb_master1_host" ]; then
-	 check_server_id $maridb_master1_host
-	 get_required_passwords $maridb_master2_host $maridb_master2_port
-	 get_master_log_file $maridb_master2_host $maridb_master2_port $mysql_master_password
-	 get_master_log_pos $maridb_master2_host $maridb_master2_port $mysql_master_password
+  if [ "$ip" == "$maridb_primary1_host" ]; then
+	 check_server_id $maridb_primary1_host
+	 get_required_passwords $maridb_primary2_host $maridb_primary2_port
+	 get_master_log_file $maridb_primary2_host $maridb_primary2_port $mysql_master_password
+	 get_master_log_pos $maridb_primary2_host $maridb_primary2_port $mysql_master_password
 	 stop_slave
-	 configure_binary_log_position $maridb_master2_host $maridb_master2_port $mysql_master_replicator_password $master_log_file $master_log_pos
+	 configure_binary_log_position $maridb_primary2_host $maridb_primary2_port $mysql_master_replicator_password $master_log_file $master_log_pos
 	 start_slave
   fi
   
-  if [ "$ip" == "$maridb_master2_host" ]; then
-	 check_server_id $maridb_master2_host
- 	 get_required_passwords $maridb_master1_host $maridb_master1_port
- 	 get_master_log_file $maridb_master1_host $maridb_master1_port $mysql_master_password
- 	 get_master_log_pos $maridb_master1_host $maridb_master1_port $mysql_master_password
+  if [ "$ip" == "$maridb_primary2_host" ]; then
+	 check_server_id $maridb_primary2_host
+ 	 get_required_passwords $maridb_primary1_host $maridb_primary1_port
+ 	 get_master_log_file $maridb_primary1_host $maridb_primary1_port $mysql_master_password
+ 	 get_master_log_pos $maridb_primary1_host $maridb_primary1_port $mysql_master_password
  	 stop_slave
- 	 configure_binary_log_position $maridb_master1_host $maridb_master1_port $mysql_master_replicator_password $master_log_file $master_log_pos
+ 	 configure_binary_log_position $maridb_primary1_host $maridb_primary1_port $mysql_master_replicator_password $master_log_file $master_log_pos
  	 start_slave
   fi	  
 done
