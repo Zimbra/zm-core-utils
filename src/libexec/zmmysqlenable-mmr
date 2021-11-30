@@ -81,16 +81,24 @@ restart_mysql(){
 }
 
 check_data_before_start(){
+	return_value=""
 	maridb_primary="`zmlocalconfig -s -m nokey $1 2>/dev/null`"
     if [ -z "$maridb_primary" ]; then
-		echo "Error: $1 from zmlocalconfig not found"
-		echo "Error: please first set $1 using zmlocalconfig"
-		exit 1
+		return_value="false"
+		echo "$return_value"
+	else
+		return_value="true"
+		echo "$return_value"
 	fi
 }
 
-check_data_before_start maridb_primary1
-check_data_before_start maridb_primary2
+maridb_primary_1=$(check_data_before_start maridb_primary1)
+maridb_primary_2=$(check_data_before_start maridb_primary2)
+if [ "${maridb_primary_1}" = "false" ] || [ "${maridb_primary_2}" = "false" ]; then
+	echo "Error: maridb_primary1 and maridb_primary2 are not found in zmlocalconfig"
+	echo "Error: please first set maridb_primary1 and maridb_primary2 using zmlocalconfig"
+	exit 1
+fi
 maridb_primary1="`zmlocalconfig -s -m nokey maridb_primary1| cut -f1 -d :`"
 maridb_primary2="`zmlocalconfig -s -m nokey maridb_primary2| cut -f1 -d :`"
 ip_address=$(hostname -I)

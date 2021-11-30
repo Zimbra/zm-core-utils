@@ -45,6 +45,7 @@ check_server_id(){
 		echo "Mariadb Primary1 is $maridb_primary1_host"
 		echo "Mariadb Primary2 is $maridb_primary2_host"
 		echo "Server ID is not yet configured for $maridb_master"
+		exit 1
 	else
 		echo "ServerID is $server_id"
 		echo "Server is $maridb_master"
@@ -63,21 +64,30 @@ replication_info(){
 	Exec_Master_Log_Pos="`mysql 2>/dev/null -e "SHOW SLAVE STATUS\G;" | grep Exec_Master_Log_Pos| tail -n 1 | awk {'print $2'}`"
 	echo "Exec_Master_Log_Pos : $Exec_Master_Log_Pos"
     if [ "$Read_Master_Log_Pos" == "$Exec_Master_Log_Pos" ]; then
-  	    echo "Read_Master_Log_Pos and Exec_Master_Log_Pos are in sync, so databases are in sync"
-	else
-		echo "Read_Master_Log_Pos and Exec_Master_Log_Pos are not in sync, so databases are not in sync. Something wrong with replication"
+        echo "Read_Master_Log_Pos and Exec_Master_Log_Pos are in sync and databases also are in sync"
+   else
+	echo "Read_Master_Log_Pos and Exec_Master_Log_Pos are not in sync, so databases are not in sync. Something wrong with replication"
     fi
 }
 check_data_before_start(){
+	return_value=""
 	maridb_primary="`zmlocalconfig -s -m nokey $1 2>/dev/null`"
     if [ -z "$maridb_primary" ]; then
-		echo "Error: $1 from zmlocalconfig not found"
-		echo "Error: please first set $1 using zmlocalconfig"
-		exit 1
+		return_value="false"
+		echo "$return_value"
+	else
+		return_value="true"
+		echo "$return_value"
 	fi
 }
-check_data_before_start maridb_primary1
-check_data_before_start maridb_primary2
+
+maridb_primary_1=$(check_data_before_start maridb_primary1)
+maridb_primary_2=$(check_data_before_start maridb_primary2)
+if [ "${maridb_primary_1}" = "false" ] || [ "${maridb_primary_2}" = "false" ]; then
+	echo "Error: maridb_primary1 and maridb_primary2 are not found in zmlocalconfig"
+	echo "Error: please first set maridb_primary1 and maridb_primary2 using zmlocalconfig"
+	exit 1
+fi
 maridb_primary1_host="`zmlocalconfig -s -m nokey maridb_primary1| cut -f1 -d :`"
 maridb_primary1_port="`zmlocalconfig -s -m nokey maridb_primary1| cut -f2 -d :`"
 maridb_primary2_host="`zmlocalconfig -s -m nokey maridb_primary2| cut -f1 -d :`"
