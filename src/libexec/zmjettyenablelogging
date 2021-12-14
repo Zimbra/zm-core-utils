@@ -1,0 +1,45 @@
+#!/bin/bash
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2021 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+# 
+
+if [ x`whoami` != xroot ]; then
+  echo "Error: must be run as root user"
+  exit 1
+fi
+
+if [ ! -e /opt/zimbra/jetty_base/etc/jetty-logging.properties ]; then
+  echo "Error: /opt/zimbra/jetty_base/etc/jetty-logging.properties does not exist"
+  exit 1
+fi
+
+if [ ! -d /opt/zimbra/common/jetty_home/resources ]; then
+  echo "Error: /opt/zimbra/common/jetty_home/resources does not exist"
+  exit 1
+fi
+
+if [ -e /opt/zimbra/common/jetty_home/resources/jetty-logging.properties ]; then
+  echo "/opt/zimbra/common/jetty_home/resources/jetty-logging.properties already exists"
+  exit 0
+fi
+
+ln -s /opt/zimbra/jetty_base/etc/jetty-logging.properties /opt/zimbra/common/jetty_home/resources/
+if [ $? -eq 0 ]; then
+  echo "Adding a symbolic link succeeded"
+  echo "mailboxd restart is required to enable jetty logging"
+else
+  echo "Adding a symbolic link failed"
+fi
