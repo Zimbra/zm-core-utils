@@ -31,7 +31,7 @@ zmmsgtrace [options] [<mail-syslog-file>...]
     --time|t "start_ts,end_ts"    # YYYYMM[DD[HH[MM[SS]]]]
     --year "YYYY"                 # file year if no YYYY in file
     --nosort                      # do not sort @ARGV files by mtime
-    --debug                       verbose output useful for debugging
+    --debug+                      verbose output useful for debugging
     --help                        display a brief help message
     --man                         display the entire man page
 
@@ -129,6 +129,7 @@ use Getopt::Long qw(GetOptions);
 use IO::File ();
 use Pod::Usage qw(pod2usage);
 use Time::localtime qw(localtime);
+use Data::Dumper; $Data::Dumper::Sortkeys = 1; $Data::Dumper::Indent = 1; $Data::Dumper::Terse = 1;
 
 my $DEBUG   = 0;                       # GLOBAL set by process_options()
 my $LOGFILE = "/var/log/zimbra.log";
@@ -211,7 +212,7 @@ sub process_options {
     GetOptions(
         \%opt,         "id|i=s",       "sender|s=s", "recipient|r=s",
         "srchost|F=s", "desthost|D=s", "time|t=s",   "year=i",
-        "sort!",       "debug",        "help",       "man",
+        "sort!",       "debug+",       "help",       "man",
     ) or pod2usage( -verbose => 0 );
 
     pod2usage( -message => "$Prog: version $VERSION\n", -verbose => 1 )
@@ -336,7 +337,6 @@ sub sort_files {
 #  Aug 17 15:16:12 host postfix/cleanup[1419]: [ID 197553 mail.info] EC2B339E5: message-id=<rnd@som.dom>
 #  Dec 25 05:20:28 host policyd-spf[1419]: [ID 27553 mail.info] ...
 
-# use Data::Dumper; $Data::Dumper::Sortkeys = $Data::Dumper::Indent = 1;
 sub doit {
     my ( $opt, @files ) = @_;
 
@@ -392,7 +392,7 @@ sub doit {
                     $ref->{messageId}  ||= "[reject:$key]";
                     $ref->{arriveTime} ||= $date;
 
-                    my $statusmsg = "";
+                    my $statusMsg = "";
                     if (
                         $msg =~ /^RCPT\sfrom\s([^[]+)
                                   \[(.*)\]\:   \s
@@ -404,14 +404,14 @@ sub doit {
                     {
                         $ref->{prevHost} = $1;
                         $ref->{prevIp}   = $2;
-                        $statusmsg       = $3;
+                        $statusMsg       = $3;
                         $ref->{sender}   = $4 || "postmaster";
                         my $to = $5;
                         if ( defined $to ) {
                             my $recip = $ref->{recipList}->{$to} = {};
                             $recip->{leaveTime} = $date;
                             $recip->{status}    = "reject";
-                            $recip->{statusmsg} = $statusmsg;
+                            $recip->{statusMsg} = $statusMsg;
                         }
                     }
                 }
@@ -456,11 +456,13 @@ sub doit {
                     $ref->{nextHost}  = $3 . ( $5 || "" );
                     $ref->{nextIp}    = ( $4 || "" ) . ( $5 || "" );
                     $ref->{status}    = $6;
-                    $ref->{statusmsg} = $7;
+                    $ref->{statusMsg} = $7;
                     $ref->{amavisId}  = $1
-                      if ( $ref->{statusmsg} =~ / id=([^ ,]+)/ );
+                      if ( $ref->{statusMsg} =~ / id=([^ ,]+)/ );
                     $ref->{nextQueueId} = $1
-                      if ( $ref->{statusmsg} =~ / queued as ([^ )]+)/ );
+                      if ( $ref->{statusMsg} =~ / queued as ([^ )]+)/ );
+
+                    $msgs{ $obj->{messageId} }{$qid} = $obj;
                 }
                 else {
                     warn("DEBUG: skip: $line\n") if ( $DEBUG > 2 );
@@ -548,7 +550,8 @@ sub doit {
             }
         }
 
-        #print( "POSTFIX:", Dumper( \%msgs ), "AMAVIS:",  Dumper( \%amav ) );
+        warn sprintf("msgs => %s\n", Dumper(\%msgs)) if $DEBUG > 1;
+        warn sprintf("amav => %s\n", Dumper(\%amav)) if $DEBUG > 1;
 
         if ($nomatch) {
             warn(
@@ -607,9 +610,10 @@ sub doit {
             }
 
             if ( defined $opt->{_desthost} ) {
-                my @next =
-                  map { @{ $rList->{$_} }{qw(nextHost nextIp)} } keys %$rList;
-                @next = map { s/:\d+$//; $_ } @next;
+                my @next = 
+                    map { s/:\d+$//; $_ }
+                    grep { defined }
+                    map { @{ $rList->{$_} }{qw(nextHost nextIp)} } keys %$rList;
                 next unless contain( $opt->{_desthost}, @next );
             }
 
@@ -661,14 +665,16 @@ sub printRecip {
     $pi ||= "";
     ( $ph, $pi ) = ( $msg->{host}, "" ) if ( $pi eq "127.0.0.1" or $pi eq "::1" );
 
+    # XXX: Show $lt to indicate time in queue? Would break the output syntax.
+
     print( $indent, "$at - $ph ",
         ( $pi ? "($pi) "     : "" ),
         ( $nh ? "--> $nh "   : "" ),
         ( $ni ? "($ni) "     : "" ),
         ( $st ? "status $st" : "" ), "\n",
     );
-    print( $indent, "  ", $ref->{statusmsg}, "\n" )
-      if ( $ref->{statusmsg} and ( !$st or $st ne "sent" ) );
+    print( $indent, "  ", $ref->{statusMsg}, "\n" )
+      if ( $ref->{statusMsg} and ( !$st or $st ne "sent" ) );
 
     print( $indent, $amr->{log_date}, " ",
         $amr->{disp}, " by amavisd on ", $amr->{host},
@@ -680,3 +686,5 @@ sub printRecip {
     printRecip( $indent, $nmsg, $msgs, $r, $amav )
       if ($nmsg);
 }
+
+# vim: set et:
