@@ -151,6 +151,10 @@ if [ -d /opt/zimbra ]; then
     chown ${zimbra_user}:${zimbra_group} /opt/zimbra/.platform
   fi
 
+  if [ -d /opt/zimbra/.saveconfig/ ]; then
+    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/.saveconfig/
+  fi
+
   for i in .zmmailbox_history .zmprov_history .bash_history; do
     if [ ! -f /opt/zimbra/${i} ]; then
       touch /opt/zimbra/${i}
