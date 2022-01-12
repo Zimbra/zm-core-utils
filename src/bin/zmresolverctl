@@ -18,4 +18,4 @@
 
 resolver_file=/opt/zimbra/conf/nginx/resolvers.conf
 cat /dev/null > ${resolver_file}
-[ -r /etc/resolv.conf ] && awk 'BEGIN{ns="";sep=""}/nameserver/{ns=ns sep $2;sep=" " }; END{ if (ns) {print "resolver " ns ";"} }' /etc/resolv.conf >> ${resolver_file}
+[ -r /etc/resolv.conf ] && awk 'BEGIN{ns="";sep=""}/^nameserver/{ns=ns sep $2;sep=" " }; END{ if (ns) {print "resolver " ns ";"} }' /etc/resolv.conf >> ${resolver_file}
