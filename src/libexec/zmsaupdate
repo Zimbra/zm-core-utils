@@ -54,8 +54,10 @@ if (!$rule_updates_enabled) {
   exit;
 }
 
+my $really_allow_plugins = getLocalConfig("antispam_saupdate_reallyallowplugins");
+   $really_allow_plugins = $really_allow_plugins =~ /true/ ? "--reallyallowplugins" : "";
+my $sa="/opt/zimbra/common/bin/sa-update -v $really_allow_plugins --refreshmirrors >/dev/null 2>&1";
 
-my $sa="/opt/zimbra/common/bin/sa-update -v --allowplugins --refreshmirrors >/dev/null 2>&1";
 my $restart="/opt/zimbra/bin/zmamavisdctl restart norewrite >/dev/null 2>&1";
 my $compile="/opt/zimbra/libexec/zmsacompile >/dev/null 2>&1";
 
