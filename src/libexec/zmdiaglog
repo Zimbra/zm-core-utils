@@ -31,7 +31,7 @@ use Digest::MD5;
 use vars qw(
   $VERSION $PID_FILE $DEFAULT_DEST $DLOGDIR $JMAP $JAVA $JINFO $DEFAULT_TIMEOUT
   $HAVE_GCORE $HAVE_PSTACK $HAVE_LSOF $HAVE_DMESG $LOG_FILE $ZMSTAT_CONF
-  $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT $HAVE_MYSQL $ZMMYTOP $ZMINNOTOP $HAVE_NETWORK
+  $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT $HAVE_MYSQL $ZMMYTOP $ZMINNOTOP $HAVE_NETWORK $MDBSTAT
 );
 
 my $isMac = isMac();
@@ -58,6 +58,7 @@ $PID_FILE                           = '/opt/zimbra/log/zmmailboxd_java.pid';
 $JMAP                               = '/opt/zimbra/common/bin/jmap';
 $JAVA                               = '/opt/zimbra/common/lib/jvm/java/bin/java';
 $JINFO                              = '/opt/zimbra/common/lib/jvm/java/bin/jinfo';
+$MDBSTAT                            = '/opt/zimbra/common/bin/mdb_stat';
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
 $VERSION                            = 0.1;
 $HAVE_GCORE                         = has_cmd('gcore');
@@ -114,6 +115,29 @@ sub get_java_version() {
     }
     close(JAVA);
     $version;
+}
+
+sub is_ldap_server(){
+    my $mdb;
+    my $ldapServiceInstalled = `sudo -i -u zimbra zmprov -l gs $ZMHOSTNAME zimbraServiceEnabled 2> /dev/null`;
+    my $isLDAPServer = 0;
+    # chomp($ldapServiceInstalled);
+    if (index($ldapServiceInstalled, "zimbraServiceEnabled") != -1) {
+        logmsg "This is an LDAP Server. Gathering LDAP diagnostic data.\n";
+        $isLDAPServer = 1;
+    }else{
+        if (index($ldapServiceInstalled, "") != -1) {
+            print "LDAP is Down. Attempting to identify if this is an LDAP server.\n";
+            $mdb = '/opt/zimbra/data/ldap/mdb/db/data.mdb';
+            if (-e $mdb) {
+                logmsg "This is (or was) an LDAP Server. Gathering LDAP diagnostic data.\n";
+                $isLDAPServer = 1;
+            }
+        }
+    }
+    if ($isLDAPServer){
+        system("bash -c '/opt/zimbra/common/bin/mdb_stat -a -e -f /opt/zimbra/data/ldap/mdb/db' > ldap_mdb_stat.txt 2>&1");
+    }
 }
 
 sub save_heap_info($$$$) {
@@ -290,6 +314,7 @@ sub remove_data_dir($) {
 
 # "main"
 sub run() {
+
     Getopt::Long::Configure ("bundling");
     my %options = ('t' => $DEFAULT_TIMEOUT);
     my $opt_result =
@@ -544,6 +569,7 @@ sub run() {
             sleep(5);
         }
     }
+    is_ldap_server;
 
     if ($HAVE_LSOF) {
         logmsg "Saving output of LSOF\n";
