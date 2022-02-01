@@ -127,7 +127,7 @@ sub is_ldap_server(){
         $isLDAPServer = 1;
     }else{
         if (index($ldapServiceInstalled, "") != -1) {
-            print "LDAP is Down. Attempting to identify if this is an LDAP server.\n";
+            print "Attempting to identify if this is an LDAP server.\n";
             $mdb = '/opt/zimbra/data/ldap/mdb/db/data.mdb';
             if (-e $mdb) {
                 logmsg "This is (or was) an LDAP Server. Gathering LDAP diagnostic data.\n";
