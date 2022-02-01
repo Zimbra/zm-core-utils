@@ -16,7 +16,7 @@
 # ***** END LICENSE BLOCK *****
 #
 use strict;
-
+use Config;
 use lib "/opt/zimbra/common/lib/perl5";
 use Zimbra::Util::Common;
 
@@ -29,9 +29,9 @@ use Zimbra::Mon::Zmstat;
 use Digest::MD5;
 
 use vars qw(
-  $VERSION $PID_FILE $DEFAULT_DEST $DLOGDIR $JMAP $JAVA $JINFO $DEFAULT_TIMEOUT
-  $HAVE_GCORE $HAVE_PSTACK $HAVE_LSOF $HAVE_DMESG $LOG_FILE $ZMSTAT_CONF
-  $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT $HAVE_MYSQL $ZMMYTOP $ZMINNOTOP $HAVE_NETWORK
+    $VERSION $PID_FILE $DEFAULT_DEST $DLOGDIR $JMAP $JAVA $JINFO $DEFAULT_TIMEOUT
+    $HAVE_GCORE $HAVE_PSTACK $HAVE_LSOF $HAVE_DMESG $LOG_FILE $ZMSTAT_CONF
+    $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT $HAVE_MYSQL $ZMMYTOP $ZMINNOTOP $HAVE_NETWORK
 );
 
 my $isMac = isMac();
@@ -41,7 +41,7 @@ chomp( $ZMHOSTNAME = qx(/opt/zimbra/bin/zmhostname) );
 my $zimbra_tmp_directory = "/opt/zimbra/data/tmp";
 if ( -f "/opt/zimbra/bin/zmlocalconfig" ) {
     $zimbra_tmp_directory =
-      qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey zimbra_tmp_directory);
+        qx(/opt/zimbra/bin/zmlocalconfig -x -s -m nokey zimbra_tmp_directory);
     chomp($zimbra_tmp_directory);
 }
 
@@ -51,8 +51,8 @@ if ( !-d $zimbra_tmp_directory ) {
 
 $DEFAULT_DEST = "$zimbra_tmp_directory";
 $DLOGDIR = "zmdiaglog-$ZMHOSTNAME."
-  . strftime( "%Y%m%d-%H%M%S", localtime() ) . "."
-  . $$;
+    . strftime( "%Y%m%d-%H%M%S", localtime() ) . "."
+    . $$;
 $DEFAULT_TIMEOUT                    = 120;
 $PID_FILE                           = '/opt/zimbra/log/zmmailboxd_java.pid';
 $JMAP                               = '/opt/zimbra/common/bin/jmap';
@@ -89,7 +89,7 @@ sub logmsg($) {
 sub get_java_version() {
     my $version = "UNKNOWN";
     open( JAVA, "$JAVA -version 2>&1 |" )
-      || die "Cannot determine java version: $!";
+        || die "Cannot determine java version: $!";
     my $version_line = <JAVA>;
     if ( $version_line =~ /"13\.0/ ) {
         $version = "13.0";
@@ -128,7 +128,7 @@ sub save_heap_info($$$$) {
     logmsg "Retrieving JVM $version heap histogram\n";
     exec_with_timeout( " '$histo_cmd' > heap.histo 2>&1", $timeout );
     logmsg "Saving JVM $version heapdump\n";
-    my $success =  system("bash -c $dump_cmd "); 
+    my $success =  system("bash -c $dump_cmd ");
     my $dumped = -f "$dump_file";
     $dumped && $success;
 }
@@ -184,7 +184,7 @@ sub get_pid() {
     if ( !$pid ) {
         eval {
             open( PS, "ps -ef | grep [j]etty.xml | awk '{ print \$2 }' |" )
-              || die $!;
+                || die $!;
             $pid = <PS>;
             chomp($pid);
             chomp($pid);
@@ -294,17 +294,17 @@ sub run() {
     my %options = ('t' => $DEFAULT_TIMEOUT);
     my $opt_result =
         GetOptions (\%options,
-                    't=i',
-                    'd:s',
-                    'h' => sub{ usage( \*STDERR ); exit 0; },
-                    'j', 'a', 'c', 'z', 'Z',
-                    '' => sub{ print "Error: '-' must be followed by a valid option.\n";
-                               usage( \*STDERR );
-                               exit 1; },
-                    '<>' => sub{ warn("Error: unexpected argument(s): @_\n");
-                                 usage( \*STDERR );
-                                 exit 1; }
-                   );
+            't=i',
+            'd:s',
+            'h' => sub{ usage( \*STDERR ); exit 0; },
+            'j', 'a', 'c', 'z', 'Z',
+            '' => sub{ print "Error: '-' must be followed by a valid option.\n";
+                usage( \*STDERR );
+                exit 1; },
+            '<>' => sub{ warn("Error: unexpected argument(s): @_\n");
+                usage( \*STDERR );
+                exit 1; }
+        );
 
     die "Error: Timeout must be greater than 0.\n" unless $options{t} > 0;
     $options{d} = $DEFAULT_DEST if ( $options{d} eq "" );
@@ -339,14 +339,14 @@ sub run() {
     {
         local $> = $uid;
         print STDERR "$destination is not writable by user zimbra\n" and exit 1
-          if !-w $destination;
+            if !-w $destination;
     }
 
     chdir($destination);
 
     my $mailboxd_pid = get_pid();
     logmsg "No '-a' argument, skipping heap/coredump collection.\n"
-      if ( !$options{a} );
+        if ( !$options{a} );
     logmsg "Saving diagnostic logging output to: $destination\n";
 
     my $JAVA_VERSION = get_java_version();
@@ -514,11 +514,11 @@ sub run() {
             system("/opt/zimbra/libexec/zmjavawatch > zmjavawatch.log 2>&1");
         }
         my $dumped =
-          save_heap_info( $JAVA_VERSION, $destination, $mailboxd_pid, $timeout )
-          if ( $options{a} );
+            save_heap_info( $JAVA_VERSION, $destination, $mailboxd_pid, $timeout )
+            if ( $options{a} );
 
         save_jvm_core( $JAVA_VERSION, $mailboxd_pid )
-          if ( $options{c} || ( !$dumped && $options{a} ) );
+            if ( $options{c} || ( !$dumped && $options{a} ) );
 
         logmsg "Heap dump processing complete. It is now safe to restart mailboxd.\n";
     }
@@ -707,11 +707,18 @@ sub run() {
         my ( $zuid, $zgid ) = ( getpwnam($zuser) )[ 2, 3 ];
         chown $zuid, $zgid, "$destination/stats/$yesterday_stats_dir";
         cp $_, "$destination/stats/$yesterday_stats_dir"
-          for glob("/opt/zimbra/zmstat/$yesterday_stats_dir/*");
+            for glob("/opt/zimbra/zmstat/$yesterday_stats_dir/*");
     }
 
-    my $systemlogfile = "/var/log/messages";
+    my $systemlogfile;
     $systemlogfile = "/var/log/system.log" if ( isMac() );
+    my $osdist = @Config{qw(myuname)};
+    if (index($osdist, "debian") != -1) {
+        $systemlogfile = "/var/log/kern.log";
+    }else{
+        $systemlogfile = "/var/log/messages";
+    }
+
     if ( -f $systemlogfile ) {
         logmsg "Copying system log $systemlogfile\n";
         cp $systemlogfile, "$destination/logs";
@@ -741,7 +748,7 @@ sub run() {
         $timeout );
 
     logmsg
-      "\n *** Diagnostics collection done. Data stored in $destination/.\n\n";
+        "\n *** Diagnostics collection done. Data stored in $destination/.\n\n";
 
     chomp( my $dirname = qx(pwd) );
     chomp( $dirname = qx(basename $dirname) );
@@ -751,12 +758,12 @@ sub run() {
         $LOG_FILE = "$destination/$LOG_FILE";
         chdir('..');
         my $rc = 0xffff &
-          system("nice -n 19 /bin/tar jcf $destination.$ext $dirname >> $LOG_FILE 2>&1");
+            system("nice -n 19 /bin/tar jcf $destination.$ext $dirname >> $LOG_FILE 2>&1");
         if ( ( $rc == 0 ) && ( -e "$destination.$ext" ) ) {
             logmsg "bzip2 archive created\n";
             logmsg "Computing MD5 digest\n";
             open(my $fh, "<", "$destination.$ext")
-              or die "cannot open file for reading";
+                or die "cannot open file for reading";
             my $ctx = Digest::MD5->new;
             $ctx->addfile($fh);
             my $md5 = $ctx->hexdigest;
@@ -768,7 +775,7 @@ sub run() {
         }
         else {
             logmsg
-"An error occurred creating $destination.$ext. Leaving data collection directory intact.\n";
+                "An error occurred creating $destination.$ext. Leaving data collection directory intact.\n";
             logmsg "$0 run complete\n";
         }
     }
