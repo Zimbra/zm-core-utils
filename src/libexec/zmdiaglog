@@ -27,11 +27,13 @@ use File::Path;
 use File::Copy qw/cp/;
 use Zimbra::Mon::Zmstat;
 use Digest::MD5;
+use Net::FTP;
 
 use vars qw(
   $VERSION $PID_FILE $DEFAULT_DEST $DLOGDIR $JMAP $JAVA $JINFO $DEFAULT_TIMEOUT
   $HAVE_GCORE $HAVE_PSTACK $HAVE_LSOF $HAVE_DMESG $LOG_FILE $ZMSTAT_CONF
   $ZMDUMPENV $ZMLOCALCONFIG $ZMPROV $ZMHOSTNAME $SU $HAVE_NETSTAT $HAVE_MYSQL $ZMMYTOP $ZMINNOTOP $HAVE_NETWORK
+    $caseNumber $casePassword
 );
 
 my $isMac = isMac();
@@ -250,7 +252,7 @@ sub usage {
     print $fd <<"EOF";
 Usage:
 zmdiaglog [-h]
-zmdiaglog [-a | -c] [-d DESTINATION] [-t TIMEOUT] [-j] [-z | -Z]
+zmdiaglog [-a | -c] [-d DESTINATION] [-t TIMEOUT] [-j] [-z | -Z] [-F]
 
     -a    - Do everything: plus collect live JVM heap dump
     -c    - Use instead of -a to parse heap dump from JVM core dump
@@ -262,6 +264,9 @@ zmdiaglog [-a | -c] [-d DESTINATION] [-t TIMEOUT] [-j] [-z | -Z]
     -Z    - Archive data collected by zmdiaglog to a bzip2 tar archive AND remove
             data collection directory.
     -h    - Display this help message.
+    -F    - Upload the output of the zmdiaglog file to Zimbra's FTP support server
+            (requires username, password, and internet connectivity).
+            -z or -Z must be specified in order to use this option.
 EOF
 }
 
@@ -297,7 +302,7 @@ sub run() {
                     't=i',
                     'd:s',
                     'h' => sub{ usage( \*STDERR ); exit 0; },
-                    'j', 'a', 'c', 'z', 'Z',
+                    'j', 'a', 'c', 'z', 'Z', 'F',
                     '' => sub{ print "Error: '-' must be followed by a valid option.\n";
                                usage( \*STDERR );
                                exit 1; },
@@ -323,6 +328,16 @@ sub run() {
         print STDERR "ERROR: Specify only one of -a or -c.\n";
         usage( \*STDERR );
         exit 1;
+    }
+
+    if ( $options{F}){
+        print "You have chosen to upload the file via FTP upon completion.\n";
+        print "Please enter your case number:\n";
+        $caseNumber = <STDIN>;
+        chomp $caseNumber;
+        print "Please enter your case password:\n";
+        $casePassword = <STDIN>;
+        chomp $casePassword;
     }
 
     my $destination = "$options{d}/$DLOGDIR";
@@ -751,8 +766,8 @@ sub run() {
         $LOG_FILE = "$destination/$LOG_FILE";
         chdir('..');
         my $rc = 0xffff &
-          system("nice -n 19 /bin/tar jcf $destination.$ext $dirname >> $LOG_FILE 2>&1");
-        if ( ( $rc == 0 ) && ( -e "$destination.$ext" ) ) {
+          system("nice -n 19 /bin/tar jcf $destination.$ext $dirname >> $LOG_FILE ");
+        if ( ( $rc == 0 ) && ( -e $destination.".".$ext ) ) {
             logmsg "bzip2 archive created\n";
             logmsg "Computing MD5 digest\n";
             open(my $fh, "<", "$destination.$ext")
@@ -762,17 +777,34 @@ sub run() {
             my $md5 = $ctx->hexdigest;
             close $fh;
             logmsg "MD5 digest: $md5\n";
-            rename "$destination.$ext", "$destination-$md5.$ext";
+            rename "$destination.".".$ext", "$destination-$md5.$ext";
             logmsg "\n***Archive $destination-$md5.$ext complete.\n";
+            if ( $options{F}){
+                # my $zmdialog_filename = basename($destination.$ext);
+                print "Uploading $destination.$ext to Zimbra FTP for case $caseNumber\n";
+                my $HOST = "ftp.zimbra.com";
+                my $PORT = 21;
+                my $ftp = Net::FTP->new($HOST, Port => $PORT, Debug => 0,Passive => 1)
+                    or die "You will need to upload the file manually.\nCannot connect to $HOST: $@";
+                $ftp->login($caseNumber, $casePassword) or die "Contact Zimbra support.\nCannot login ", $ftp->message;
+                # $ftp->cwd ("/home/ftp/$caseNumber");
+                $ftp->put("$destination.$ext" )
+                    or die "Contact Zimbra support.\nCannot upload $destination.$ext", $ftp->message;
+                $ftp->quit;
+                logmsg("zmdiaglog successfully uploaded! Please let your support agent know the file is in place.\n");
+                logmsg "$0 run complete\n";
+            }
             remove_data_dir($destination) if ( $options{Z} );
         }
         else {
-            logmsg
-"An error occurred creating $destination.$ext. Leaving data collection directory intact.\n";
+            logmsg "An error occurred creating $destination.$ext. Leaving data collection directory intact.\n";
             logmsg "$0 run complete\n";
         }
     }
     else {
+        if ( $options{F}){
+            logmsg("The -z or -Z options were not passed. Cannot upload.\n");
+        }
         logmsg "Skipping bzip2 archive creation.\n";
         logmsg "$0 run complete\n";
     }
