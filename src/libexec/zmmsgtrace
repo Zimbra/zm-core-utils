@@ -483,7 +483,6 @@ sub doit {
 
                         push(@msgs, $obj);
                     }
-                    $obj->{messageId}  ||= "[unknown:$key]";
                     $msgs{ $obj->{messageId} }{$qid} = $obj;
                 }
                 else {
