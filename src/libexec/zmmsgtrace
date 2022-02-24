@@ -462,6 +462,7 @@ sub doit {
                     }
 
                     $ref->{messageId}  ||= "[unknown:$key]";
+                    $obj->{messageId}  ||= $ref->{messageId};
                     $ref->{leaveTime} = $date;
                     $ref->{origRecip} = $2 if $2;
 
