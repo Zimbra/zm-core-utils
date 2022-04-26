@@ -31,11 +31,11 @@ fi
 zimbraMilterServerEnabled=${zimbraMilterServerEnabled:=FALSE}
 
 if [ x"$zimbraMilterServerEnabled" = "xTRUE" ]; then
-  START_SCRIPTS="zmmilterctl zmsaslauthdctl postfix"
-  STOP_SCRIPTS="postfix zmsaslauthdctl zmmilterctl"
+  START_SCRIPTS="zmamavisdctl zmmilterctl zmsaslauthdctl postfix"
+  STOP_SCRIPTS="postfix zmsaslauthdctl zmmilterctl zmamavisdctl"
 else 
-  START_SCRIPTS="zmsaslauthdctl postfix"
-  STOP_SCRIPTS="postfix zmsaslauthdctl"
+  START_SCRIPTS="zmamavisdctl zmsaslauthdctl postfix"
+  STOP_SCRIPTS="postfix zmsaslauthdctl zmamavisdctl"
 fi
 
 rewriteconfig() {
