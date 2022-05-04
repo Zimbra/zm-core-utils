@@ -40,26 +40,7 @@ CYGWIN*) PATHSEP=";";;
 *) PATHSEP=":";;
 esac
 
-CP=${ZMROOT}/lib/jars/zimbracommon.jar\
-${PATHSEP}${ZMROOT}/lib/jars/zimbrasoap.jar\
-${PATHSEP}${ZMROOT}/lib/jars/zimbraclient.jar\
-${PATHSEP}${ZMROOT}/lib/jars/zimbrastore.jar\
-${PATHSEP}${ZMROOT}/lib/jars/zimbra-native.jar\
-${PATHSEP}${ZMROOT}/lib/jars/apache-log4j-extras-1.0.jar\
-${PATHSEP}${ZMROOT}/lib/jars/commons-logging.jar\
-${PATHSEP}${ZMROOT}/lib/jars/commons-cli-1.2.jar\
-${PATHSEP}${ZMROOT}/lib/jars/commons-httpclient-3.1.jar\
-${PATHSEP}${ZMROOT}/lib/jars/commons-codec-1.7.jar\
-${PATHSEP}${ZMROOT}/lib/jars/guava-23.0.jar\
-${PATHSEP}${ZMROOT}/lib/jars/httpclient-4.5.2.jar\
-${PATHSEP}${ZMROOT}/lib/jars/httpcore-4.4.5.jar\
-${PATHSEP}${ZMROOT}/lib/jars/dom4j-1.5.2.jar\
-${PATHSEP}${ZMROOT}/lib/jars/log4j-1.2.16.jar\
-${PATHSEP}${ZMROOT}/lib/jars/json.jar\
-${PATHSEP}${ZMROOT}/lib/jars/activation-1.1.1.jar\
-${PATHSEP}${ZMROOT}/lib/jars/jaxb-api-2.3.1.jar\
-${PATHSEP}${ZMROOT}/lib/jars/jaxb-impl-2.3.1.jar\
-${PATHSEP}${ZMROOT}/lib/jars/istack-commons-runtime-3.0.8.jar
+CP=${ZMROOT}/lib/jars/*
 
 if [ -f "${ZMROOT}/lib/ext/backup/zimbrabackup.jar" ]; then
     CP="$CP${PATHSEP}${ZMROOT}/lib/ext/backup/zimbrabackup.jar"
