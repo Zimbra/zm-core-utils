@@ -71,6 +71,11 @@ start()
     if [ x$1 = "x" ]; then
       rewriteconfig
     fi
+    if [ -f /opt/zimbra/common/sbin/unbound-anchor ]; then
+         if [ ! -f /opt/zimbra/conf/root.key ]; then
+              /opt/zimbra/common/sbin/unbound-anchor -a "/opt/zimbra/conf/root.key"
+         fi
+    fi
     if [ x"$RESOLVCONF" = "xtrue" ]; then
       /opt/zimbra/common/sbin/unbound-checkconf -o interface | (
         while read interface; do
