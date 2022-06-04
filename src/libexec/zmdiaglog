@@ -92,9 +92,9 @@ sub get_java_version() {
       || die "Cannot determine java version: $!";
     my $version_line = <JAVA>;
     if ( $version_line =~ /"17\.0/ ) {
-	$version = "17.0";
+        $version = "17.0";
     }
-    if ( $version_line =~ /"13\.0/ ) {
+    elsif ( $version_line =~ /"13\.0/ ) {
         $version = "13.0";
     }
     elsif ( $version_line =~ /"11\.0/ ) {
