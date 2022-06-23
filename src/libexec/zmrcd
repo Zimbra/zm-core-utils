@@ -101,7 +101,7 @@ my %REGEX_CHECKED_COMMANDS = (
      regex => '[\'"a-zA-Z0-9\\/\\.\\-_:@= ]*',
      program => "rsync"},
    "zmschedulesmpolicy" => {
-     regex => '[\'"a-zA-Z0-9\\/\\.\\-_:@=* ]*',
+     regex => '[\'"e-g0-9\\-: ]*',
      program => "/opt/zimbra/bin/zmschedulesmpolicy"},
 );
 
