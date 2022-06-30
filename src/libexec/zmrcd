@@ -105,7 +105,9 @@ my %REGEX_CHECKED_COMMANDS = (
    "zmmdmnotificationmail" => {
      regex => '*',
      program => "/opt/zimbra/bin/zmmdmnotificationmail"},
-
+   "zmschedulesmpolicy" => {
+     regex => '[\'"e-g0-9\\-: ]*',
+     program => "/opt/zimbra/bin/zmschedulesmpolicy"},
 );
 
 my %allhosts = ();
