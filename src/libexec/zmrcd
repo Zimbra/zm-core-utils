@@ -102,6 +102,10 @@ my %REGEX_CHECKED_COMMANDS = (
    "rsync" => {
      regex => '[\'"a-zA-Z0-9\\/\\.\\-_:@= ]*',
      program => "rsync"},
+   "zmmdmnotificationmail" => {
+     regex => '*',
+     program => "/opt/zimbra/bin/zmmdmnotificationmail"},
+
 );
 
 my %allhosts = ();
