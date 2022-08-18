@@ -66,6 +66,7 @@ flushDirtyPages() {
 }
 
 start_all(){
+    start_rabbitmq_service
     start_converter_service
     start_spellchecker_service
     start_docservice_service
@@ -155,11 +156,15 @@ start_docservice_service()
   fi
 }
 
+start_rabbitmq_service(){
+	/opt/zimbra/bin/zmrabbitmqctl start
+}
 stop_all(){
     echo "Stopping Onlyoffice services....."
     stop_converter_service
     stop_spellchecker_service
     stop_docservice_service
+    stop_rabbitmq_service
 }
 
 stop_converter_service()
@@ -213,6 +218,13 @@ stop_docservice_service()
   fi
 }
 
+stop_rabbitmq_service(){
+	/opt/zimbra/bin/zmrabbitmqctl stop
+}
+
+rabbitmq_service_status(){
+	/opt/zimbra/bin/zmrabbitmqctl status
+}
 
 case "$1" in 
   start)
@@ -309,6 +321,8 @@ case "$1" in
          STATUS=1
     fi
 
+    #rabbitmq status
+    rabbitmq_service_status
 
     exit $STATUS
   ;;
