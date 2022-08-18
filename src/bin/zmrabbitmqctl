@@ -52,7 +52,7 @@ remove_pid () {
 }
 
 start_rabbitmq () {
-	echo -n "Starting $DESC....."
+    echo -n "Starting $DESC....."
     status_rabbitmq quiet
     if [ $RETVAL = 0 ] ; then
         echo rabbitmq is running
@@ -84,7 +84,7 @@ start_rabbitmq () {
 }
 
 stop_rabbitmq () {
-	echo -n "Stopping $DESC....."
+    echo -n "Stopping $DESC....."
     status_rabbitmq quiet
     if [ $RETVAL = 0 ] ; then
         set +e
@@ -98,11 +98,11 @@ stop_rabbitmq () {
             if [ -n "$LOCK_FILE" ] ; then
                 rm -f $LOCK_FILE
             fi
-			erlang_pid=$(ps -aef | grep epmd | grep /opt/zimbra/common/lib/erlang | awk '{print $2}')
-			if [ ! -z "$erlang_pid" -a "$erlang_pid" != " " ]; then
-			  kill -9 "$erlang_pid"
-			fi
-			echo done.
+	    erlang_pid=$(ps -aef | grep epmd | grep /opt/zimbra/common/lib/erlang | awk '{print $2}')
+	    if [ ! -z "$erlang_pid" -a "$erlang_pid" != " " ]; then
+		    kill -9 "$erlang_pid"
+	    fi
+	    echo done.
         else
             echo failed.
         fi
@@ -117,9 +117,9 @@ status_rabbitmq_quiet(){
     if [ $RETVAL = 0 ] ; then
         echo rabbitmq is running.
     else
-		echo rabbitmq is not runnning.
-		RETVAL=0
-	fi
+	echo rabbitmq is not runnning.
+	RETVAL=0
+    fi
 }
 status_rabbitmq() {
     set +e
