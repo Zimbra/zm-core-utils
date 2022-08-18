@@ -1,0 +1,174 @@
+#!/bin/sh
+# 
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2016, 2021 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+# 
+NAME=rabbitmq-server
+DAEMON=/opt/zimbra/common/sbin/${NAME}
+CONTROL=/opt/zimbra/common/sbin/rabbitmqctl
+DESC=rabbitmq
+USER=zimbra
+PID_FILE=/opt/zimbra/data/rabbitmq/pid
+LOCK_FILE=/opt/zimbra/data/rabbitmq/$NAME
+RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR=/opt/zimbra/log/rabbitmq
+RABBITMQ_LOG_BASE=/opt/zimbra/log/rabbitmq
+RABBITMQ_STARTUP_TIMEOUT=600
+CONF_ENV_FILE=/opt/zimbra/common/lib/rabbitmq/rabbitmq-env.conf
+
+if [ x`whoami` != xzimbra ]; then
+  echo Error: must be run as zimbra user
+  exit 1
+fi
+
+test -x $DAEMON || exit 0
+test -x $CONTROL || exit 0
+
+RETVAL=0
+set -e
+
+ensure_pid_dir () {
+    PID_DIR=`dirname ${PID_FILE}`
+    if [ ! -d ${PID_DIR} ] ; then
+        mkdir -p ${PID_DIR}
+        chown -R ${USER}:${USER} ${PID_DIR}
+        chmod 755 ${PID_DIR}
+    fi
+}
+
+remove_pid () {
+    rm -f ${PID_FILE}
+}
+
+start_rabbitmq () {
+	echo -n "Starting $DESC....."
+    status_rabbitmq quiet
+    if [ $RETVAL = 0 ] ; then
+        echo rabbitmq is running
+    else
+        RETVAL=0
+        ensure_pid_dir
+        set +e
+        RABBITMQ_CONF_ENV_FILE=$CONF_ENV_FILE RABBITMQ_PID_FILE=$PID_FILE $START_PROG $DAEMON \
+            > "${RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR}/startup_log" \
+            2> "${RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR}/startup_err" \
+            0<&- &
+        RABBITMQ_CONF_ENV_FILE=$CONF_ENV_FILE $CONTROL wait --timeout $RABBITMQ_STARTUP_TIMEOUT $PID_FILE >/dev/null 2>&1
+        RETVAL=$?
+        set -e
+        case "$RETVAL" in
+            0)
+                echo done.
+                if [ -n "$LOCK_FILE" ] ; then
+                    touch $LOCK_FILE
+                fi
+                ;;
+            *)
+                remove_pid
+                echo failed.
+                RETVAL=1
+                ;;
+        esac
+    fi
+}
+
+stop_rabbitmq () {
+	echo -n "Stopping $DESC....."
+    status_rabbitmq quiet
+    if [ $RETVAL = 0 ] ; then
+        set +e
+        RABBITMQ_CONF_ENV_FILE=$CONF_ENV_FILE $CONTROL stop ${PID_FILE} \
+            > ${RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR}/shutdown_log \
+            2> ${RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR}/shutdown_err
+        RETVAL=$?
+        set -e
+        if [ $RETVAL = 0 ] ; then
+            remove_pid
+            if [ -n "$LOCK_FILE" ] ; then
+                rm -f $LOCK_FILE
+            fi
+			erlang_pid=$(ps -aef | grep epmd | grep /opt/zimbra/common/lib/erlang | awk '{print $2}')
+			if [ ! -z "$erlang_pid" -a "$erlang_pid" != " " ]; then
+			  kill -9 "$erlang_pid"
+			fi
+			echo done.
+        else
+            echo failed.
+        fi
+    else
+        echo rabbitmq is not running.
+        RETVAL=0
+    fi
+}
+
+status_rabbitmq_quiet(){
+    status_rabbitmq quiet
+    if [ $RETVAL = 0 ] ; then
+        echo rabbitmq is running.
+    else
+		echo rabbitmq is not runnning.
+		RETVAL=0
+	fi
+}
+status_rabbitmq() {
+    set +e
+    if [ "$1" != "quiet" ] ; then
+        RABBITMQ_CONF_ENV_FILE=$CONF_ENV_FILE $CONTROL status 2>&1
+    else
+        RABBITMQ_CONF_ENV_FILE=$CONF_ENV_FILE $CONTROL status > /dev/null 2>&1
+    fi
+    if [ $? != 0 ] ; then
+        RETVAL=3
+    fi
+    set -e
+}
+
+restart_running_rabbitmq () {
+    status_rabbitmq quiet
+    if [ $RETVAL = 0 ] ; then
+        restart_rabbitmq
+    else
+        echo rabbitmq is not runnning.
+        RETVAL=0
+    fi
+}
+
+restart_rabbitmq() {
+    stop_rabbitmq
+    start_rabbitmq
+}
+
+case "$1" in
+    start)
+        start_rabbitmq
+        ;;
+    stop)
+        stop_rabbitmq
+        ;;
+    status)
+        status_rabbitmq_quiet
+        ;;
+    force-reload|reload|restart)
+        restart_rabbitmq
+        ;;
+    try-restart)
+        restart_running_rabbitmq
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart|try-restart|reload|force-reload}" >&2
+        RETVAL=1
+        ;;
+esac
+
+exit $RETVAL
