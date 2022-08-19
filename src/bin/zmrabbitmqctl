@@ -20,12 +20,12 @@ DAEMON=/opt/zimbra/common/sbin/${NAME}
 CONTROL=/opt/zimbra/common/sbin/rabbitmqctl
 DESC=rabbitmq
 USER=zimbra
-PID_FILE=/opt/zimbra/data/rabbitmq/pid
+PID_FILE=/opt/zimbra/log/rabbitmq.pid
 LOCK_FILE=/opt/zimbra/data/rabbitmq/$NAME
-RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR=/opt/zimbra/log/rabbitmq
-RABBITMQ_LOG_BASE=/opt/zimbra/log/rabbitmq
+RABBITMQ_SERVER_CONSOLE_OUTPUT=/opt/zimbra/log/rabbitmq_startup.log
+RABBITMQ_LOG_BASE=/opt/zimbra/log
 RABBITMQ_STARTUP_TIMEOUT=600
-CONF_ENV_FILE=/opt/zimbra/common/lib/rabbitmq/rabbitmq-env.conf
+CONF_ENV_FILE=/opt/zimbra/conf/rabbitmq-env.conf
 
 if [ x`whoami` != xzimbra ]; then
   echo Error: must be run as zimbra user
@@ -43,7 +43,6 @@ ensure_pid_dir () {
     if [ ! -d ${PID_DIR} ] ; then
         mkdir -p ${PID_DIR}
         chown -R ${USER}:${USER} ${PID_DIR}
-        chmod 755 ${PID_DIR}
     fi
 }
 
@@ -61,8 +60,8 @@ start_rabbitmq () {
         ensure_pid_dir
         set +e
         RABBITMQ_CONF_ENV_FILE=$CONF_ENV_FILE RABBITMQ_PID_FILE=$PID_FILE $START_PROG $DAEMON \
-            > "${RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR}/startup_log" \
-            2> "${RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR}/startup_err" \
+            > "${RABBITMQ_SERVER_CONSOLE_OUTPUT}" \
+            2>> "${RABBITMQ_SERVER_CONSOLE_OUTPUT}" \
             0<&- &
         RABBITMQ_CONF_ENV_FILE=$CONF_ENV_FILE $CONTROL wait --timeout $RABBITMQ_STARTUP_TIMEOUT $PID_FILE >/dev/null 2>&1
         RETVAL=$?
@@ -89,8 +88,8 @@ stop_rabbitmq () {
     if [ $RETVAL = 0 ] ; then
         set +e
         RABBITMQ_CONF_ENV_FILE=$CONF_ENV_FILE $CONTROL stop ${PID_FILE} \
-            > ${RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR}/shutdown_log \
-            2> ${RABBITMQ_SERVER_CONSOLE_OUTPUT_DIR}/shutdown_err
+            >> ${RABBITMQ_SERVER_CONSOLE_OUTPUT} \
+            2>> ${RABBITMQ_SERVER_CONSOLE_OUTPUT}
         RETVAL=$?
         set -e
         if [ $RETVAL = 0 ] ; then
