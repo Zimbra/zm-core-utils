@@ -694,9 +694,7 @@ done
 if [ -d /opt/zimbra/common/lib/rabbitmq ]; then
 	chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/common/lib/rabbitmq
 fi
-if [ -d /opt/zimbra/log/rabbitmq ]; then
-	chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/log/rabbitmq
-fi
+
 if [ -d /opt/zimbra/data/rabbitmq ]; then
 	chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/rabbitmq
 fi
