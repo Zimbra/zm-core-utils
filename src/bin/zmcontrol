@@ -559,9 +559,16 @@ sub displayVersion {
   
       chomp($hline);
       (undef, $entry) = split(': ', $hline);
-      if ($entry =~ /CONFIGURED patch/) {
-        $patch = substr($entry, 16)
+      if ($entry =~ /CONFIGURED ldap-patch /) {
+        $patch = substr($entry, 22);
+      } elsif ($entry =~ /CONFIGURED mta-patch /) {
+        $patch = substr($entry, 21);
+      } elsif ($entry =~ /CONFIGURED proxy-patch /) {
+        $patch = substr($entry, 23);
+      } elsif ($entry =~ /CONFIGURED patch /) {
+        $patch = substr($entry, 17);
       }
+	  
       if ($entry =~ /INSTALL SESSION START/) {
         $patch = "";
       }
