@@ -384,11 +384,11 @@ sub updateRsyslogd {
   if ( $TYPE eq "remote" ) {
     print ZFH "local0.*                @".$LOGHOST."\n";
     print ZFH "local1.*                @".$LOGHOST."\n";
-    print TMPFH "*slogger.info;local0.none;local1.none;mail.none;auth.none;authpriv.none;cron.none                @".$LOGHOST."\n";
+    print ZFH "*slogger.info;local0.none;local1.none;mail.none;auth.none;authpriv.none;cron.none                @".$LOGHOST."\n";
     print ZFH "auth.*                  @".$LOGHOST."\n";
   }
   print ZFH "local0.*                $logfile\n";
-  print TMPFH "*slogger.info;local0.none;local1.none;mail.none;auth.none;authpriv.none;cron.none                $statsfile\n";
+  print ZFH "*slogger.info;local0.none;local1.none;mail.none;auth.none;authpriv.none;cron.none                $statsfile\n";
   print ZFH "local1.*                $statsfile\n";
   print ZFH "auth.*                  $logfile\n";
 
