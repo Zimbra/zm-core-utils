@@ -21,10 +21,11 @@ use Getopt::Std;
 use File::Basename;
 
 my $progname = basename($0);
-# Need to be root to run "postfix status"
-if ($> != 0) {
-  print "$0 must be run as root.\n";
-  exit 1;
+
+# make sure we are not running as root anymore
+if ($< == 0) {
+    print "$progname: ERROR: no longer runs as root!\n";
+    exit 1;
 }
 
 # Exit if software-only node.

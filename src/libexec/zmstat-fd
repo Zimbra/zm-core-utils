@@ -59,19 +59,19 @@ if ($< != 0) {
     Zimbra::Mon::Zmstat::userCheck();
     createPidFile('zmstat-fd.pid');
     $SIG{TERM} = sub {
-    	system("sudo /opt/zimbra/libexec/zmstat-fd stop");
+    	system("/opt/zimbra/libexec/zmstat-fd stop");
     };
     $SIG{INT} = sub {
-    	system("sudo /opt/zimbra/libexec/zmstat-fd stop");
+    	system("/opt/zimbra/libexec/zmstat-fd stop");
     };
     $SIG{HUP} = sub {
-    	system("sudo /opt/zimbra/libexec/zmstat-fd rotate");
+    	system("/opt/zimbra/libexec/zmstat-fd rotate");
     };
     my $args = "";
     if (@ARGV > 0) {
     	$args = " " . join(' ', @ARGV);
     }
-    system("sudo /opt/zimbra/libexec/zmstat-fd$args");
+    system("/opt/zimbra/libexec/zmstat-fd$args");
     exit;
 }
 

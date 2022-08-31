@@ -117,7 +117,7 @@ remote "zmlocalconfig -e ldap_is_master=false";
 
 
 #6) Set up the new server account
-print "About to start ldap locally - if you get a password prompt, it's because the 'ldap start' script is trying to sudo -- add yourself to sudoers, or type your password\n";
+print "About to start ldap locally\n";
 loc "ldap start";
 loc "zmprov -l cs $SECONDARY";
 loc "zmprov -l ms $SECONDARY +zimbraServiceInstalled mailbox +zimbraServiceEnabled mailbox";

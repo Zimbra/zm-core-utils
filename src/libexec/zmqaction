@@ -48,10 +48,10 @@ if ($queue !~ /^(incoming|active|deferred|hold|maildrop|corrupt)$/) {
 }
 
 if ($idarg eq "ALL") {
-    system("sudo /opt/zimbra/common/sbin/postsuper $paction ALL $queue");
+    system("/opt/zimbra/common/sbin/postsuper $paction ALL $queue");
 } else {
     my @ids = split(',', $idarg);
-    my $command = "sudo /opt/zimbra/common/sbin/postsuper $paction - $queue";
+    my $command = "/opt/zimbra/common/sbin/postsuper $paction - $queue";
     if (open(POSTSUPER, "| $command")) {
         foreach my $id (@ids) {
             print POSTSUPER $id, "\n";

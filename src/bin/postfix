@@ -40,7 +40,7 @@ if [ "x$1" = "xstatus" -o "x$1" = "xstart" ]; then
     touch /opt/zimbra/common/conf/main.cf
     /opt/zimbra/common/sbin/postconf -e mail_owner=${postfix_mail_owner} setgid_group=${postfix_setgid_group}
   fi
-  sudo /opt/zimbra/libexec/zmmtastatus 2> /dev/null
+  /opt/zimbra/libexec/zmmtastatus 2> /dev/null
 	R=$?
 	if [ "x$1" = "xstart" ]; then
 		if [ "x$R" = "x0" ]; then
@@ -63,8 +63,8 @@ if [ "x$1" = "xstart" -o "x$1" = "xreload" -o "x$1" = "xrestart" ]; then
 fi
 
 if [ -f /etc/aliases ]; then
-  sudo /opt/zimbra/common/sbin/postalias /etc/aliases
+  /opt/zimbra/common/sbin/postalias /etc/aliases
 fi
 
-sudo /opt/zimbra/common/sbin/postfix "$@"
+/opt/zimbra/common/sbin/postfix "$@"
 

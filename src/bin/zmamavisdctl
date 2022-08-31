@@ -97,7 +97,7 @@ case "$1" in
       echo "amavisd-mc is already running."
     else
       if [ $MCRUNNING = 0 ]; then
-        sudo /opt/zimbra/common/sbin/amavis-mc
+        /opt/zimbra/common/sbin/amavis-mc
         for ((i=0; i < 30; i++)); do
           checkrunning-mc
           if [ $MCRUNNING = 1 ]; then 
