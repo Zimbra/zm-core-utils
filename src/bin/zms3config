@@ -2,7 +2,7 @@
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Zimbra Collaboration Suite Server
-# Copyright (C) 2015, 2016 Synacor, Inc.
+# Copyright (C) 2022 Synacor, Inc.
 #
 # This program is free software: you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software Foundation,
@@ -16,6 +16,4 @@
 # ***** END LICENSE BLOCK *****
 #
 
-resolver_file=/opt/zimbra/conf/nginx/resolvers.conf
-cat /dev/null > ${resolver_file}
-[ -r /etc/resolv.conf ] && awk 'BEGIN{ns="";sep=""}/^nameserver/{ns=ns sep $2;sep=" " }; END{ if (ns) {print "resolver " ns ";"} }' /etc/resolv.conf >> ${resolver_file}
+exec `dirname $0`/zmjava com.zimbra.cs.volume.VolumeS3ConfigCLI "$@"

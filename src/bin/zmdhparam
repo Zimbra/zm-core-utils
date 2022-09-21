@@ -380,7 +380,7 @@ them (Proxy/MTA/LDAP) are restarted.
     sub getNewDHParam {
         my ( $self, $file ) = @_;
         return join( "",
-            $self->run( $self->Openssl, "dhparam", $self->New, "-out", $file )
+            $self->run( $self->Openssl, "dhparam",  "-out", $file, $self->New )
         );
     }
 

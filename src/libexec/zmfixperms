@@ -151,6 +151,10 @@ if [ -d /opt/zimbra ]; then
     chown ${zimbra_user}:${zimbra_group} /opt/zimbra/.platform
   fi
 
+  if [ -d /opt/zimbra/.saveconfig/ ]; then
+    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/.saveconfig/
+  fi
+
   for i in .zmmailbox_history .zmprov_history .bash_history; do
     if [ ! -f /opt/zimbra/${i} ]; then
       touch /opt/zimbra/${i}
@@ -677,6 +681,53 @@ if [[ "x$PLAT" == "xRHEL7_64" && ! -d /opt/zimbra/.cache ]]; then
   chmod 775 /opt/zimbra/.cache
 fi
 
+# Fix permissions for default openldap configuration files
+for i in slapd.conf slapd.conf.default slapd.ldif slapd.ldif.default;
+do
+  if [ -f /opt/zimbra/common/etc/openldap/${i} ]; then
+    chown -f ${root_user}:${root_group} /opt/zimbra/common/etc/openldap/${i}
+    chmod 644 /opt/zimbra/common/etc/openldap/${i}
+  fi
+done
+
+# Fix permissions for rabbitmq
+if [ -d /opt/zimbra/common/lib/rabbitmq ]; then
+	chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/common/lib/rabbitmq
+fi
+
+if [ -d /opt/zimbra/data/rabbitmq ]; then
+	chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/rabbitmq
+fi
+
+
+##### Fix permissions for ldap and proxy #####
+
+if [ -x /opt/zimbra/common/sbin/nginx ]; then
+  chown ${root_user}:${zimbra_group} /opt/zimbra/common/sbin/nginx
+  chmod 750 /opt/zimbra/common/sbin/nginx
+
+  if [ -f /opt/zimbra/log/nginx.log ]; then
+    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/log/nginx.log
+    chmod 644 /opt/zimbra/log/nginx.log
+  fi
+
+  if [ -f /opt/zimbra/log/nginx.access.log ]; then
+    chown ${zimbra_user}:${zimbra_group} /opt/zimbra/log/nginx.access.log
+    chmod 644 /opt/zimbra/log/nginx.access.log
+  fi
+
+  # changing permission will reset capabilities so set it again
+  echo "Set capability for /opt/zimbra/common/sbin/nginx"
+  setcap CAP_NET_BIND_SERVICE=+ep /opt/zimbra/common/sbin/nginx
+fi
+
+if [ -x /opt/zimbra/common/libexec/slapd ]; then
+  chown ${root_user}:${zimbra_group} /opt/zimbra/common/libexec/slapd
+  chmod 750 /opt/zimbra/common/libexec/slapd
+
+  # changing permission will reset capabilities so set it again
+  echo "Set capability for /opt/zimbra/common/libexec/slapd"
+  setcap CAP_NET_BIND_SERVICE=+ep /opt/zimbra/common/libexec/slapd
+fi
 
 exit 0
-

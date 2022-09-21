@@ -65,6 +65,7 @@ my %startorder = (
 	"cbpolicyd"	=> 120,
 	"snmp" 		=> 130,
 	"spell" 	=> 140,
+	"onlyoffice" 	=> 145,
 	"mta" 		=> 150,
 	"stats"		=> 160,
 	"service"	=> 170,
@@ -91,6 +92,7 @@ my %stoporder = (
 	"cbpolicyd"	=> 110,
 	"snmp" 		=> 120,
 	"spell" 	=> 130,
+	"onlyoffice" 	=> 135,
 	"mta" 		=> 140,
 	"stats"		=> 150,
 	"service"	=> 160,
@@ -127,6 +129,7 @@ my %allservices = (
 	"cbpolicyd" => "/opt/zimbra/bin/zmcbpolicydctl",
 	"vmware-ha" => "/opt/zimbra/bin/zmhactl",
 	"imapd" => "/opt/zimbra/bin/zmimapdctl",
+	"onlyoffice" => "/opt/zimbra/bin/zmonlyofficectl",
 );
 
 my %rewrites = ( 
@@ -369,7 +372,7 @@ sub doShutdown {
 		if ($_ eq "mta" && !(-x "/opt/zimbra/common/sbin/postfix") ) { next; }
 		if ($_ eq "snmp" && !(-f "/opt/zimbra/bin/zmswatchctl") ) { next; }
 		if ($_ eq "mailbox" && !(-d "/opt/zimbra/db/data") ) { next; }
-		if ($_ eq "convertd" && !(-l "/opt/zimbra/keyview") ) { next; }
+		if ($_ eq "convertd" && !(-d "/opt/zimbra/convertd") ) { next; }
                 if ($_ eq "vmware-ha" && !(-x "/opt/zimbra/bin/zmhactl") ) { next; }
 		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
 			print "\tStopping $_ webapp...";
@@ -556,9 +559,16 @@ sub displayVersion {
   
       chomp($hline);
       (undef, $entry) = split(': ', $hline);
-      if ($entry =~ /CONFIGURED patch/) {
-        $patch = substr($entry, 16)
+      if ($entry =~ /CONFIGURED ldap-patch /) {
+        $patch = substr($entry, 22);
+      } elsif ($entry =~ /CONFIGURED mta-patch /) {
+        $patch = substr($entry, 21);
+      } elsif ($entry =~ /CONFIGURED proxy-patch /) {
+        $patch = substr($entry, 23);
+      } elsif ($entry =~ /CONFIGURED patch /) {
+        $patch = substr($entry, 17);
       }
+	  
       if ($entry =~ /INSTALL SESSION START/) {
         $patch = "";
       }
