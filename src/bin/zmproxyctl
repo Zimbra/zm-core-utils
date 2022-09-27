@@ -89,7 +89,7 @@ case "$1" in
       fi
     fi
 
-    /opt/zimbra/common/sbin/nginx -c ${configfile}
+    sudo /opt/zimbra/common/sbin/nginx -c ${configfile}
     for ((i=0; i < 30; i++)); do
       checkrunning
       if [ $running = 1 ]; then
@@ -115,7 +115,7 @@ case "$1" in
       echo "${servicename} is not running."
       exit 0
     else
-      /opt/zimbra/common/sbin/nginx -c /opt/zimbra/conf/nginx.conf -s stop
+      sudo /opt/zimbra/common/sbin/nginx -c /opt/zimbra/conf/nginx.conf -s stop
       sleep 1
     fi
     if [ -s ${pidfile} ]; then
@@ -134,7 +134,7 @@ case "$1" in
     checkrunning
     if [ $running = 1 -a "x$pid" != "x" ]; then
       echo -n "Reloading ${servicename}..."
-      /opt/zimbra/common/sbin/nginx -c /opt/zimbra/conf/nginx.conf -s reload
+      sudo /opt/zimbra/common/sbin/nginx -c /opt/zimbra/conf/nginx.conf -s reload
       echo "done."
     fi
     
