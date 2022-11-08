@@ -690,16 +690,6 @@ do
   fi
 done
 
-# Fix permissions for rabbitmq
-if [ -d /opt/zimbra/common/lib/rabbitmq ]; then
-	chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/common/lib/rabbitmq
-fi
-
-if [ -d /opt/zimbra/data/rabbitmq ]; then
-	chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/rabbitmq
-fi
-
-
 ##### Fix permissions for ldap #####
 
 if [ -x /opt/zimbra/common/libexec/slapd ]; then
