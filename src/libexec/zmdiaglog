@@ -329,7 +329,7 @@ sub run() {
     if ( $options{a} ) {
         print "!!WARNING: In most cases, the -a option is not needed.\n";
         print "This option can slow down the server significantly, make the server less stable, and create a very large file.\n";
-        print "Only using -a if Zimbra support has explicitly asked for a heap dump.\n";
+        print "Only use -a if Zimbra support has explicitly asked for a heap dump.\n";
         print "Do you still wish to perform a heap dump? (Y/N)\n";
         chomp(my $input = <STDIN>);
         if($input =~ m/^[Y]$/i) {
