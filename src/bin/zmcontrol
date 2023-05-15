@@ -542,7 +542,7 @@ sub displayVersion {
 			$string = "Release $release $platform";
 		}
 	} else {
-		my $release = qx(rpm -q --queryformat "%{version}_%{release}" zimbra-core);
+		$release = qx(rpm -q --queryformat "%{version}_%{release}" zimbra-core);
 		my $inst = localtime (qx(rpm -q --queryformat "%{installtime}" zimbra-core));
 		$string = "Release $release $platform";
 		$rpm_pkg_timestamp = qx(rpm -q --queryformat "%{release}" zimbra-core);
