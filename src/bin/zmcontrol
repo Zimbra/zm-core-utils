@@ -577,7 +577,6 @@ sub displayVersion {
     close(HIST_FILE);
   }
   if ($patch ne "") {
-    $string .= ", Patch $patch";
     $new_patch_version = "$patch";$new_patch_version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;(my $maj,my $min,my $mic) = $new_patch_version =~ m/^(\d+)\.(\d+)\.(\d+)/;$new_patch_version = "$mic";
     $current_patch_version = "$release";$current_patch_version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;(my $maj,my $min,my $mic,my $rtype,my $build) = $current_patch_version =~ m/^(\d+)\.(\d+)\.(\d+)\.(\w+)\.(\d+)/; ($maj,$min,$mic,$rtype,$build) = $current_patch_version =~ m/(\d+)\.(\d+)\.(\d+)_(\w+[^_])_(\d+)/ if ($rtype eq "");
     if ($rpm_pkg_timestamp ne "") {
