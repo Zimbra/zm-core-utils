@@ -524,8 +524,14 @@ sub displayVersion {
 	my $platform = qx(/opt/zimbra/libexec/get_plat_tag.sh);
 	chomp $platform;
 	my $string = "";
+	my $base_version = "";
+	my $patch_version = "";
+	my $release = "";
+	my $edition = "";
+	my $rpm_pkg_timestamp = "";
+
 	if ($platform =~ /DEBIAN/ || $platform =~ /UBUNTU/) {
-		my $release = qx(dpkg -s zimbra-core | egrep '^Version:' | sed -e 's/Version: //');
+		$release = qx(dpkg -s zimbra-core | egrep '^Version:' | sed -e 's/Version: //');
 		chomp $release;
 		if ( -x "/opt/vmware/bin/vamicli") {
 			my $appliance_version=qx(/opt/vmware/bin/vamicli version --appliance | awk '{if ((\$1 ~ /Version/) && (\$2 ~ /-/)) { print \$3} }' 2> /dev/null);
@@ -536,12 +542,14 @@ sub displayVersion {
 			$string = "Release $release $platform";
 		}
 	} else {
-		my $release = qx(rpm -q --queryformat "%{version}_%{release}" zimbra-core);
+		$release = qx(rpm -q --queryformat "%{version}_%{release}" zimbra-core);
 		my $inst = localtime (qx(rpm -q --queryformat "%{installtime}" zimbra-core));
 		$string = "Release $release $platform";
+		$rpm_pkg_timestamp = qx(rpm -q --queryformat "%{release}" zimbra-core);
 	}
 
-  $string .=  ((-f "/opt/zimbra/bin/zmbackupquery") ? " NETWORK" : " FOSS"); 
+  $edition .=  ((-f "/opt/zimbra/bin/zmbackupquery") ? " NETWORK" : " FOSS");
+  $string .= "$edition";
   $string .= " edition";
 
   my $patch = "";
@@ -569,10 +577,24 @@ sub displayVersion {
     close(HIST_FILE);
   }
   if ($patch ne "") {
-    $string .= ", Patch $patch";
+    $patch_version = "$patch";
+    $patch_version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;
+    (my $maj, my $min, my $mic) = $patch_version =~ m/^(\d+)\.(\d+)\.(\d+)/;
+    $patch_version = "$mic";
+    $base_version = "$release";
+    $base_version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;
+    (my $maj, my $min, my $mic, my $rtype, my $build) = $base_version =~ m/^(\d+)\.(\d+)\.(\d+)\.(\w+)\.(\d+)/;
+    ($maj, $min, $mic, $rtype, $build) = $base_version =~ m/(\d+)\.(\d+)\.(\d+)_(\w+[^_])_(\d+)/ if ($rtype eq "");
+    if ($rpm_pkg_timestamp ne "") {
+	    print "Release $maj.$min.$patch_version.$rtype.$build.$platform.$rpm_pkg_timestamp$edition edition.\n";
+    } else {
+	    print "Release $maj.$min.$patch_version.$rtype.$build.$platform$edition edition.\n";
+    }
+
+  } else {
+	  print "$string.\n";
   }
 
-	print "$string.\n";
 }
 
 sub checkAvailableSpace {
