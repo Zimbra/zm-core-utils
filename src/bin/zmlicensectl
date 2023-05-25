@@ -46,9 +46,6 @@ startLicenseDaemonService()
 		echo "license daemon service is already running."
 		return
 	fi
-	if [ "x${licenseDaemonServicepid}" != "x" ]; then
-		kill -9 ${licenseDaemonServicepid}
-	fi
 	if [ -f ${LD_LIBRARY_PATH}/libShafer-dev-linux64.so ]; then
 		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > $LICENSE_DAEMON_SERVICE_OUTPUT 2>&1 &
 	else
