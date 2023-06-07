@@ -237,7 +237,7 @@ sub doStatus {
 	foreach (sort keys %{$services}) {
 		if ($_ eq "syncshare") {next;}
 		if ($_ eq "license-daemon" || $_ eq "license-daemon-dev") {
-			$allservices{$_}="$allservices{$_} zmlicenseservice"
+			$allservices{$_}="$allservices{$_} zmlicenseservice";
 		}
 		my $rc = 0xffff & system ("$allservices{$_} status > $statusfile 2> $errfile");
 		$rc = $rc >> 8;
@@ -264,6 +264,7 @@ sub doStatus {
 	unlink($statusfile);
 	unlink($errfile);
 	alarm(0);
+	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $status;
 }
 
@@ -345,7 +346,7 @@ sub doStartup {
 			next;
 		}
 		if ($_ eq "license-daemon" || $_ eq "license-daemon-dev") {
-			$allservices{$_}="$allservices{$_} zmlicenseservice"
+			$allservices{$_}="$allservices{$_} zmlicenseservice";
 		}
 		$rrc = 0xffff & system ("$allservices{$_} start norewrite > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
@@ -359,6 +360,7 @@ sub doStartup {
 		}
 		unlink($zmcontrolLogfile);
 	}
+	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
@@ -386,7 +388,7 @@ sub doShutdown {
 			next;
 		}
 		if ($_ eq "license-daemon" || $_ eq "license-daemon-dev") {
-			$allservices{$_}="$allservices{$_} zmlicenseservice"
+			$allservices{$_}="$allservices{$_} zmlicenseservice";
 		}
 		$rrc = 0xffff & system ("$allservices{$_} stop > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
@@ -400,6 +402,7 @@ sub doShutdown {
 		}
 		unlink($zmcontrolLogfile);
 	}
+	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
