@@ -236,7 +236,7 @@ sub doStatus {
 	print "Host $localHostName\n";
 	foreach (sort keys %{$services}) {
 		if ($_ eq "syncshare") {next;}
-		if ($_ eq "license-daemon" || $_ eq "license-daemon-dev") {
+		if ($_ eq "license-daemon") {
 			$allservices{$_}="$allservices{$_} zmlicenseservice";
 		}
 		my $rc = 0xffff & system ("$allservices{$_} status > $statusfile 2> $errfile");
@@ -345,7 +345,7 @@ sub doStartup {
 			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
 			next;
 		}
-		if ($_ eq "license-daemon" || $_ eq "license-daemon-dev") {
+		if ($_ eq "license-daemon") {
 			$allservices{$_}="$allservices{$_} zmlicenseservice";
 		}
 		$rrc = 0xffff & system ("$allservices{$_} start norewrite > $zmcontrolLogfile 2>&1");
@@ -387,7 +387,7 @@ sub doShutdown {
 			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
 			next;
 		}
-		if ($_ eq "license-daemon" || $_ eq "license-daemon-dev") {
+		if ($_ eq "license-daemon") {
 			$allservices{$_}="$allservices{$_} zmlicenseservice";
 		}
 		$rrc = 0xffff & system ("$allservices{$_} stop > $zmcontrolLogfile 2>&1");
