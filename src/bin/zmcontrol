@@ -72,6 +72,7 @@ my %startorder = (
 	"zimbra"	=> 180,
 	"zimbraAdmin"	=> 190,
 	"zimlet"	=> 200,
+	"license-daemon"=> 205,
 	"imapd"		=> 210,
 	"vmware-ha"	=> 250,  # this should remain last
 );
@@ -100,6 +101,7 @@ my %stoporder = (
 	"zimbraAdmin"	=> 180,
 	"zimlet"	=> 190,
 	"imapd"		=> 200,
+	"license-daemon"=> 205,
 	"zmconfigd"	=> 210,
 	"vmware-ha"	=> 250,
 );
@@ -130,6 +132,7 @@ my %allservices = (
 	"vmware-ha" => "/opt/zimbra/bin/zmhactl",
 	"imapd" => "/opt/zimbra/bin/zmimapdctl",
 	"onlyoffice" => "/opt/zimbra/bin/zmonlyofficectl",
+	"license-daemon" => "/opt/zimbra/bin/zmlicensectl",
 );
 
 my %rewrites = ( 
@@ -233,6 +236,9 @@ sub doStatus {
 	print "Host $localHostName\n";
 	foreach (sort keys %{$services}) {
 		if ($_ eq "syncshare") {next;}
+		if ($_ eq "license-daemon") {
+			$allservices{$_}="$allservices{$_} zmlicenseservice";
+		}
 		my $rc = 0xffff & system ("$allservices{$_} status > $statusfile 2> $errfile");
 		$rc = $rc >> 8;
 		if ($rc) {
@@ -258,6 +264,7 @@ sub doStatus {
 	unlink($statusfile);
 	unlink($errfile);
 	alarm(0);
+	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $status;
 }
 
@@ -338,6 +345,9 @@ sub doStartup {
 			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
 			next;
 		}
+		if ($_ eq "license-daemon") {
+			$allservices{$_}="$allservices{$_} zmlicenseservice";
+		}
 		$rrc = 0xffff & system ("$allservices{$_} start norewrite > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
@@ -350,6 +360,7 @@ sub doStartup {
 		}
 		unlink($zmcontrolLogfile);
 	}
+	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
@@ -376,6 +387,9 @@ sub doShutdown {
 			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
 			next;
 		}
+		if ($_ eq "license-daemon") {
+			$allservices{$_}="$allservices{$_} zmlicenseservice";
+		}
 		$rrc = 0xffff & system ("$allservices{$_} stop > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
@@ -388,6 +402,7 @@ sub doShutdown {
 		}
 		unlink($zmcontrolLogfile);
 	}
+	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
