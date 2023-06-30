@@ -1815,7 +1815,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my $kpass = $self->lc->get("mailboxd_keystore_password");
         print("** Creating file '$pkcsf'\n");
         @out = $self->run(
-            $self->Openssl, "pkcs12", "-nomac", "-inkey", $keyf,
+            $self->Openssl, "pkcs12", "-propquery", "-fips", "-inkey", $keyf,
             "-in",          $crtf,    "-name",  $server,
             "-export",      "-out",   $pkcsf,   "-passout",
             "pass:$kpass",  "2>&1"
@@ -1876,7 +1876,7 @@ use lib qw(/opt/zimbra/common/lib/perl5 /opt/zimbra/zimbramon/lib/);
         my $kpass = $self->lc->get("imapd_keystore_password");
         print("** Creating file '$pkcsf'\n");
         @out = $self->run(
-            $self->Openssl, "pkcs12", "-nomac", "-inkey", $keyf,
+            $self->Openssl, "pkcs12", "-propquery", "-fips", "-inkey", $keyf,
             "-in",          $crtf,    "-name",  $server,
             "-export",      "-out",   $pkcsf,   "-passout",
             "pass:$kpass",  "2>&1"
