@@ -54,10 +54,10 @@ startLicenseDaemonService()
 	fi
 	source $CONFIG_FILE
 	if [ "x$zimbra_license_daemon_log_level" = "x" ]; then
-		zimbra_license_daemon_log_level=DEBUG
+		zimbra_license_daemon_log_level=INFO
 	fi
 	if [ "x$zimbra_license_daemon_mode" = "x" ]; then
-		zimbra_license_daemon_mode=offline
+		zimbra_license_daemon_mode=online
 	fi
 	if [ -f ${LD_LIBRARY_PATH}/libShafer-dev-linux64.so ]; then
 		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -jar $LICENSE_DAEMON_SERVICE -Dlicense-daemon.log=${zimbra_license_daemon_log_level} -Dlicense-daemon.mode=${zimbra_license_daemon_mode} --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > $LICENSE_DAEMON_SERVICE_OUTPUT 2>&1 &
