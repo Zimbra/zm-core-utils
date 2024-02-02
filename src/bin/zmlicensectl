@@ -81,7 +81,7 @@ displayHelp()
 	echo "Usage: $0 [option...]"
 	echo
 	echo "   --service start|restart|stop"
-	echo "   --service setLogLevel=INFO|DEBUG|ERROR|TRACE"
+	echo "   --service setLogLevel=INFO|DEBUG|ERROR|WARN"
 	echo "   --service setOfflineMode=true|false"
 }
 
@@ -128,7 +128,7 @@ case "$1" in
 			  	fi
 			  	;;
 
-			"setLogLevel=INFO"|"setLogLevel=DEBUG"|"setLogLevel=ERROR"|"setLogLevel=TRACE")
+			"setLogLevel=INFO"|"setLogLevel=DEBUG"|"setLogLevel=ERROR"|"setLogLevel=WARN")
 				loglevel=`echo $2|cut -d = -f 2`
 				sed -i "/zimbra_license_daemon_log_level*/c\zimbra_license_daemon_log_level="$loglevel"" $CONFIG_FILE
 				if [ $? != 0 ]; then
