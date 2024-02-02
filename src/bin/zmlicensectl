@@ -56,7 +56,7 @@ startLicenseDaemonService()
 	if [ "x$zimbra_license_daemon_log_level" = "x" ]; then
 		zimbra_license_daemon_log_level=ERROR
 	fi
-	if [ "x$zimbra_license_daemon_mode" = "x" ]; then
+	if [ "x$zimbra_license_daemon_offline_mode" = "x" ]; then
 		zimbra_license_daemon_offline_mode=false
 	fi
 	if [ -f ${LD_LIBRARY_PATH}/libShafer-dev-linux64.so ]; then
