@@ -54,7 +54,7 @@ startLicenseDaemonService()
 	fi
 	source $CONFIG_FILE
 	if [ "x$zimbra_license_daemon_log_level" = "x" ]; then
-		zimbra_license_daemon_log_level=INFO
+		zimbra_license_daemon_log_level=ERROR
 	fi
 	if [ "x$zimbra_license_daemon_mode" = "x" ]; then
 		zimbra_license_daemon_mode=online
