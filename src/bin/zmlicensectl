@@ -20,12 +20,18 @@ if [ x`whoami` != xzimbra ]; then
 	exit 1
 fi
 
+CONFIG_FILE=/opt/zimbra/license/config/license-daemon.cnf
 ZMJAVA="/opt/zimbra/common/lib/jvm/java/bin/java"
 LD_LIBRARY_PATH="/opt/zimbra/license/lib"
 LICENSE_DAEMON_SERVICE_OUTPUT="/opt/zimbra/log/license-daemon-service.log"
 LICENSE_DAEMON_SERVICE="/opt/zimbra/license/lib/app.jar"
 LICENSE_DAEMON_SERVICE_PORT="8081"
 licenseDaemonServicepid=""
+
+if [ ! -f ${CONFIG_FILE} ]; then
+      echo "Error: ${CONFIG_FILE} is missing."
+      exit 1
+fi
 
 checkLicenseDaemonServiceRunning()
 {
@@ -46,10 +52,17 @@ startLicenseDaemonService()
 		echo "license daemon service is already running."
 		return
 	fi
+	source $CONFIG_FILE
+	if [ "x$zimbra_license_daemon_log_level" = "x" ]; then
+		zimbra_license_daemon_log_level=ERROR
+	fi
+	if [ "x$zimbra_license_daemon_offline_mode" = "x" ]; then
+		zimbra_license_daemon_offline_mode=false
+	fi
 	if [ -f ${LD_LIBRARY_PATH}/libShafer-dev-linux64.so ]; then
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > $LICENSE_DAEMON_SERVICE_OUTPUT 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > $LICENSE_DAEMON_SERVICE_OUTPUT 2>&1 &
 	else
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -jar $LICENSE_DAEMON_SERVICE --server.port=$LICENSE_DAEMON_SERVICE_PORT > $LICENSE_DAEMON_SERVICE_OUTPUT 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -jar $LICENSE_DAEMON_SERVICE --server.port=$LICENSE_DAEMON_SERVICE_PORT > $LICENSE_DAEMON_SERVICE_OUTPUT 2>&1 &
 	fi
 	sleep 5
 	checkLicenseDaemonServiceRunning
@@ -63,8 +76,17 @@ startLicenseDaemonService()
 	fi
 }
 
+displayHelp()
+{
+	echo "Usage: $0 [option...]"
+	echo
+	echo "   --service start|restart|stop"
+	echo "   --service setLogLevel=INFO|DEBUG|ERROR|WARN"
+	echo "   --service setOfflineMode=true|false"
+}
+
 case "$1" in
-	"zmlicenseservice")
+	"--service")
 		case "$2" in
 			"start")
 				startLicenseDaemonService
@@ -106,14 +128,32 @@ case "$1" in
 			  	fi
 			  	;;
 
+			"setLogLevel=INFO"|"setLogLevel=DEBUG"|"setLogLevel=ERROR"|"setLogLevel=WARN")
+				loglevel=`echo $2|cut -d = -f 2`
+				sed -i "/zimbra_license_daemon_log_level*/c\zimbra_license_daemon_log_level="$loglevel"" $CONFIG_FILE
+				if [ $? != 0 ]; then
+					exit 1
+				fi
+				exit 0
+				;;
+
+			"setOfflineMode=true"|"setOfflineMode=false")
+				offlineMode=`echo $2|cut -d = -f 2`
+				sed -i "/zimbra_license_daemon_offline_mode*/c\zimbra_license_daemon_offline_mode="$offlineMode"" $CONFIG_FILE
+				if [ $? != 0 ]; then
+					exit 1
+				fi
+				exit 0
+				;;
+
 			*)
-				echo "Usage: $0 $1 start|stop|restart|status"
+				displayHelp
 				exit 1
 				;;
 		esac
 		;;
 	*)
-		echo "Usage: $0 zmlicenseservice start|stop|restart|status"
+		displayHelp
 		exit 1
 		;;
 esac
