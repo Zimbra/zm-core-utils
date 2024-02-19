@@ -51,6 +51,7 @@ my %serviceStatusList;
 my %startorder = ( 
 	"ldap" 		=> 0,
 	"zmconfigd"	=> 10,
+	"license-daemon"=> 15,
 	"dnscache"	=> 20,
 	"logger" 	=> 30,
 	"convertd"	=> 40,
@@ -72,7 +73,6 @@ my %startorder = (
 	"zimbra"	=> 180,
 	"zimbraAdmin"	=> 190,
 	"zimlet"	=> 200,
-	"license-daemon"=> 205,
 	"imapd"		=> 210,
 	"vmware-ha"	=> 250,  # this should remain last
 );
