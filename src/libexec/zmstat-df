@@ -35,7 +35,7 @@ chomp $hostname;
 my $platform = qx(/opt/zimbra/libexec/get_plat_tag.sh);
 chomp $platform;
 
-my $DF = '/bin/df -k';
+my $DF = '/bin/df -k -x squashfs';
 my $HEADING = 'timestamp, path, disk, disk_use, disk_space, disk_pct_used';
 
 my @DF_EXCLUDES = split(/:/, getLocalConfig("zmstat_df_excludes") || "");
