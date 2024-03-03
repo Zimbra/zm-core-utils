@@ -28,11 +28,6 @@ LICENSE_DAEMON_SERVICE="/opt/zimbra/license/lib/app.jar"
 LICENSE_DAEMON_SERVICE_PORT="8081"
 licenseDaemonServicepid=""
 
-if [ ! -f ${CONFIG_FILE} ]; then
-      echo "Error: ${CONFIG_FILE} is missing."
-      exit 1
-fi
-
 checkLicenseDaemonServiceRunning()
 {
 	licenseDaemonServicepid=`ps -aef | grep ${LICENSE_DAEMON_SERVICE} | grep -v grep |awk '{print $2}'`
@@ -50,6 +45,11 @@ startLicenseDaemonService()
 	echo -n "Starting license daemon service..."
 	if [ $licenseDaemonServiceRunning = 1 ]; then
 		echo "license daemon service is already running."
+		return
+	fi
+	if [ ! -f ${CONFIG_FILE} ]; then
+		echo "Error: ${CONFIG_FILE} is missing."
+		err=1
 		return
 	fi
 	source $CONFIG_FILE
