@@ -542,10 +542,12 @@ sub displayVersion {
 		$release = qx(rpm -q --queryformat "%{version}_%{release}" zimbra-core);
 		my $inst = localtime (qx(rpm -q --queryformat "%{installtime}" zimbra-core));
 		$string = "Release $release $platform";
+		$rpm_pkg_timestamp = qx(rpm -q --queryformat "%{release}" zimbra-core);
 	}
 
   $edition .=  ((-f "/opt/zimbra/bin/zmbackupquery") ? " NETWORK" : " FOSS");
   $string .= "$edition";
+  $string .= " edition";
 
   my $patch = "";
   my $zimbra_patch = "";
