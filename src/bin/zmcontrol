@@ -30,6 +30,7 @@ use Net::LDAP;
 use Getopt::Std;
 use File::Temp qw/ tempfile /;
 use File::Path;
+use List::Util qw(max);
 
 my $zimbra_tmp_directory=getLocalConfig("zimbra_tmp_directory");
 
@@ -568,6 +569,10 @@ sub displayVersion {
   $string .= " edition";
 
   my $patch = "";
+  my $zimbra_patch = "";
+  my $proxy_patch = "";
+  my $mta_patch = "";
+  my $ldap_patch = "";
   if (open(HIST_FILE, "/opt/zimbra/.install_history")) {
     my $hline;
     while ($hline = <HIST_FILE>) {
@@ -576,42 +581,69 @@ sub displayVersion {
       chomp($hline);
       (undef, $entry) = split(': ', $hline);
       if ($entry =~ /CONFIGURED ldap-patch /) {
-        $patch = substr($entry, 22);
-      } elsif ($entry =~ /CONFIGURED mta-patch /) {
-        $patch = substr($entry, 21);
-      } elsif ($entry =~ /CONFIGURED proxy-patch /) {
-        $patch = substr($entry, 23);
-      } elsif ($entry =~ /CONFIGURED patch /) {
-        $patch = substr($entry, 17);
+	      $ldap_patch = substr($entry, 22);
+      }
+      if ($entry =~ /CONFIGURED mta-patch /) {
+	      $mta_patch = substr($entry, 21);
+      }
+      if ($entry =~ /CONFIGURED proxy-patch /) {
+	      $proxy_patch = substr($entry, 23);
+      }
+      if ($entry =~ /CONFIGURED patch /) {
+	      $zimbra_patch = substr($entry, 17);
       }
 	  
       if ($entry =~ /INSTALL SESSION START/) {
-        $patch = "";
+	      $zimbra_patch = "";
+	      $proxy_patch = "";
+	      $mta_patch = "";
+	      $ldap_patch = "";
       }
     }
     close(HIST_FILE);
   }
-  if ($patch ne "") {
-    $patch_version = "$patch";
-    $patch_version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;
-    (my $maj, my $min, my $mic) = $patch_version =~ m/^(\d+)\.(\d+)\.(\d+)/;
-    $patch_version = "$mic";
-    $base_version = "$release";
-    $base_version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;
-    (my $maj, my $min, my $mic, my $rtype, my $build) = $base_version =~ m/^(\d+)\.(\d+)\.(\d+)\.(\w+)\.(\d+)/;
-    ($maj, $min, $mic, $rtype, $build) = $base_version =~ m/(\d+)\.(\d+)\.(\d+)_(\w+[^_])_(\d+)/ if ($rtype eq "");
-    if ($rpm_pkg_timestamp ne "") {
-	    print "Release $maj.$min.$patch_version.$rtype.$build.$platform.$rpm_pkg_timestamp$edition edition.\n";
-    } else {
-	    print "Release $maj.$min.$patch_version.$rtype.$build.$platform$edition edition.\n";
-    }
-
+  my $zimbra_patch_version = getPatchVersion($zimbra_patch);
+  my $proxy_patch_version = getPatchVersion($proxy_patch);
+  my $mta_patch_version = getPatchVersion($mta_patch);
+  my $ldap_patch_version = getPatchVersion($ldap_patch);
+  my @patches = ($zimbra_patch_version, $proxy_patch_version, $mta_patch_version, $ldap_patch_version);
+  $patch = max(@patches);
+  if ($patch != 0) {
+	  $base_version = "$release";
+	  $base_version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;
+	  (my $maj, my $min, my $mic, my $rtype, my $build) = $base_version =~ m/^(\d+)\.(\d+)\.(\d+)\.(\w+)\.(\d+)/;
+	  ($maj, $min, $mic, $rtype, $build) = $base_version =~ m/(\d+)\.(\d+)\.(\d+)_(\w+[^_])_(\d+)/ if ($rtype eq "");
+	  if ($release =~ /9.0.0/) {
+		  $string .= ", Patch $maj.$min.$mic\_P$patch";
+		  print "$string.\n";
+	  } else {
+		  if ($rpm_pkg_timestamp ne "") {
+			  print "Release $maj.$min.$patch.$rtype.$build.$platform.$rpm_pkg_timestamp$edition edition.\n";
+		  } else {
+			  print "Release $maj.$min.$patch.$rtype.$build.$platform$edition edition.\n";
+		  }
+	  }
   } else {
 	  print "$string.\n";
   }
-
 }
 
+sub getPatchVersion {
+	my $version = shift;
+	if ($version eq "") {
+		return 0;
+	} else {
+		if ($version =~ /P/) {
+			my @parts = split('P', $version);
+			my $after_symbol = $parts[1];
+			return $after_symbol;
+		} else {
+			$version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;
+			(my $maj, my $min, my $mic) = $version =~ m/^(\d+)\.(\d+)\.(\d+)/;
+			return $mic;
+		}
+	}
+}
 sub checkAvailableSpace {
   my ($service) = @_;
 
