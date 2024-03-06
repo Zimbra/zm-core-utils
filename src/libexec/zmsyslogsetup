@@ -313,7 +313,7 @@ sub updateSyslog {
     while (<>) {
       if ( $rsyslog == 1 ) {
         s/syslogd\*.pid/rsyslogd.pid/g;
-        if ($platform eq "RHEL7_64") {
+        if ($platform eq "RHEL7_64"  || $platform eq "RHEL8_64" || $platform eq "RHEL9_64") {
       		s/#su zimbra zimbra/su zimbra zimbra/;
       	}
 	if ($platform eq "RHEL8_64" || $platform eq "RHEL9_64") {
