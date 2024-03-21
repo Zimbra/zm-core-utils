@@ -52,6 +52,7 @@ my %serviceStatusList;
 my %startorder = ( 
 	"ldap" 		=> 0,
 	"zmconfigd"	=> 10,
+	"nalpeiron-daemon" => 14,
 	"license-daemon"=> 15,
 	"dnscache"	=> 20,
 	"logger" 	=> 30,
@@ -102,6 +103,7 @@ my %stoporder = (
 	"zimbraAdmin"	=> 180,
 	"zimlet"	=> 190,
 	"imapd"		=> 200,
+	"nalpeiron-daemon" => 204,
 	"license-daemon"=> 205,
 	"zmconfigd"	=> 210,
 	"vmware-ha"	=> 250,
@@ -134,6 +136,7 @@ my %allservices = (
 	"imapd" => "/opt/zimbra/bin/zmimapdctl",
 	"onlyoffice" => "/opt/zimbra/bin/zmonlyofficectl",
 	"license-daemon" => "/opt/zimbra/bin/zmlicensectl",
+	"nalpeiron-daemon" => "/opt/zimbra/bin/zmlicensectl"
 );
 
 my %rewrites = ( 
@@ -240,6 +243,9 @@ sub doStatus {
 		if ($_ eq "license-daemon") {
 			$allservices{$_}="$allservices{$_} --service";
 		}
+		if ($_ eq "nalpeiron-daemon") {
+			$allservices{$_}="$allservices{$_} --nalpeiron";
+		}
 		my $rc = 0xffff & system ("$allservices{$_} status > $statusfile 2> $errfile");
 		$rc = $rc >> 8;
 		if ($rc) {
@@ -266,6 +272,7 @@ sub doStatus {
 	unlink($errfile);
 	alarm(0);
 	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
+	$allservices{"nalpeiron-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $status;
 }
 
@@ -349,6 +356,9 @@ sub doStartup {
 		if ($_ eq "license-daemon") {
 			$allservices{$_}="$allservices{$_} --service";
 		}
+		if ($_ eq "nalpeiron-daemon") {
+			$allservices{$_}="$allservices{$_} --nalpeiron";
+		}
 		$rrc = 0xffff & system ("$allservices{$_} start norewrite > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
@@ -362,6 +372,7 @@ sub doStartup {
 		unlink($zmcontrolLogfile);
 	}
 	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
+	$allservices{"nalpeiron-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
@@ -391,6 +402,9 @@ sub doShutdown {
 		if ($_ eq "license-daemon") {
 			$allservices{$_}="$allservices{$_} --service";
 		}
+		if ($_ eq "nalpeiron-daemon") {
+			$allservices{$_}="$allservices{$_} --nalpeiron";
+		}
 		$rrc = 0xffff & system ("$allservices{$_} stop > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
@@ -404,6 +418,7 @@ sub doShutdown {
 		unlink($zmcontrolLogfile);
 	}
 	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
+	$allservices{"nalpeiron-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
