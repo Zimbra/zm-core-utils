@@ -132,15 +132,31 @@ sub checkDbs() {
       }
     }
   }
-  if (scalar @output != 0) {
-    addToReport("Database errors found.\n");
-    addToReport("$cmd --password=XXXXXXXX\n");
-    addToReport("@output");
-    if(!$options{m}) {
-      return 1;
-    }
+  my $mysql_cmd = "/opt/zimbra/common/bin/mysql -S ${mysql_socket} -u root --password=${mysql_root_passwd}";
+  my @mistmatch_records;
+  for my $num (1..100) {
+	  if (system("$mysql_cmd -e 'use mboxgroup$num' 2>/dev/null") == 0) {
+		  my $query = "select id from zimbra.mailbox where group_id=$num and id not in (select distinct(mailbox_id) from mboxgroup$num.mail_item)";
+		  my $query_output = `$mysql_cmd -e "$query"`;
+		  my $num_rows = () = $query_output =~ /\n/g;
+		  if ($num_rows >= 1) {
+			  push @mistmatch_records, "Error: Found mailbox record mismatch with mail_item for DB mboxgroup$num\n";
+			  push @mistmatch_records, "Query: $query\n";
+			  my @mailbox_ids = split /\n/, $query_output;
+			  push @mistmatch_records, map { "  $_\n" } @mailbox_ids;
+		  }
+	  }
+  }
+  if (scalar @output || scalar @mistmatch_records) {
+	  addToReport("Database errors found.\n");
+	  addToReport("$cmd --password=XXXXXXXX\n");
+	  addToReport("@output");
+	  addToReport("@mistmatch_records");
+	  if (!$options{m}) {
+		  return 1;
+	  }
   } else {
-    addToReport("No errors found\n") if $verbose;
+	  addToReport("No errors found\n") if $verbose;
   }
   unless (close(CMD)) {
     addToReport("command failed $!\n");;
