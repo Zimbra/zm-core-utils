@@ -26,6 +26,15 @@ if [ x`whoami` != xroot ]; then
   exit 1
 fi
 
+if [  -d "/opt/zimbra/jetty_base/webapps" ]; then
+	if lsattr -d /opt/zimbra/jetty_base/webapps/ | grep -qE '\b[i]\b'; then
+		echo "**** remove restrict write access for /opt/zimbra/jetty_base/webapps/ (zmfixperms) ****"
+		chattr -i -R /opt/zimbra/jetty_base/webapps/
+	fi
+fi
+
+
+
 PLAT=`/bin/sh /opt/zimbra/libexec/get_plat_tag.sh`
 if [ "X$PLAT" = "XMACOSX" -o "X$PLAT" = "XMACOSXx86" ]; then
   root_group=wheel
@@ -728,6 +737,15 @@ if [ -x /opt/zimbra/common/libexec/slapd ]; then
   # changing permission will reset capabilities so set it again
   echo "Set capability for /opt/zimbra/common/libexec/slapd"
   setcap CAP_NET_BIND_SERVICE=+ep /opt/zimbra/common/libexec/slapd
+fi
+
+if [  -d "/opt/zimbra/jetty_base/webapps" ]; then
+	if lsattr -d /opt/zimbra/jetty_base/webapps/ | grep -qE '\b[i]\b'; then
+		echo "Immutable attribute already set on the /opt/zimbra/jetty_base/webapps/ (zmfixperms)"
+	else
+		echo "**** apply restrict write access for /opt/zimbra/jetty_base/webapps/ (zmfixperms) ****"
+		chattr +i -R /opt/zimbra/jetty_base/webapps/
+	fi
 fi
 
 exit 0
