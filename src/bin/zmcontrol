@@ -30,6 +30,7 @@ use Net::LDAP;
 use Getopt::Std;
 use File::Temp qw/ tempfile /;
 use File::Path;
+use List::Util qw(max);
 
 my $zimbra_tmp_directory=getLocalConfig("zimbra_tmp_directory");
 
@@ -51,6 +52,7 @@ my %serviceStatusList;
 my %startorder = ( 
 	"ldap" 		=> 0,
 	"zmconfigd"	=> 10,
+	"license-daemon"=> 15,
 	"dnscache"	=> 20,
 	"logger" 	=> 30,
 	"convertd"	=> 40,
@@ -100,6 +102,7 @@ my %stoporder = (
 	"zimbraAdmin"	=> 180,
 	"zimlet"	=> 190,
 	"imapd"		=> 200,
+	"license-daemon"=> 205,
 	"zmconfigd"	=> 210,
 	"vmware-ha"	=> 250,
 );
@@ -130,6 +133,7 @@ my %allservices = (
 	"vmware-ha" => "/opt/zimbra/bin/zmhactl",
 	"imapd" => "/opt/zimbra/bin/zmimapdctl",
 	"onlyoffice" => "/opt/zimbra/bin/zmonlyofficectl",
+	"license-daemon" => "/opt/zimbra/bin/zmlicensectl",
 );
 
 my %rewrites = ( 
@@ -233,6 +237,9 @@ sub doStatus {
 	print "Host $localHostName\n";
 	foreach (sort keys %{$services}) {
 		if ($_ eq "syncshare") {next;}
+		if ($_ eq "license-daemon") {
+			$allservices{$_}="$allservices{$_} --service";
+		}
 		my $rc = 0xffff & system ("$allservices{$_} status > $statusfile 2> $errfile");
 		$rc = $rc >> 8;
 		if ($rc) {
@@ -258,6 +265,7 @@ sub doStatus {
 	unlink($statusfile);
 	unlink($errfile);
 	alarm(0);
+	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $status;
 }
 
@@ -338,6 +346,9 @@ sub doStartup {
 			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
 			next;
 		}
+		if ($_ eq "license-daemon") {
+			$allservices{$_}="$allservices{$_} --service";
+		}
 		$rrc = 0xffff & system ("$allservices{$_} start norewrite > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
@@ -350,6 +361,7 @@ sub doStartup {
 		}
 		unlink($zmcontrolLogfile);
 	}
+	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
@@ -376,6 +388,9 @@ sub doShutdown {
 			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
 			next;
 		}
+		if ($_ eq "license-daemon") {
+			$allservices{$_}="$allservices{$_} --service";
+		}
 		$rrc = 0xffff & system ("$allservices{$_} stop > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
 		if ($rrc) {
@@ -388,6 +403,7 @@ sub doShutdown {
 		}
 		unlink($zmcontrolLogfile);
 	}
+	$allservices{"license-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
@@ -524,8 +540,14 @@ sub displayVersion {
 	my $platform = qx(/opt/zimbra/libexec/get_plat_tag.sh);
 	chomp $platform;
 	my $string = "";
+	my $base_version = "";
+	my $patch_version = "";
+	my $release = "";
+	my $edition = "";
+	my $rpm_pkg_timestamp = "";
+
 	if ($platform =~ /DEBIAN/ || $platform =~ /UBUNTU/) {
-		my $release = qx(dpkg -s zimbra-core | egrep '^Version:' | sed -e 's/Version: //');
+		$release = qx(dpkg -s zimbra-core | egrep '^Version:' | sed -e 's/Version: //');
 		chomp $release;
 		if ( -x "/opt/vmware/bin/vamicli") {
 			my $appliance_version=qx(/opt/vmware/bin/vamicli version --appliance | awk '{if ((\$1 ~ /Version/) && (\$2 ~ /-/)) { print \$3} }' 2> /dev/null);
@@ -536,15 +558,21 @@ sub displayVersion {
 			$string = "Release $release $platform";
 		}
 	} else {
-		my $release = qx(rpm -q --queryformat "%{version}_%{release}" zimbra-core);
+		$release = qx(rpm -q --queryformat "%{version}_%{release}" zimbra-core);
 		my $inst = localtime (qx(rpm -q --queryformat "%{installtime}" zimbra-core));
 		$string = "Release $release $platform";
+		$rpm_pkg_timestamp = qx(rpm -q --queryformat "%{release}" zimbra-core);
 	}
 
-  $string .=  ((-f "/opt/zimbra/bin/zmbackupquery") ? " NETWORK" : " FOSS"); 
+  $edition .=  ((-f "/opt/zimbra/bin/zmbackupquery") ? " NETWORK" : " FOSS");
+  $string .= "$edition";
   $string .= " edition";
 
   my $patch = "";
+  my $zimbra_patch = "";
+  my $proxy_patch = "";
+  my $mta_patch = "";
+  my $ldap_patch = "";
   if (open(HIST_FILE, "/opt/zimbra/.install_history")) {
     my $hline;
     while ($hline = <HIST_FILE>) {
@@ -553,28 +581,69 @@ sub displayVersion {
       chomp($hline);
       (undef, $entry) = split(': ', $hline);
       if ($entry =~ /CONFIGURED ldap-patch /) {
-        $patch = substr($entry, 22);
-      } elsif ($entry =~ /CONFIGURED mta-patch /) {
-        $patch = substr($entry, 21);
-      } elsif ($entry =~ /CONFIGURED proxy-patch /) {
-        $patch = substr($entry, 23);
-      } elsif ($entry =~ /CONFIGURED patch /) {
-        $patch = substr($entry, 17);
+	      $ldap_patch = substr($entry, 22);
+      }
+      if ($entry =~ /CONFIGURED mta-patch /) {
+	      $mta_patch = substr($entry, 21);
+      }
+      if ($entry =~ /CONFIGURED proxy-patch /) {
+	      $proxy_patch = substr($entry, 23);
+      }
+      if ($entry =~ /CONFIGURED patch /) {
+	      $zimbra_patch = substr($entry, 17);
       }
 	  
       if ($entry =~ /INSTALL SESSION START/) {
-        $patch = "";
+	      $zimbra_patch = "";
+	      $proxy_patch = "";
+	      $mta_patch = "";
+	      $ldap_patch = "";
       }
     }
     close(HIST_FILE);
   }
-  if ($patch ne "") {
-    $string .= ", Patch $patch";
+  my $zimbra_patch_version = getPatchVersion($zimbra_patch);
+  my $proxy_patch_version = getPatchVersion($proxy_patch);
+  my $mta_patch_version = getPatchVersion($mta_patch);
+  my $ldap_patch_version = getPatchVersion($ldap_patch);
+  my @patches = ($zimbra_patch_version, $proxy_patch_version, $mta_patch_version, $ldap_patch_version);
+  $patch = max(@patches);
+  if ($patch != 0) {
+	  $base_version = "$release";
+	  $base_version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;
+	  (my $maj, my $min, my $mic, my $rtype, my $build) = $base_version =~ m/^(\d+)\.(\d+)\.(\d+)\.(\w+)\.(\d+)/;
+	  ($maj, $min, $mic, $rtype, $build) = $base_version =~ m/(\d+)\.(\d+)\.(\d+)_(\w+[^_])_(\d+)/ if ($rtype eq "");
+	  if ($release =~ /9.0.0/) {
+		  $string .= ", Patch $maj.$min.$mic\_P$patch";
+		  print "$string.\n";
+	  } else {
+		  if ($rpm_pkg_timestamp ne "") {
+			  print "Release $maj.$min.$patch.$rtype.$build.$platform.$rpm_pkg_timestamp$edition edition.\n";
+		  } else {
+			  print "Release $maj.$min.$patch.$rtype.$build.$platform$edition edition.\n";
+		  }
+	  }
+  } else {
+	  print "$string.\n";
   }
-
-	print "$string.\n";
 }
 
+sub getPatchVersion {
+	my $version = shift;
+	if ($version eq "") {
+		return 0;
+	} else {
+		if ($version =~ /P/) {
+			my @parts = split('P', $version);
+			my $after_symbol = $parts[1];
+			return $after_symbol;
+		} else {
+			$version =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/;
+			(my $maj, my $min, my $mic) = $version =~ m/^(\d+)\.(\d+)\.(\d+)/;
+			return $mic;
+		}
+	}
+}
 sub checkAvailableSpace {
   my ($service) = @_;
 
