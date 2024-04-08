@@ -3,6 +3,7 @@
     missingok
     notifempty
     create 0644 USER GROUP
+    #su root adm
     postrotate
       kill -HUP `cat /var/run/syslog*.pid 2> /dev/null` 2> /dev/null || true
       su - zimbra -c "/opt/zimbra/bin/zmconfigdctl restart" > /dev/null 2>&1 || true
@@ -15,6 +16,7 @@
     missingok
     notifempty
     create 0644 USER GROUP
+    #su root adm
     postrotate
       kill -HUP `cat /var/run/syslog*.pid 2> /dev/null` 2> /dev/null || true
       su - zimbra -c "/opt/zimbra/bin/zmconfigdctl restart" > /dev/null 2>&1 || true

@@ -426,6 +426,7 @@ sub updateRsyslogd {
         s/GROUP/zimbra/;
       }
       if ($platform eq "UBUNTU14_64" || $platform eq "UBUNTU16_64" || $platform eq "UBUNTU18_64" || $platform eq "UBUNTU20_64") {
+      	s/#su root adm/su root adm/;
       	s/#su zimbra zimbra/su zimbra zimbra/;
       }
       print;
