@@ -60,10 +60,30 @@ mk_download_dir() {
 }
 
 #
+# License check
+#
+check_license_status() {
+  local command="zmjava com.zimbra.cs.license.LicenseCLI -c"
+  local output
+  output=$(eval "$command")
+
+  if [ $? -ne 0 ]; then
+      echo "Error executing license check: $!"
+      exit 1
+  fi
+
+  if [[ $output =~ "License is expired" ]]; then
+      echo "License is expired."
+      exit 1
+  fi
+}
+
+#
 # Main
 #
 case "$1" in
     'start')
+      check_license_status
       mk_download_dir
 	  if [ "x$2" = "x" ]; then
 		  /opt/zimbra/bin/zmtlsctl > /dev/null 2>&1
