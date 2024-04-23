@@ -66,11 +66,14 @@ my $ldap_root_password = $localxml->{key}->{ldap_root_password}->{value};
 my $ldap_is_master     = $localxml->{key}->{ldap_is_master}->{value};
 my $ldap_replication_password =
   $localxml->{key}->{ldap_replication_password}->{value};
+my $ldap_replication_retry =
+  $localxml->{key}->{ldap_replication_retry}->{value};
 my $ldap_starttls_supported =
   $localxml->{key}->{ldap_starttls_supported}->{value};
 my $zimbra_require_interprocess_security =
   $localxml->{key}->{zimbra_require_interprocess_security}->{value};
-chomp( $ldap_is_master, $ldap_root_password, $ldap_replication_password );
+chomp( $ldap_is_master, $ldap_root_password, $ldap_replication_password,
+  $ldap_replication_retry );
 
 die "ERROR: Cannot be used on a LDAP master.\n"
   if ( lc($ldap_is_master) eq "true" );
@@ -183,7 +186,7 @@ if ($add) {
             $bdn,
             add => {
                 olcSyncrepl =>
-"rid=$rid provider=$providerURI bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password $tls filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"60 +\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30"
+"rid=$rid provider=$providerURI bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password $tls filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"$ldap_replication_retry\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30"
             },
         );
     }
@@ -192,7 +195,7 @@ if ($add) {
             $bdn,
             add => {
                 olcSyncrepl =>
-"rid=$rid provider=$providerURI bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"60 +\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30"
+"rid=$rid provider=$providerURI bindmethod=simple timeout=0 network-timeout=0 binddn=uid=zmreplica,cn=admins,cn=zimbra credentials=$ldap_replication_password filter=\"(objectclass=*)\" searchbase=\"\" logfilter=\"(&(objectClass=auditWriteObject)(reqResult=0))\" logbase=cn=accesslog scope=sub schemachecking=off type=refreshAndPersist retry=\"$ldap_replication_retry\" syncdata=accesslog tls_cacertdir=/opt/zimbra/conf/ca keepalive=240:10:30"
             },
         );
         $err = $mesg->code;
