@@ -268,7 +268,7 @@ sub updateSyslog {
       }
       if ($rsyslog == 1 ) {
         s/;mail.none//g;
-        if ($platform =~ /RHEL6/ || $platform =~ /RHEL7/ || $platform =~ /RHEL8/) {
+        if ($platform =~ /RHEL6/ || $platform =~ /RHEL7/ || $platform =~ /RHEL8/ || $platform =~ /RHEL9/) {
           s/^\*\.info/\*\.info;local0.none;local1.none;mail.none;auth.none/;
         }
         s/^\*\.\*;auth,authpriv.none/\*\.\*;auth,authpriv.none;local0.none;local1.none;mail.none/;
@@ -316,7 +316,7 @@ sub updateSyslog {
         if ($platform eq "RHEL7_64"  || $platform eq "RHEL8_64" || $platform eq "RHEL9_64") {
       		s/#su zimbra zimbra/su zimbra zimbra/;
       	}
-	if ($platform eq "RHEL8_64") {
+	if ($platform eq "RHEL8_64" || $platform eq "RHEL9_64") {
 		s/syslog\*.pid/rsyslogd.pid/g;
 	}
       }
@@ -484,7 +484,7 @@ if ( $platform =~ /RHEL6/ ) {
     print "Unable to restart rsyslog.  Please do it manually.\n";
     exit 1;
   }
-} elsif ( $platform =~ /RHEL7/ || $platform =~ /RHEL8/ ) {
+} elsif ( $platform =~ /RHEL7/ || $platform =~ /RHEL8/ || $platform =~ /RHEL9/ ) {
   if ( -e "/usr/lib/systemd/system/rsyslog.service" ) {
     qx(/usr/bin/systemctl restart rsyslog.service >/dev/null 2>&1);
     exit 0;
