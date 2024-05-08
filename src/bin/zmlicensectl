@@ -76,13 +76,50 @@ startLicenseDaemonService()
 	fi
 }
 
+checkNalpeironDaemonServiceRunning() {
+	nalpeironDaemonServiceRunning=0
+	sudo systemctl status nalpdaemon &>/dev/null
+	if [ $? -ne 0 ]; then
+		nalpeironDaemonServiceRunning=0
+	else
+		nalpeironDaemonServiceRunning=1
+	fi
+}
+
+startNalpeironDaemonService() {
+	err=0
+	checkNalpeironDaemonServiceRunning
+	echo -n "Starting nalpeiron daemon service..."
+	if [ $nalpeironDaemonServiceRunning = 1 ]; then
+		echo "nalpeiron daemon service is already running."
+		return
+	fi
+	if ! sudo systemctl start nalpdaemon &>/dev/null;  then
+		echo "Failed to start"
+		err=1
+		return
+	else
+		sleep 5
+		checkNalpeironDaemonServiceRunning
+		if [ $nalpeironDaemonServiceRunning -lt 1 ]; then
+			echo "Failed to start."
+			err=1
+			return
+		else
+			echo "done."
+			return
+		fi
+	fi
+}
+
 displayHelp()
 {
 	echo "Usage: $0 [option...]"
 	echo
-	echo "   --service start|restart|stop"
+	echo "   --service start|restart|stop|status"
 	echo "   --service setLogLevel=INFO|DEBUG|ERROR|WARN"
 	echo "   --service setOfflineMode=true|false"
+	echo "   --nalpeiron start|restart|stop|status"
 }
 
 case "$1" in
@@ -146,6 +183,53 @@ case "$1" in
 				exit 0
 				;;
 
+			*)
+				displayHelp
+				exit 1
+				;;
+		esac
+		;;
+
+	"--nalpeiron")
+		case "$2" in
+			"start")
+				startNalpeironDaemonService
+				exit ${err}
+				;;
+
+			"stop")
+				echo -n "Stopping nalpeiron daemon service..."
+				checkNalpeironDaemonServiceRunning
+				if [ $nalpeironDaemonServiceRunning -lt 1 ]; then
+					echo "not running."
+					exit 0
+				else
+					if ! sudo systemctl stop nalpdaemon &>/dev/null;  then
+						echo "failed."
+						exit 1
+					else
+						echo "done."
+						exit 0
+					fi
+				fi
+				;;
+
+			"restart")
+				$0 $1 stop
+				$0 $1 start
+				;;
+
+			"status")
+				echo -n "nalpeiron daemon service is "
+				checkNalpeironDaemonServiceRunning
+				if [ $nalpeironDaemonServiceRunning -lt 1 ]; then
+					echo "not running."
+					exit 1
+				else
+					echo "running."
+					exit 0
+				fi
+				;;
 			*)
 				displayHelp
 				exit 1
