@@ -236,6 +236,10 @@ case "$1" in
 				;;
 		esac
 		;;
+	"--exportOfflineLicenseData")
+	      shift  # Remove the "--exportOfflineLicenseData" argument
+        exportOfflineLicenseData "$@"
+        ;;  
 	*)
 		displayHelp
 		exit 1
