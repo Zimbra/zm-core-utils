@@ -76,6 +76,91 @@ startLicenseDaemonService()
 	fi
 }
 
+exportOfflineLicenseData() {
+    startTimeStr=""
+    endTimeStr=""
+
+    # parse start and end times from arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --exportStartTime)
+                shift
+                startTimeStr="$1"
+                ;;
+            --exportEndTime)
+                shift
+                endTimeStr="$1"
+                ;;
+            *)
+                echo "Error: Unknown argument: $1"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    if [[ -n "$startTimeStr" && -z "$endTimeStr" ]] || [[ -z "$startTimeStr" && -n "$endTimeStr" ]]; then
+        echo "Error: Both --exportStartTime and --exportEndTime are required, or use no arguments to default to 90 days."
+        exit 1
+    elif [[ -n "$startTimeStr" && -n "$endTimeStr" ]]; then
+        # validating date format
+        if ! date -d "$startTimeStr" >/dev/null 2>&1 || ! date -d "$endTimeStr" >/dev/null 2>&1; then
+            echo "Error: Invalid date format. Please use YYYY/MM/DD."
+            exit 1
+        fi
+
+        # converting to Epoch timestamps
+        startEpoch=$(date -d "$startTimeStr" +%s)
+        endEpoch=$(date -d "$endTimeStr" +%s)
+
+        # input validation (dates)
+        todayEpoch=$(date +%s)
+        if (( endEpoch > todayEpoch )); then
+            echo "Error: endTime cannot be after today."
+            exit 1
+        fi
+        if (( startEpoch > endEpoch )); then
+            echo "Error: startTime must be before or equal to endTime."
+            exit 1
+        fi
+    else
+        # defaults to 90 days if no dates provided
+        echo "Defaulting export to 90 days..."
+        endEpoch=$(date +%s)
+        startEpoch=$(( endEpoch - 90 * 86400 ))
+    fi
+
+    # get the license daemon server host from zmprov
+    licenseDaemonHost=$(zmprov gcf zimbraLicenseDaemonServerHost | cut -d ':' -f2 | xargs)
+
+    # check if licenseDaemonHost is empty
+    if [ -z "$licenseDaemonHost" ]; then
+        echo "Error: Could not determine the license daemon host. zimbraLicenseDaemonServerHost is empty."
+        exit 1
+    fi
+
+    # Directly call zmlicense with epoch timestamps
+    echo "Exporting offline license data from $(date -d @$startEpoch +"%Y/%m/%d") to $(date -d @$endEpoch +"%Y/%m/%d")"
+    zmlicense --exportOfflineLicenseData --exportStartTime "$startEpoch" --exportEndTime "$endEpoch"
+    if [[ $? -ne 0 ]]; then
+        echo "Error: zmlicense failed to export data. Check logs for details."
+        exit 1
+    fi
+
+    # Rsync to local system (filename uses the original epoch timestamps)
+    rsyncCmd="/opt/zimbra/common/bin/rsync -az -e 'ssh -T -i /opt/zimbra/.ssh/zimbra_identity -o StrictHostKeyChecking=no' zimbra@$licenseDaemonHost:/etc/nalpeiron/exports/daemondata_${startEpoch}_${endEpoch}.csv /opt/zimbra/data/license/"
+
+    eval "$rsyncCmd"
+    if [[ $? -ne 0 ]]; then
+        echo "Error: Failed to copy license data from remote host."
+        exit 1
+    fi
+
+    echo "Offline license data exported successfully for the period from $(date -d @$startEpoch +"%Y/%m/%d") to $(date -d @$endEpoch +"%Y/%m/%d"), exported to: /opt/zimbra/data/license/daemondata_${startEpoch}_${endEpoch}.csv"
+}
+
+
+
 checkNalpeironDaemonServiceRunning() {
 	nalpeironDaemonServiceRunning=0
 	sudo systemctl status nalpdaemon &>/dev/null
@@ -120,6 +205,7 @@ displayHelp()
 	echo "   --service setLogLevel=INFO|DEBUG|ERROR|WARN"
 	echo "   --service setOfflineMode=true|false"
 	echo "   --nalpeiron start|restart|stop|status"
+  echo "   --exportOfflineLicenseData | -exportOfflineLicenseData --exportStartTime YYYY/MM/DD --exportEndTime YYYY/MM/DD (offline only feature)"
 }
 
 case "$1" in
@@ -129,14 +215,14 @@ case "$1" in
 				startLicenseDaemonService
 				exit ${err}
 				;;
-				
+
 			"stop")
 				checkLicenseDaemonServiceRunning
 				echo -n "Stopping license daemon service..."
 				if [ $licenseDaemonServiceRunning -lt 1 ]; then
 					echo "license daemon service is not running."
 					exit 0
-				else 
+				else
 					kill -9 $licenseDaemonServicepid 2> /dev/null
 					if [ $? != 0 ]; then
 						echo "failed."
@@ -147,12 +233,12 @@ case "$1" in
 					fi
 				fi
 				;;
-			
+
 			"restart")
 				$0 $1 stop
 				$0 $1 start
 				;;
-			
+
 			"status")
 				echo -n "license daemon service is "
 				checkLicenseDaemonServiceRunning
@@ -236,6 +322,10 @@ case "$1" in
 				;;
 		esac
 		;;
+	"--exportOfflineLicenseData")
+	      shift
+        exportOfflineLicenseData "$@"
+        ;;
 	*)
 		displayHelp
 		exit 1
