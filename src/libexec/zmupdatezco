@@ -36,7 +36,7 @@ fi
 client_file_basename=`basename $client_file`
 
 # sed RE
-version_re='[0-9]*\.*[0-9]*\.*[0-9]*\.*\(_BETA[^_]*_\)*\(_GA_\)*[0-9][0-9]*'
+version_re='[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.*\(_BETA[^_]*_\)*\(_GA_\)*[0-9][0-9]*'
 client_file_appglob=`echo $client_file_basename | sed -e "s/$version_re/*/"`
 
 if [ ! -r ${client_file} ]; then
