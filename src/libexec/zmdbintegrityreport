@@ -147,11 +147,16 @@ sub checkDbs() {
 		  }
 	  }
   }
-  if (scalar @output || scalar @mistmatch_records) {
+  if (scalar @output) {
 	  addToReport("Database errors found.\n");
 	  addToReport("$cmd --password=XXXXXXXX\n");
 	  addToReport("@output");
+  }
+  if (scalar @mistmatch_records) {
+	  addToReport("\n\nOrphan accounts detected.\n");
 	  addToReport("@mistmatch_records");
+  }
+  if (scalar @output || scalar @mistmatch_records) {
 	  if (!$options{m}) {
 		  return 1;
 	  }
