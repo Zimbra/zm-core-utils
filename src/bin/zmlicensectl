@@ -47,6 +47,12 @@ startLicenseDaemonService()
 		echo "license daemon service is already running."
 		return
 	fi
+	/opt/zimbra/bin/zmprov -l gs `/opt/zimbra/bin/zmhostname` zimbraServiceEnabled | grep -qw license-daemon
+	if [ $? = 1 ]; then
+		echo "license daemon service is not enabled!  failed."
+		err=1
+		return
+	fi
 	if [ ! -f ${CONFIG_FILE} ]; then
 		echo "Error: ${CONFIG_FILE} is missing."
 		err=1

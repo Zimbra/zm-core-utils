@@ -31,45 +31,86 @@
 ### END INIT INFO
 
 
-command()
-{
-	if [ -f /opt/zimbra/redolog/redo.log ]; then
-		chown -f zimbra:zimbra /opt/zimbra/redolog/redo.log
-	fi
-	# su - zimbra -c "zmcontrol $1 </dev/null >>/opt/zimbra/log/startup.log 2>&1"
-	# bug 45842
-	su - zimbra -c "zmcontrol $1 </dev/null"
+is_zimbra_license_daemon_installed() {
+    if command -v dpkg &> /dev/null; then
+        dpkg -l | grep -q zimbra-license-daemon
+    elif command -v rpm &> /dev/null; then
+        rpm -q zimbra-license-daemon &> /dev/null
+    else
+        return 1
+    fi
+}
+
+command() {
+    if [ -f /opt/zimbra/redolog/redo.log ]; then
+        chown -f zimbra:zimbra /opt/zimbra/redolog/redo.log
+    fi
+
+    su - zimbra -c "zmcontrol $1 </dev/null"
+    RETVAL1=$?
+
+    case "$1" in
+        status|reload)
+            # Do not run zmlicensectl for status or reload
+            RETVAL2=0
+            ;;
+        shutdown)
+            # Use stop for zmlicensectl when command is shutdown
+            if is_zimbra_license_daemon_installed; then
+                su - zimbra -c "zmlicensectl --service stop </dev/null"
+                RETVAL2=$?
+            else
+                RETVAL2=0
+            fi
+            ;;
+        startup)
+            # Use start for zmlicensectl when command is startup
+            if is_zimbra_license_daemon_installed; then
+                su - zimbra -c "zmlicensectl --service start </dev/null"
+                RETVAL2=$?
+            else
+                RETVAL2=0
+            fi
+            ;;
+        *)
+            # For other commands, do nothing for zmlicensectl
+            RETVAL2=0
+            ;;
+    esac
+
+    if [ $RETVAL1 -ne 0 ] || [ $RETVAL2 -ne 0 ]; then
+        RETVAL=1
+    else
+        RETVAL=0
+    fi
 }
 
 case "$1" in
-	restart)
-		command shutdown
-		command startup
-		RETVAL=$?
-    if [ -d /var/lock/subsys -a $RETVAL -eq 0 ]; then
-      touch /var/lock/subsys/zimbra
-    fi
-		;;
-	start)
-		command startup
-		RETVAL=$?
-    if [ -d /var/lock/subsys -a $RETVAL -eq 0 ]; then
-      touch /var/lock/subsys/zimbra
-    fi
-		;;
-	stop)
-		command shutdown
-		RETVAL=$?
-    if [ -d /var/lock/subsys -a $RETVAL -eq 0 ]; then
-      rm -f /var/lock/subsys/zimbra
-    fi
-		;;
-	reload|status)
-		command $1
-		RETVAL=$?
-		;;
-	*)
-		echo $"Usage: $0 {start|stop|restart|reload|status}"
-		RETVAL=1
+    restart)
+        command shutdown
+        command startup
+        if [ -d /var/lock/subsys -a $RETVAL -eq 0 ]; then
+            touch /var/lock/subsys/zimbra
+        fi
+        ;;
+    start)
+        command startup
+        if [ -d /var/lock/subsys -a $RETVAL -eq 0 ]; then
+            touch /var/lock/subsys/zimbra
+        fi
+        ;;
+    stop)
+        command shutdown
+        if [ -d /var/lock/subsys -a $RETVAL -eq 0 ]; then
+            rm -f /var/lock/subsys/zimbra
+        fi
+        ;;
+    reload|status)
+        command $1
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|restart|reload|status}"
+        RETVAL=1
+        ;;
 esac
 exit $RETVAL
