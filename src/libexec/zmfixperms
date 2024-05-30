@@ -329,6 +329,7 @@ if [ -d /opt/zimbra ]; then
 
   if [ ! -d /opt/zimbra/data/license ]; then
     mkdir -p /opt/zimbra/data/license # create it if it doesn't exist
+    chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/data/license
   fi
 
   chmod 755 /opt/zimbra/data
