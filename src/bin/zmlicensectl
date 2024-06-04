@@ -165,7 +165,61 @@ exportOfflineLicenseData() {
     echo "Offline license data exported successfully for the period from $(date -d @$startEpoch +"%Y/%m/%d") to $(date -d @$endEpoch +"%Y/%m/%d"), exported to: /opt/zimbra/data/license/daemondata_${startEpoch}_${endEpoch}.csv"
 }
 
+clearLicenseWorkDir() {
+    echo "clearing license cache..."
+    LICENSE_WORK_DIR="/opt/zimbra/license/work/"
+    LICENSE_DATA_DIR="/opt/zimbra/data/license/"
 
+    # getting the license daemon server host from zmprov
+    licenseDaemonHost=$(zmprov gcf zimbraLicenseDaemonServerHost | cut -d ':' -f2 | xargs)
+
+    if [ -z "$licenseDaemonHost" ]; then
+        echo "Error: Could not determine the license daemon host. zimbraLicenseDaemonServerHost is empty."
+        exit 1
+    fi
+
+    # getting log files from cache to backup
+    logFiles=$(/opt/zimbra/common/bin/rsync --list-only -az -e 'ssh -T -i /opt/zimbra/.ssh/zimbra_identity -o StrictHostKeyChecking=no' zimbra@$licenseDaemonHost:$LICENSE_WORK_DIR)
+
+    if [[ $? -ne 0 ]]; then
+        echo "Error: Failed to list log files on remote host."
+        exit 1
+    fi
+
+    # extract the filenames from the rsync output
+    logFiles=$(echo "$logFiles" | awk '{print $NF}' | grep '\.log$')
+
+    if [[ -z "$logFiles" ]]; then
+        echo "No log files found in $LICENSE_WORK_DIR on remote host."
+    else
+        for logFile in $logFiles; do
+            echo "copying $logFile from remote host..."
+            rsyncCmd="/opt/zimbra/common/bin/rsync -az -e 'ssh -T -i /opt/zimbra/.ssh/zimbra_identity -o StrictHostKeyChecking=no' zimbra@$licenseDaemonHost:$LICENSE_WORK_DIR$logFile $LICENSE_DATA_DIR"
+            eval "$rsyncCmd"
+            if [[ $? -ne 0 ]]; then
+                echo "Error: Failed to copy $logFile from remote host."
+                exit 1
+            fi
+        done
+    fi
+
+    echo "deleting license cache contents. . ."
+    # creating temporary directory for rsync
+    empty_dir=$(mktemp -d /tmp/license.XXXXXX) || { echo "Failed to create empty directory"; exit 1; }
+    # execute rsync command
+    /opt/zimbra/common/bin/rsync -az --delete -e 'ssh -i /opt/zimbra/.ssh/zimbra_identity -o StrictHostKeyChecking=no' "$empty_dir/" zimbra@$licenseDaemonHost:$LICENSE_WORK_DIR
+    # rsync exit code
+    rsync_exit_code=$?
+    # deleting temp dir
+    rm -rf "$empty_dir"
+
+    if [[ $rsync_exit_code -ne 0 ]]; then
+	    echo "Error: Failed to clear the license cache on remote host."
+            exit 1
+    fi
+
+    echo "License cache cleared successfully."
+}
 
 checkNalpeironDaemonServiceRunning() {
 	nalpeironDaemonServiceRunning=0
@@ -211,7 +265,8 @@ displayHelp()
 	echo "   --service setLogLevel=INFO|DEBUG|ERROR|WARN"
 	echo "   --service setOfflineMode=true|false"
 	echo "   --nalpeiron start|restart|stop|status"
-  echo "   --exportOfflineLicenseData | -exportOfflineLicenseData --exportStartTime YYYY/MM/DD --exportEndTime YYYY/MM/DD (offline only feature)"
+	echo "   --exportOfflineLicenseData | -exportOfflineLicenseData --exportStartTime YYYY/MM/DD --exportEndTime YYYY/MM/DD (offline only feature)"
+	echo "   --clearLicenseWorkDir"
 }
 
 case "$1" in
@@ -328,10 +383,13 @@ case "$1" in
 				;;
 		esac
 		;;
+	"--clearLicenseWorkDir")
+		clearLicenseWorkDir
+		;;
 	"--exportOfflineLicenseData")
-	      shift
-        exportOfflineLicenseData "$@"
-        ;;
+		shift
+		exportOfflineLicenseData "$@"
+		;;
 	*)
 		displayHelp
 		exit 1
