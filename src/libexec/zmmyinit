@@ -111,7 +111,7 @@ echo '*' Starting mysql server
     >> ${zimbra_log_directory}/zmmyinit.log 2>&1
 
 # make sure we can connect before continuing 
-until `echo "show processlist" | /opt/zimbra/bin/mysql -u root --password= > /dev/null 2>&1`; do
+until `echo "show processlist" | /opt/zimbra/bin/mysql -u zimbra --password= > /dev/null 2>&1`; do
   let i++
   sleep 5
   if [ $i -gt 25 ]; then
@@ -121,34 +121,6 @@ until `echo "show processlist" | /opt/zimbra/bin/mysql -u root --password= > /de
     echo '*' Failed to connect to mysql...retrying
   fi
 done
-
-#
-# Load zimbra sql files
-#
-echo '*' Loading schema ${zimbra_db_directory}/db.sql 
-/opt/zimbra/bin/mysql -u root --password= < \
-    ${zimbra_db_directory}/db.sql
-
-if [ -f "${zimbra_db_directory}/create_sharing_database.sql" ];then
-  echo '*' Loading schema ${zimbra_db_directory}/create_sharing_database.sql 
-  /opt/zimbra/bin/mysql -u root --password= < \
-      ${zimbra_db_directory}/create_sharing_database.sql
-fi
-
-echo '*' Loading version from ${zimbra_db_directory}/versions-init.sql
-/opt/zimbra/bin/mysql -u root --password= < \
-    ${zimbra_db_directory}/versions-init.sql
-
-if [ -f "${zimbra_db_directory}/backup-version-init.sql" ]; then
-  echo '*' Loading version from ${zimbra_db_directory}/backup-version-init.sql
-  /opt/zimbra/bin/mysql -u root --password= < \
-    ${zimbra_db_directory}/backup-version-init.sql
-fi
-
-#
-# Delete wildcard user login entries
-#
-/opt/zimbra/bin/mysql -u root --password= -e "DROP USER ''@'localhost'; DROP USER ''@'`hostname`';"
 
 #
 # Generate passwords for mysql into local config
@@ -172,15 +144,61 @@ fi
 # use 'zmmypasswd --root' here because of bootstrapping problems - at
 # this stage we know that the root password is empty.
 #
+
 zmsetvars -f
+echo '*' Creating mysql zimbra user
+cat <<EOF | /opt/zimbra/bin/mysql -u zimbra --password=
+        CREATE USER IF NOT EXISTS 'zimbra';
+	CREATE USER IF NOT EXISTS 'zimbra'@'localhost.localdomain';
+	FLUSH PRIVILEGES;
+EOF
+
+echo '*' Creating mysql root user
+cat <<EOF | /opt/zimbra/bin/mysql -u zimbra --password=
+        CREATE USER IF NOT EXISTS 'root'@'`hostname`';
+	CREATE USER IF NOT EXISTS 'root'@'127.0.0.1';
+	CREATE USER IF NOT EXISTS 'root'@'::1';
+	CREATE USER IF NOT EXISTS 'root'@'localhost.localdomain';
+	FLUSH PRIVILEGES;
+EOF
+
 echo '*' Changing mysql root user password
-cat <<EOF | /opt/zimbra/bin/mysql -u root --password=
+cat <<EOF | /opt/zimbra/bin/mysql -u zimbra --password=
     SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${mysql_root_password}');
     SET PASSWORD FOR 'root'@'`hostname`' = PASSWORD('${mysql_root_password}');
     SET PASSWORD FOR 'root'@'127.0.0.1' = PASSWORD('${mysql_root_password}');
     SET PASSWORD FOR 'root'@'::1' = PASSWORD('${mysql_root_password}');
     SET PASSWORD FOR 'root'@'localhost.localdomain' = PASSWORD('${mysql_root_password}');
+    FLUSH PRIVILEGES;
 EOF
+
+#
+# Load zimbra sql files
+#
+echo '*' Loading schema ${zimbra_db_directory}/db.sql
+/opt/zimbra/bin/mysql -u root --password=${mysql_root_password} < \
+    ${zimbra_db_directory}/db.sql
+
+if [ -f "${zimbra_db_directory}/create_sharing_database.sql" ];then
+  echo '*' Loading schema ${zimbra_db_directory}/create_sharing_database.sql
+  /opt/zimbra/bin/mysql -u root --password=${mysql_root_password} < \
+      ${zimbra_db_directory}/create_sharing_database.sql
+fi
+
+echo '*' Loading version from ${zimbra_db_directory}/versions-init.sql
+/opt/zimbra/bin/mysql -u root --password=${mysql_root_password} < \
+    ${zimbra_db_directory}/versions-init.sql
+
+if [ -f "${zimbra_db_directory}/backup-version-init.sql" ]; then
+  echo '*' Loading version from ${zimbra_db_directory}/backup-version-init.sql
+  /opt/zimbra/bin/mysql -u root --password=${mysql_root_password} < \
+    ${zimbra_db_directory}/backup-version-init.sql
+fi
 
 echo '*' Changing mysql zimbra user password
 /opt/zimbra/bin/zmmypasswd ${zimbra_mysql_password}
+
+#
+# Delete wildcard user login entries
+#
+/opt/zimbra/bin/mysql -u root --password=${mysql_root_password} -e "DROP USER ''@'localhost'; DROP USER ''@'`hostname`';"
