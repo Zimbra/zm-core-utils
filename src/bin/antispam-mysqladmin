@@ -24,7 +24,7 @@ if [ "x127.0.0.1" != x"${antispam_mysql_host}" -a x"${zimbra_server_hostname}" !
     exit 1
 fi
 
-exec /opt/zimbra/common/bin/mysqladmin \
+exec /opt/zimbra/common/bin/mariadb-admin \
     --socket=${antispam_mysql_socket} \
     --user=root \
     --password=${antispam_mysql_root_password} "$@"

@@ -38,7 +38,7 @@ zmassert -x /opt/zimbra/bin/mysqladmin
 zmassert -x /opt/zimbra/bin/mysql
 zmassert -x /opt/zimbra/bin/zmlocalconfig
 zmassert -x /opt/zimbra/bin/zmmypasswd
-zmassert -x /opt/zimbra/common/share/mysql/scripts/mysql_install_db
+zmassert -x /opt/zimbra/common/share/mysql/scripts/mariadb-install-db
 zmassert -r ${zimbra_db_directory}/db.sql
 zmassert -r ${zimbra_db_directory}/versions-init.sql
 
@@ -98,7 +98,7 @@ rm -f ${mysql_mycnf}
 # Create database
 #
 echo '*' Creating database in ${mysql_data_directory}
-(/opt/zimbra/common/share/mysql/scripts/mysql_install_db \
+(/opt/zimbra/common/share/mysql/scripts/mariadb-install-db \
     --basedir=/opt/zimbra/common \
     --defaults-file=${mysql_mycnf}) \
     >> ${zimbra_log_directory}/zmmyinit.log 2>&1

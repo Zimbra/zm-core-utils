@@ -40,7 +40,7 @@ then
 	exit 0
 fi
 
-if [ ! -x /opt/zimbra/common/bin/mysql -a ! -x /opt/zimbra/common/sbin/amavisd ]; then
+if [ ! -x /opt/zimbra/common/bin/mariadb -a ! -x /opt/zimbra/common/sbin/amavisd ]; then
   exit 0
 fi
 
@@ -49,7 +49,7 @@ if [ ! -d ${zimbra_tmp_directory}/antispam-mysql ]; then
 fi
 
 zmassert -d ${zimbra_tmp_directory}
-zmassert -x /opt/zimbra/common/bin/mysqld_safe
+zmassert -x /opt/zimbra/common/bin/mariadbd-safe
 
 
 # innodb will open the database before binding and writing out the pid
@@ -109,7 +109,7 @@ case "$1" in
     fi
     # --defaults-file must be first argument
     echo -n "Starting mysqld for anti-spam..."
-    /opt/zimbra/common/bin/mysqld_safe \
+    /opt/zimbra/common/bin/mariadbd-safe \
       --defaults-file=${antispam_mysql_mycnf} \
       --external-locking \
       --malloc-lib=/opt/zimbra/common/lib/libtcmalloc_minimal.so \

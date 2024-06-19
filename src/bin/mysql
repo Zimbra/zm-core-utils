@@ -19,5 +19,5 @@
 source `dirname $0`/zmshutil || exit 1
 zmsetvars
 
-exec /opt/zimbra/common/bin/mysql -S ${mysql_socket} \
+exec /opt/zimbra/common/bin/mariadb -S ${mysql_socket} \
     -u ${zimbra_mysql_user} --password=${zimbra_mysql_password} "$@"

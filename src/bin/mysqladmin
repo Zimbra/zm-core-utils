@@ -19,4 +19,4 @@
 source `dirname $0`/zmshutil || exit 1
 zmsetvars
 
-exec /opt/zimbra/common/bin/mysqladmin -S ${mysql_socket} -u root --password=${mysql_root_password} "$@"
+exec /opt/zimbra/common/bin/mariadb-admin -S ${mysql_socket} -u root --password=${mysql_root_password} "$@"

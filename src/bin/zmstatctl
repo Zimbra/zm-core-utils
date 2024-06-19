@@ -153,7 +153,7 @@ if (defined($cmd)) {
     if ($cmd eq 'start' || $cmd eq 'restart') {
         my $procs = getProcList();
         my $doNginx = $procs =~ /\bnginx\b/;
-        my $doMysql = (-x "/opt/zimbra/common/sbin/mysqld" && -l "/opt/zimbra/mailboxd") ? 1 : 0;
+        my $doMysql = (-x "/opt/zimbra/common/sbin/mariadbd" && -l "/opt/zimbra/mailboxd") ? 1 : 0;
         my $doMtaQueue = (-x "/opt/zimbra/common/sbin/postqueue" && $procs =~ /\bmta\b/) ? 1 : 0;
 	my $doLdap = -x "/opt/zimbra/common/libexec/slapd" ? 1 : 0;
         my $outfile = getZmstatRoot() . "/zmstat.out";

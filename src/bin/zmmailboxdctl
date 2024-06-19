@@ -23,7 +23,7 @@ if [ ! -d ${mailboxd_directory} ]; then
   exit 0
 fi
 
-if [ ! -x /opt/zimbra/common/bin/mysql ]; then
+if [ ! -x /opt/zimbra/common/bin/mariadb ]; then
   exit 0
 fi
 

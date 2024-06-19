@@ -28,7 +28,7 @@ zmassert -x /opt/zimbra/bin/antispam-mysqladmin
 zmassert -x /opt/zimbra/bin/antispam-mysql
 zmassert -x /opt/zimbra/bin/zmlocalconfig
 zmassert -x /opt/zimbra/bin/zmantispamdbpasswd
-zmassert -x /opt/zimbra/common/share/mysql/scripts/mysql_install_db
+zmassert -x /opt/zimbra/common/share/mysql/scripts/mariadb-install-db
 zmassert -r /opt/zimbra/data/amavisd/mysql/antispamdb.sql
 
 # Check if log directory exists.  If not, create.
@@ -47,7 +47,7 @@ fi
 # Create database
 #
 echo '*' Creating database in ${antispam_mysql_data_directory}
-(/opt/zimbra/common/share/mysql/scripts/mysql_install_db \
+(/opt/zimbra/common/share/mysql/scripts/mariadb-install-db \
     --basedir=/opt/zimbra/common \
     --datadir=${antispam_mysql_data_directory} \
     --defaults-file=${antispam_mysql_mycnf} ) \
@@ -70,7 +70,7 @@ if [ "x$pid" != "x" ]; then
 fi
 # --defaults-file must be first argument
 echo -n '*' Starting antispam mysql server ...
-/opt/zimbra/common/bin/mysqld_safe \
+/opt/zimbra/common/bin/mariadbd-safe \
     --defaults-file=${antispam_mysql_mycnf} \
     --basedir=/opt/zimbra/common \
     --datadir=${antispam_mysql_data_directory} \

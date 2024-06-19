@@ -24,7 +24,7 @@ if [ x`whoami` != "x${zimbra_user}" ]; then
   exit 1
 fi
 
-if [ ! -x /opt/zimbra/common/bin/mysqld_safe ]; then
+if [ ! -x /opt/zimbra/common/bin/mariadbd-safe ]; then
   exit 0
 fi
 
@@ -90,7 +90,7 @@ case "$1" in
     fi
     # --defaults-file must be first argument
     echo -n "Starting mysqld..."
-    /opt/zimbra/common/bin/mysqld_safe \
+    /opt/zimbra/common/bin/mariadbd-safe \
       --defaults-file=${mysql_mycnf} \
       --external-locking \
       --log-error=${mysql_errlogfile} \

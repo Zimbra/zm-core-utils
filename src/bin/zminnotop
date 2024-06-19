@@ -21,7 +21,7 @@ if [ x`whoami` != xzimbra ]; then
   exit 1
 fi
 
-if [ ! -x /opt/zimbra/common/bin/mysql ]; then
+if [ ! -x /opt/zimbra/common/bin/mariadb ]; then
   echo "Error: mariadb not available"
   exit 1
 fi

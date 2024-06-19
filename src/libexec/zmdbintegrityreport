@@ -83,10 +83,10 @@ sub checkDbs() {
   my $cmd;
   if ( -x "/opt/zimbra/mysql/bin/mysqlcheck") {
     $cmd = "/opt/zimbra/mysql/bin/mysqlcheck";
-  } elsif ( -x "/opt/zimbra/common/bin/mysqlcheck") {
-    $cmd = "/opt/zimbra/common/bin/mysqlcheck";
+  } elsif ( -x "/opt/zimbra/common/bin/mariadb-check") {
+    $cmd = "/opt/zimbra/common/bin/mariadb-check";
   } else {
-    print "ERROR: Unable to find mysqlcheck.\n";
+    print "ERROR: Unable to find mariadb-check.\n";
     exit 1;
   }
   $cmd .= " --defaults-file=${mysql_mycnf}";
@@ -132,7 +132,7 @@ sub checkDbs() {
       }
     }
   }
-  my $mysql_cmd = "/opt/zimbra/common/bin/mysql -S ${mysql_socket} -u root --password=${mysql_root_passwd}";
+  my $mysql_cmd = "/opt/zimbra/common/bin/mariadb -S ${mysql_socket} -u root --password=${mysql_root_passwd}";
   my @mistmatch_records;
   for my $num (1..100) {
 	  if (system("$mysql_cmd -e 'use mboxgroup$num' 2>/dev/null") == 0) {
