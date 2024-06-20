@@ -147,29 +147,29 @@ fi
 
 zmsetvars -f
 echo '*' Creating mysql zimbra user
-cat <<EOF | /opt/zimbra/bin/mysql -u zimbra --password=
-        CREATE USER IF NOT EXISTS 'zimbra';
-	CREATE USER IF NOT EXISTS 'zimbra'@'localhost.localdomain';
-	FLUSH PRIVILEGES;
+cat <<EOF | /opt/zimbra/bin/mysql -u ${zimbra_mysql_user} --password=
+CREATE USER IF NOT EXISTS 'zimbra';
+CREATE USER IF NOT EXISTS 'zimbra'@'localhost.localdomain';
+FLUSH PRIVILEGES;
 EOF
 
 echo '*' Creating mysql root user
-cat <<EOF | /opt/zimbra/bin/mysql -u zimbra --password=
-        CREATE USER IF NOT EXISTS 'root'@'`hostname`';
-	CREATE USER IF NOT EXISTS 'root'@'127.0.0.1';
-	CREATE USER IF NOT EXISTS 'root'@'::1';
-	CREATE USER IF NOT EXISTS 'root'@'localhost.localdomain';
-	FLUSH PRIVILEGES;
+cat <<EOF | /opt/zimbra/bin/mysql -u ${zimbra_mysql_user} --password=
+CREATE USER IF NOT EXISTS 'root'@'`hostname`';
+CREATE USER IF NOT EXISTS 'root'@'127.0.0.1';
+CREATE USER IF NOT EXISTS 'root'@'::1';
+CREATE USER IF NOT EXISTS 'root'@'localhost.localdomain';
+FLUSH PRIVILEGES;
 EOF
 
 echo '*' Changing mysql root user password
-cat <<EOF | /opt/zimbra/bin/mysql -u zimbra --password=
-    SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${mysql_root_password}');
-    SET PASSWORD FOR 'root'@'`hostname`' = PASSWORD('${mysql_root_password}');
-    SET PASSWORD FOR 'root'@'127.0.0.1' = PASSWORD('${mysql_root_password}');
-    SET PASSWORD FOR 'root'@'::1' = PASSWORD('${mysql_root_password}');
-    SET PASSWORD FOR 'root'@'localhost.localdomain' = PASSWORD('${mysql_root_password}');
-    FLUSH PRIVILEGES;
+cat <<EOF | /opt/zimbra/bin/mysql -u ${zimbra_mysql_user} --password=
+SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${mysql_root_password}');
+SET PASSWORD FOR 'root'@'`hostname`' = PASSWORD('${mysql_root_password}');
+SET PASSWORD FOR 'root'@'127.0.0.1' = PASSWORD('${mysql_root_password}');
+SET PASSWORD FOR 'root'@'::1' = PASSWORD('${mysql_root_password}');
+SET PASSWORD FOR 'root'@'localhost.localdomain' = PASSWORD('${mysql_root_password}');
+FLUSH PRIVILEGES;
 EOF
 
 #

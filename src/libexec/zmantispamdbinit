@@ -94,15 +94,6 @@ else
     echo "done."
 fi
 
-
-#
-# Load zimbra sql files
-#
-echo '*' Loading schema /opt/zimbra/data/amavisd/mysql/antispamdb.sql 
-/opt/zimbra/bin/antispam-mysql -u root --password= < \
-    /opt/zimbra/data/amavisd/mysql/antispamdb.sql
-
-
 #
 # Generate passwords for mysql into local config
 #
@@ -126,8 +117,38 @@ fi
 # this stage we know that the root password is empty.
 #
 zmsetvars -f
+echo '*' Creating antispam mysql user
+cat <<EOF | /opt/zimbra/bin/antispam-mysql -u ${antispam_mysql_user} --password=
+CREATE USER IF NOT EXISTS 'zimbra';
+CREATE USER IF NOT EXISTS 'zimbra'@'localhost.localdomain';
+FLUSH PRIVILEGES;
+EOF
+
+echo '*' Creating antispam mysql root user
+cat <<EOF | /opt/zimbra/bin/antispam-mysql -u ${antispam_mysql_user} --password=
+CREATE USER IF NOT EXISTS 'root'@'`hostname`';
+CREATE USER IF NOT EXISTS 'root'@'127.0.0.1';
+CREATE USER IF NOT EXISTS 'root'@'::1';
+CREATE USER IF NOT EXISTS 'root'@'localhost.localdomain';
+FLUSH PRIVILEGES;
+EOF
+
 echo '*' Changing antispam mysql root user password
-/opt/zimbra/bin/antispam-mysqladmin -u root --password= password ${antispam_mysql_root_password}
+cat <<EOF | /opt/zimbra/bin/antispam-mysql -u ${antispam_mysql_user} --password=
+SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${antispam_mysql_root_password}');
+SET PASSWORD FOR 'root'@'`hostname`' = PASSWORD('${antispam_mysql_root_password}');
+SET PASSWORD FOR 'root'@'127.0.0.1' = PASSWORD('${antispam_mysql_root_password}');
+SET PASSWORD FOR 'root'@'::1' = PASSWORD('${antispam_mysql_root_password}');
+SET PASSWORD FOR 'root'@'localhost.localdomain' = PASSWORD('${antispam_mysql_root_password}');
+FLUSH PRIVILEGES;
+EOF
+
+#
+# Load zimbra sql files
+#
+echo '*' Loading schema /opt/zimbra/data/amavisd/mysql/antispamdb.sql
+/opt/zimbra/bin/antispam-mysql -u root --password=${antispam_mysql_root_password} < \
+    /opt/zimbra/data/amavisd/mysql/antispamdb.sql
 
 echo '*' Changing antispam mysql user password
 /opt/zimbra/bin/zmantispamdbpasswd ${antispam_mysql_password}
