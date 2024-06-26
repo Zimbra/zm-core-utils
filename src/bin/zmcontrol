@@ -52,7 +52,6 @@ my %serviceStatusList;
 my %startorder = ( 
 	"ldap" 		=> 0,
 	"zmconfigd"	=> 10,
-	"nalpeiron-daemon" => 14,
 	"dnscache"	=> 20,
 	"logger" 	=> 30,
 	"convertd"	=> 40,
@@ -102,7 +101,6 @@ my %stoporder = (
 	"zimbraAdmin"	=> 180,
 	"zimlet"	=> 190,
 	"imapd"		=> 200,
-	"nalpeiron-daemon" => 204,
 	"zmconfigd"	=> 210,
 	"vmware-ha"	=> 250,
 );
@@ -269,7 +267,6 @@ sub doStatus {
 	unlink($statusfile);
 	unlink($errfile);
 	alarm(0);
-	$allservices{"nalpeiron-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $status;
 }
 
@@ -340,6 +337,7 @@ sub doStartup {
 		if ($_ eq "ldap") {next;}
 		if ($_ eq "syncshare") {next;}
 		if ($_ eq "license-daemon") {next;}
+		if ($_ eq "nalpeiron-daemon") {next;}
 		checkAvailableServiceSpace($_);
 		Zimbra::Mon::Logger::Log ("info", "Starting $_ via zmcontrol");
 		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
@@ -350,9 +348,6 @@ sub doStartup {
 		unless (-x "$allservices{$_}") {
 			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
 			next;
-		}
-		if ($_ eq "nalpeiron-daemon") {
-			$allservices{$_}="$allservices{$_} --nalpeiron";
 		}
 		$rrc = 0xffff & system ("$allservices{$_} start norewrite > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
@@ -366,7 +361,6 @@ sub doStartup {
 		}
 		unlink($zmcontrolLogfile);
 	}
-	$allservices{"nalpeiron-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
@@ -385,7 +379,7 @@ sub doShutdown {
 		if ($_ eq "convertd" && !(-d "/opt/zimbra/convertd") ) { next; }
 		if ($_ eq "vmware-ha" && !(-x "/opt/zimbra/bin/zmhactl") ) { next; }
 		if ($_ eq "license-daemon") {next;}
-		if ($_ eq "nalpeiron-daemon" && !(-f "/etc/nalpeiron/NetProtectord") ) { next; }
+		if ($_ eq "nalpeiron-daemon") {next;}
 		if ($_ eq "service" || $_ eq "zimbra" || $_ eq "zimbraAdmin" || $_ eq "zimlet") {
 			print "\tStopping $_ webapp...";
 		} else {
@@ -394,9 +388,6 @@ sub doShutdown {
 		unless (-x "$allservices{$_}") {
 			print "skipped.\n\t\t$allservices{$_} missing or not executable.\n";
 			next;
-		}
-		if ($_ eq "nalpeiron-daemon") {
-			$allservices{$_}="$allservices{$_} --nalpeiron";
 		}
 		$rrc = 0xffff & system ("$allservices{$_} stop > $zmcontrolLogfile 2>&1");
 		$rrc = $rrc >> 8;
@@ -410,7 +401,6 @@ sub doShutdown {
 		}
 		unlink($zmcontrolLogfile);
 	}
-	$allservices{"nalpeiron-daemon"} = "/opt/zimbra/bin/zmlicensectl";
 	return $rc;
 }
 
