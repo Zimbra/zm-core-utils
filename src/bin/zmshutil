@@ -44,6 +44,8 @@ zmsetvars() {
     fi
     
     export zmsetvars='true'
+    # ldap_single_master_url can be used for  adhoc scripting in deployments with multi master ldap.
+    export ldap_single_master_url=`echo $ldap_master_url | awk '{print $1}'`
 }
 
 #
