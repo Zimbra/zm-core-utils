@@ -290,8 +290,8 @@ installPackages() {
 }
 
 runAsZimbra() {
-  echo "COMMAND: $1" >> $LOGFILE 2>&1
-  su - zimbra -c "$1" >> $LOGFILE 2>&1
+	echo "COMMAND: $1" >> $LOGFILE 2>&1
+	su - zimbra -c "$1" >> $LOGFILE 2>&1
 }
 
 isEnabled() {
