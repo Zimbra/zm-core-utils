@@ -1,0 +1,434 @@
+#!/bin/bash
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2024 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+
+ID=`id -u`
+
+if [ "x$ID" != "x0" ]; then
+	echo "Run as root!"
+	exit 1
+fi
+
+if [ ! -f "/opt/zimbra/bin/zmcontrol" ] || [ ! -f "/opt/zimbra/conf/localconfig.xml" ]; then
+	echo "The Zimbra Collaboration Server does not appear to be installed."
+	exit 1
+fi
+
+if [ ! -f "/opt/zimbra/bin/zmbackupquery" ]; then
+	echo "Onlyoffice installation requires ZCS Network Edition."
+	exit 1
+fi
+
+PACKAGES="zimbra-onlyoffice zimbra-rabbitmq-server"
+
+LOGFILE=`mktemp -t onlyoffice-install.log.XXXXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
+if [ -e "/tmp/onlyoffice-install.log" ]; then
+	rm "/tmp/onlyoffice-install.log"
+fi
+
+ln -sf "$LOGFILE" "/tmp/onlyoffice-install.log"
+echo "Operations logged to $LOGFILE"
+
+getPlatformVars() {
+	PLATFORM=`/opt/zimbra/libexec/get_plat_tag.sh`
+	echo $PLATFORM | egrep -q "UBUNTU|DEBIAN"
+	if [ $? = 0 ]; then
+		REPOINST='apt-get install -y'
+		PACKAGEDOWNLOAD='apt-get --download-only install -y --force-yes'
+		PACKAGEQUERY='dpkg -s'
+		PACKAGEEXT='deb'
+	else
+		REPOINST='yum -y install'
+		PACKAGEDOWNLOAD='yum -y install --downloadonly'
+		PACKAGEQUERY='rpm -q'
+		PACKAGEEXT='rpm'
+	fi
+}
+
+isInstalled() {
+	pkg=$1
+	PKGINSTALLED=""
+	if [ "x$PACKAGEEXT" = "xrpm" ]; then
+		$PACKAGEQUERY $pkg >/dev/null 2>&1
+		if [ $? = 0 ]; then
+			PKGVERSION=`$PACKAGEQUERY $pkg 2> /dev/null | sort -u`
+			PKGINSTALLED=`$PACKAGEQUERY $pkg | sed -e 's/\.[a-zA-Z].*$//' 2> /dev/null`
+		fi
+	else
+		Q=`$PACKAGEQUERY $pkg 2>/dev/null | egrep '^Status: ' `
+		if [ "x$Q" != "x" ]; then
+			echo $Q | grep 'not-installed' > /dev/null 2>&1
+			if [ $? != 0 ]; then
+				echo $Q | grep 'deinstall ok' > /dev/null 2>&1
+				if [ $? != 0 ]; then
+					PKGVERSION=`$PACKAGEQUERY $pkg | egrep '^Version: ' | sed -e 's/Version: //' 2> /dev/null`
+					PKGINSTALLED="${pkg}-${PKGVERSION}"
+				fi
+			fi
+		fi
+	fi
+}
+
+checkVersion() {
+	isInstalled zimbra-core
+	if [ x"$PKGINSTALLED" != "x" ]; then
+		export ZMVERSION_CURRENT=`echo $PKGVERSION | sed s/^zimbra-core-//`
+		ZM_CUR_MAJOR=$(perl -e '$v=$ENV{ZMVERSION_CURRENT}; $v =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/; ($maj,$min,$mic) = $v =~ m/^(\d+)\.(\d+)\.(\d+)/; print "$maj\n"')
+		ZM_CUR_MINOR=$(perl -e '$v=$ENV{ZMVERSION_CURRENT}; $v =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/; ($maj,$min,$mic) = $v =~ m/^(\d+)\.(\d+)\.(\d+)/; print "$min\n"')
+		ZM_CUR_MICRO=$(perl -e '$v=$ENV{ZMVERSION_CURRENT}; $v =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/; ($maj,$min,$mic) = $v =~ m/^(\d+)\.(\d+)\.(\d+)/; print "$mic\n"')
+		if [ ${ZM_CUR_MAJOR} -lt 10 ]; then
+			echo "ERROR: zimbra-onlyoffice installation requires ZCS 10.0 or later."
+			exit 1
+		fi
+	fi
+}
+
+ask() {
+	PROMPT=$1
+	DEFAULT=$2
+	echo ""
+	echo -n "$PROMPT [$DEFAULT] "
+	read response
+	if [ -z $response ]; then
+		response=$DEFAULT
+	fi
+}
+
+askYN() {
+	PROMPT=$1
+	DEFAULT=$2
+	if [ "x$DEFAULT" = "xyes" -o "x$DEFAULT" = "xYes" -o "x$DEFAULT" = "xy" -o "x$DEFAULT" = "xY" ]; then
+		DEFAULT="Y"
+	else
+		DEFAULT="N"
+	fi
+	while [ 1 ]; do
+		ask "$PROMPT" "$DEFAULT"
+		response=$(perl -e "print lc(\"$response\");")
+		if [ -z $response ]; then
+			:
+		else
+			if [ $response = "yes" -o $response = "y" ]; then
+				response="yes"
+				break
+			else
+				if [ $response = "no" -o $response = "n" ]; then
+					response="no"
+					break
+				fi
+			fi
+		fi
+		echo "A Yes/No answer is required"
+	done
+}
+
+configurePackageServer() {
+	echo -e ""
+	response="no"
+	HOSTNAME=`hostname --fqdn`
+	askYN "Use Zimbra's package repository" "Y"
+	if [ $response = "yes" ]; then
+		PACKAGE_SERVER="repo.zimbra.com"
+		response="no"
+		echo $HOSTNAME | egrep -qe 'eng.zimbra.com$|zimbradev.com$' > /dev/null 2>&1
+		if [ $? = 0 ]; then
+			askYN "Use internal development repo" "N"
+			if [ $response = "yes" ]; then
+				PACKAGE_SERVER="repo-dev.eng.zimbra.com"
+			else
+				response="no"
+				askYN "Use internal production mirror" "N"
+				if [ $response = "yes" ]; then
+					PACKAGE_SERVER="repo.eng.zimbra.com"
+				fi
+			fi
+		fi
+	fi
+	echo $PLATFORM | egrep -q "UBUNTU|DEBIAN"
+	if [ $? = 0 ]; then
+		if [ $PLATFORM = "UBUNTU22_64" ]; then
+			repo="jammy"
+		elif [ $PLATFORM = "UBUNTU20_64" ]; then
+			repo="focal"
+		elif [ $PLATFORM = "UBUNTU18_64" ]; then
+			repo="bionic"
+		else
+			print "Aborting, unknown platform: $PLATFORM"
+			exit 1
+		fi
+		echo "Configuring package repository"
+		apt-get install -y apt-transport-https >>$LOGFILE 2>&1
+		if [ $? -ne 0 ]; then
+			 echo "ERROR: Unable to install packages via apt-get"
+			 echo "Please fix system to allow normal package installation before proceeding"
+			 exit 1
+		fi
+		if [ ${ZM_CUR_MAJOR} -eq 10 -a ${ZM_CUR_MINOR} -eq 0 ]; then
+cat > /etc/apt/sources.list.d/zimbra-onlyoffice.list << EOF
+deb     [arch=amd64] https://$PACKAGE_SERVER/apt/onlyoffice $repo zimbra
+EOF
+		else
+cat > /etc/apt/sources.list.d/zimbra-onlyoffice.list << EOF
+deb     [arch=amd64] https://$PACKAGE_SERVER/apt/onlyoffice-${ZM_CUR_MAJOR}${ZM_CUR_MINOR}${ZM_CUR_MICRO} $repo zimbra
+EOF
+		fi
+		apt-get update >>$LOGFILE 2>&1
+		if [ $? -ne 0 ]; then
+			echo "ERROR: Unable to install packages via apt-get"
+			echo "Please fix system to allow normal package installation before proceeding"
+			exit 1
+		fi
+	else
+		if [ $PLATFORM = "RHEL7_64" ]; then
+			repo="rhel7"
+		elif [ $PLATFORM = "RHEL8_64" ]; then
+			repo="rhel8"
+		elif [ $PLATFORM = "RHEL9_64" ]; then
+			repo="rhel9"
+		else
+			print "Aborting, unknown platform: $PLATFORM"
+			exit 1
+		fi
+		echo "Configuring package repository"
+		if [ ${ZM_CUR_MAJOR} -eq 10 -a ${ZM_CUR_MINOR} -eq 0 ]; then
+cat > /etc/yum.repos.d/zimbra-onlyoffice.repo <<EOF
+[zimbra-onlyoffice]
+name=Zimbra Onlyoffice RPM Repository
+baseurl=https://$PACKAGE_SERVER/rpm/onlyoffice/$repo
+gpgcheck=1
+enabled=1
+EOF
+		else
+cat > /etc/yum.repos.d/zimbra-onlyoffice.repo <<EOF
+[zimbra-onlyoffice]
+name=Zimbra Onlyoffice RPM Repository
+baseurl=https://$PACKAGE_SERVER/rpm/onlyoffice-${ZM_CUR_MAJOR}${ZM_CUR_MINOR}${ZM_CUR_MICRO}/$repo
+gpgcheck=1
+enabled=1
+EOF
+		fi
+		yum --disablerepo=* --enablerepo=zimbra-onlyoffice clean metadata >>$LOGFILE 2>&1
+		yum check-update --disablerepo=* --enablerepo=zimbra-onlyoffice --noplugins >>$LOGFILE 2>&1
+		if [ $? -ne 0 -a $? -ne 100 ]; then
+			echo "ERROR: yum check-update failed"
+			echo "Please validate ability to install packages"
+			exit 1
+		fi
+	fi
+}
+
+getInstallPackages() {
+	INSTALL_PACKAGES=""
+	isInstalled zimbra-store
+	if [ "x$PKGINSTALLED" != "x" ]; then
+		INSTALL_PACKAGES="$PACKAGES"
+	else
+		INSTALL_PACKAGES="$PACKAGES zimbra-mariadb"
+	fi	
+}
+
+pkgError() {
+	echo ""
+	echo "ERROR: Unable to install required packages"
+	echo "Fix the issues with remote package installation and rerun the installer"
+	exit 1
+}
+
+
+installPackages() {
+	echo
+	echo "Beginning Installation - see $LOGFILE for details..."
+	echo
+	pretty_display() {
+		local banner=$1; shift;
+		local pk=("$@");
+		echo
+		echo "$banner (${#pk[*]}):" | tee -a $LOGFILE
+		local p;
+		for p in "${pk[@]}"
+		do
+			echo "   $(basename $p)" | tee -a $LOGFILE
+		done
+		echo -n "      ...";
+		echo >> $LOGFILE
+	}
+	local repo_pkg_names=()
+	for PKG in $INSTALL_PACKAGES
+	do
+		repo_pkg_names+=( "$PKG" )
+	done
+	if [ "${#repo_pkg_names[@]}" -gt 0 ]; then
+		pretty_display "Downloading packages" "${repo_pkg_names[@]}";
+		$PACKAGEDOWNLOAD "${repo_pkg_names[@]}" >> $LOGFILE 2>&1
+		if [ $? -ne 0 ]; then
+			echo "Unable to download packages from repository. System is not modified."
+			exit 1
+		fi
+		echo "done"
+		pretty_display "Installing repo packages" "${repo_pkg_names[@]}";
+		$REPOINST "${repo_pkg_names[@]}" >>$LOGFILE 2>&1
+		if [ $? != 0 ]; then
+			pkgError
+		fi
+		echo "done"
+		echo "Running Post Installation Configuration..."
+	fi
+}
+
+runAsZimbra() {
+	echo "COMMAND: $1" >> $LOGFILE 2>&1
+	su - zimbra -c "$1" >> $LOGFILE 2>&1
+}
+
+isEnabled() {
+	local service_name="$1"
+	runAsZimbra "/opt/zimbra/bin/zmprov -l gs `/opt/zimbra/bin/zmhostname` zimbraServiceEnabled 2>/dev/null | grep -qw '$service_name'"
+	if [ $? -eq 0 ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+enableOnlyofficeService() {
+	if ! isEnabled "onlyoffice"; then
+		echo -n "Enabling Onlyoffice service... "
+		if runAsZimbra "zmprov ms `/opt/zimbra/bin/zmhostname` +zimbraServiceInstalled onlyoffice +zimbraServiceEnabled onlyoffice"; then
+			echo "done"
+		else
+			echo "failed"
+			exit 1
+		fi
+	fi
+}
+
+createSudoersFileIfNeeded() {
+	if [ ! -e "/etc/sudoers.d/02_zimbra-store" ]; then
+		echo "%zimbra ALL=NOPASSWD:/opt/zimbra/libexec/zmmailboxdmgr" | sudo tee /etc/sudoers.d/02_zimbra-store >/dev/null
+		sudo chmod 440 /etc/sudoers.d/02_zimbra-store
+	fi
+}
+
+initSql() {
+	if [ ! -f "/opt/zimbra/log/zmmyinit.log" ] || [ ! -d "/opt/zimbra/db/data/zimbra" ]; then
+		if isEnabled "onlyoffice"; then
+			echo -n "Initializing sql database..."
+			runAsZimbra "zmlocalconfig -e mysql_bind_address=127.0.0.1"
+			runAsZimbra "/opt/zimbra/libexec/zmmyinit"
+			echo "done"
+		fi
+	fi
+}
+
+createOnlyofficeDB() {
+	mysql_root_pass=$(su - zimbra -c "zmlocalconfig -x -s -m nokey mysql_root_password")
+	runAsZimbra '/opt/zimbra/bin/mysql -e "USE onlyoffice;"'
+	if [ $? -ne 0 ]; then
+		echo -n "Creating onlyoffice database..."
+		runAsZimbra "/opt/zimbra/common/bin/mysql -S /opt/zimbra/data/tmp/mysql/mysql.sock -u root --password=$mysql_root_pass < /opt/zimbra/onlyoffice/bin/createdb.sql"
+		if [ $? = 0 ]; then
+			echo "done"
+		else
+			echo "failed"
+			exit 1
+		fi	
+	fi
+}
+
+createDirForOnlyoffice() {
+	local zimbra_user="zimbra"
+	local zimbra_uid=$(id -u "$zimbra_user")
+	local zimbra_gid=$(id -g "$zimbra_user")
+	local dir_to_create=(
+	'/opt/zimbra/index'
+	'/opt/zimbra/store'
+	'/opt/zimbra/data/tmp/mysql'
+	'/opt/zimbra/mailboxd'
+	'/opt/zimbra/common/conf'
+	)
+	for dir in "${dir_to_create[@]}"; do
+		if [ ! -d "$dir" ]; then
+			mkdir -p "$dir"
+			chown "$zimbra_uid:$zimbra_gid" "$dir"
+			chmod 0755 "$dir"
+		fi
+	done
+}
+
+configureOnlyoffice() {
+	if isEnabled "onlyoffice"; then
+		echo -n "Configuring Onlyoffice..."
+		runAsZimbra "/opt/zimbra/bin/zmprov -r -m -l mc default zimbraFeatureViewInHTMLEnabled TRUE"
+		chmod +x /opt/zimbra/onlyoffice/bin/zmonlyofficeconfig
+		/opt/zimbra/onlyoffice/bin/zmonlyofficeconfig
+		chmod 775 /opt/zimbra/onlyoffice/bin/process_id.json
+		chown -R zimbra:zimbra /opt/zimbra/onlyoffice/
+		createOnlyofficeDB
+		if isEnabled "mailbox"; then
+			ONLYOFFICESTANDALONE="no"
+		else
+			ONLYOFFICESTANDALONE="yes"
+		fi
+		# set the config value zimbraDocumentServerHost
+		# if not standalone:
+		#    set the server host name at server level config
+		# if standalone server :
+		#    1. global config already present, do not override
+		#    2. global config not present, this server name goes as global config
+		if [ "$ONLYOFFICESTANDALONE" = "no" ]; then
+			runAsZimbra "/opt/zimbra/bin/zmprov -r -m -l ms `/opt/zimbra/bin/zmhostname` zimbraDocumentServerHost `/opt/zimbra/bin/zmhostname`"
+		else
+			ONLYOFFICE_HOST=$(su - zimbra -c "zmprov -l gacf zimbraDocumentServerHost" | awk -F': ' '/zimbraDocumentServerHost/{print $2}')
+			if [ -z "$ONLYOFFICE_HOST" ]; then
+				runAsZimbra "/opt/zimbra/bin/zmprov -r -m -l mcf zimbraDocumentServerHost `/opt/zimbra/bin/zmhostname`"
+			fi
+		fi
+	fi
+}
+
+startServices() {
+	echo -n "Starting Services..."
+	if isEnabled "onlyoffice"; then
+		if ! su - zimbra -c "/opt/zimbra/bin/zmonlyofficectl restart &>/dev/null"; then
+			echo "failed to start onlyoffice"
+		fi
+	fi
+	if isEnabled "proxy"; then
+		if ! su - zimbra -c "/opt/zimbra/bin/zmproxyctl restart &>/dev/null"; then
+			echo "failed to restart proxy service"
+		fi
+	else
+		echo "restart proxy service as zimbra user"
+	fi
+	if ! su - zimbra -c "/opt/zimbra/bin/zmconfigdctl restart &>/dev/null"; then
+		echo "failed to restart zmconfigdctl"
+	fi
+	echo "done"
+	echo "Configuration complete."
+}
+
+getPlatformVars
+checkVersion
+configurePackageServer
+getInstallPackages
+installPackages
+enableOnlyofficeService
+createDirForOnlyoffice
+createSudoersFileIfNeeded
+initSql
+configureOnlyoffice
+startServices
