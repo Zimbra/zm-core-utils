@@ -270,6 +270,8 @@ displayHelp()
 	echo "   --service start|restart|stop|status"
 	echo "   --service setLogLevel=INFO|DEBUG|ERROR|WARN"
 	echo "   --service setOfflineMode=true|false"
+	echo "   --service getLogLevel"
+	echo "   --service getOfflineMode"
 	echo "   --nalpeiron start|restart|stop|status"
 	echo "   --exportOfflineLicenseData | -exportOfflineLicenseData --exportStartTime YYYY/MM/DD --exportEndTime YYYY/MM/DD (offline only feature)"
 	echo "   --clearLicenseWorkDir"
@@ -317,6 +319,31 @@ case "$1" in
 			  		exit 0
 			  	fi
 			  	;;
+			"getLogLevel")
+			  # Ensure exact match for "getLogLevel"
+			  if [ "$#" -ne 2 ]; then
+			      displayHelp
+			      exit 1
+			  fi
+			  # Read the current log level from CONFIG_FILE
+			  currentLogLevel=$(grep "zimbra_license_daemon_log_level" "$CONFIG_FILE" | cut -d '=' -f 2)
+			  # Output the current log level
+			  echo "Current log level: $currentLogLevel"
+			  exit 0
+			  ;;
+
+			"getOfflineMode")
+			  # Ensure exact match for "getOfflineMode"
+			  if [ "$#" -ne 2 ]; then
+			      displayHelp
+			      exit 1
+			  fi
+			  # Read the current log level from CONFIG_FILE
+			  offlineMode=$(grep "zimbra_license_daemon_offline_mode" "$CONFIG_FILE" | cut -d '=' -f 2)
+			  # Output the current log level
+			  echo "Current offline mode: $offlineMode"
+			  exit 0
+			  ;;
 
 			"setLogLevel=INFO"|"setLogLevel=DEBUG"|"setLogLevel=ERROR"|"setLogLevel=WARN")
 				loglevel=`echo $2|cut -d = -f 2`
