@@ -23,7 +23,6 @@ fi
 CONFIG_FILE=/opt/zimbra/license/config/license-daemon.cnf
 ZMJAVA="/opt/zimbra/common/lib/jvm/java/bin/java"
 LD_LIBRARY_PATH="/opt/zimbra/license/lib"
-LICENSE_DAEMON_SERVICE_OUTPUT="/opt/zimbra/log/license-daemon-service.log"
 LICENSE_DAEMON_SERVICE="/opt/zimbra/license/lib/app.jar"
 LICENSE_DAEMON_SERVICE_PORT="8081"
 licenseDaemonServicepid=""
@@ -66,9 +65,9 @@ startLicenseDaemonService()
 		zimbra_license_daemon_offline_mode=false
 	fi
 	if [ -f ${LD_LIBRARY_PATH}/libShafer-prod-linux64.so ]; then
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=prod --server.port=$LICENSE_DAEMON_SERVICE_PORT > $LICENSE_DAEMON_SERVICE_OUTPUT 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=prod --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
 	else
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > $LICENSE_DAEMON_SERVICE_OUTPUT 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
 	fi
 	sleep 5
 	checkLicenseDaemonServiceRunning
@@ -317,7 +316,6 @@ case "$1" in
 			  		exit 0
 			  	fi
 			  	;;
-
 			"setLogLevel=INFO"|"setLogLevel=DEBUG"|"setLogLevel=ERROR"|"setLogLevel=WARN")
 				loglevel=`echo $2|cut -d = -f 2`
 				sed -i "/zimbra_license_daemon_log_level*/c\zimbra_license_daemon_log_level="$loglevel"" $CONFIG_FILE
