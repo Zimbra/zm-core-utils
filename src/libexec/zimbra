@@ -32,13 +32,11 @@
 
 
 is_zimbra_license_daemon_installed() {
-    if command -v dpkg &> /dev/null; then
-        dpkg -l | grep -q zimbra-license-daemon
-    elif command -v rpm &> /dev/null; then
-        rpm -q zimbra-license-daemon &> /dev/null
-    else
-        return 1
-    fi
+	if [ -f /opt/zimbra/license/config/license-daemon.cnf ]; then
+		return 0
+	else
+		return 1
+	fi
 }
 
 command() {
@@ -46,7 +44,7 @@ command() {
         chown -f zimbra:zimbra /opt/zimbra/redolog/redo.log
     fi
 
-    su - zimbra -c "zmcontrol $1 </dev/null"
+    runuser -l zimbra -c "zmcontrol $1 </dev/null"
     RETVAL1=$?
 
     case "$1" in
@@ -57,7 +55,7 @@ command() {
         shutdown)
             # Use stop for zmlicensectl when command is shutdown
             if is_zimbra_license_daemon_installed; then
-                su - zimbra -c "zmlicensectl --service stop </dev/null"
+                runuser -l zimbra -c "zmlicensectl --service stop </dev/null"
                 RETVAL2=$?
             else
                 RETVAL2=0
@@ -66,7 +64,7 @@ command() {
         startup)
             # Use start for zmlicensectl when command is startup
             if is_zimbra_license_daemon_installed; then
-                su - zimbra -c "zmlicensectl --service start </dev/null"
+                runuser -l zimbra -c "zmlicensectl --service start </dev/null"
                 RETVAL2=$?
             else
                 RETVAL2=0
