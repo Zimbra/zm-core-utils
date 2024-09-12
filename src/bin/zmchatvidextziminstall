@@ -1,0 +1,418 @@
+#!/bin/bash 
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2024 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+CHAT_VIDEO="/opt/zimbra/lib/ext/chat-video"
+MODERN_ZIMLET="/opt/zimbra/zimlets-deployed/zimbra-zimlet-chat-video/config_template.xml"
+CLASSIC_ZIMLET="/opt/zimbra/zimlets-deployed/com_zimbra_chat_video/config_template.xml"
+MODERN_ZIMLET_TMP="/tmp/modern_zimlet_template.xml"
+CLASSIC_ZIMLET_TMP="/tmp/classic_zimlet_template.xml"
+CONFIG_DOMAINS_FILE="$CHAT_VIDEO/config.domains.json"
+CONFIG_PROPERTIES_FILE="$CHAT_VIDEO/config.properties"
+CONFIG="$CHAT_VIDEO/chat-video.cnf"
+CONFIG_TMP="/tmp/chat-video.cnf.in"
+
+getPlatformVars() {
+    PLATFORM=`/opt/zimbra/libexec/get_plat_tag.sh`
+    echo $PLATFORM | egrep -q "UBUNTU|DEBIAN"
+    if [ $? = 0 ]; then
+        REPOINST='apt-get install -y'
+        PACKAGEDOWNLOAD='apt-get --download-only install -y --force-yes'
+        PACKAGEQUERY='dpkg -s'
+        PACKAGEEXT='deb'
+    else
+        REPOINST='yum -y install'
+        PACKAGEDOWNLOAD='yum -y install --downloadonly'
+        PACKAGEQUERY='rpm -q'
+        PACKAGEEXT='rpm'
+    fi
+}
+
+isInstalled() {
+    pkg=$1
+    PKGINSTALLED=""
+    if [ "x$PACKAGEEXT" = "xrpm" ]; then
+        $PACKAGEQUERY $pkg >/dev/null 2>&1
+        if [ $? = 0 ]; then
+            PKGVERSION=`$PACKAGEQUERY $pkg 2> /dev/null | sort -u`
+            PKGINSTALLED=`$PACKAGEQUERY $pkg | sed -e 's/\.[a-zA-Z].*$//' 2> /dev/null`
+        fi
+    else
+        Q=`$PACKAGEQUERY $pkg 2>/dev/null | egrep '^Status: ' `
+        if [ "x$Q" != "x" ]; then
+            echo $Q | grep 'not-installed' > /dev/null 2>&1
+            if [ $? != 0 ]; then
+                echo $Q | grep 'deinstall ok' > /dev/null 2>&1
+                if [ $? != 0 ]; then
+                    PKGVERSION=`$PACKAGEQUERY $pkg | egrep '^Version: ' | sed -e 's/Version: //' 2> /dev/null`
+                    PKGINSTALLED="${pkg}-${PKGVERSION}"
+                fi
+            fi
+        fi
+    fi
+}
+
+checkVersion() {
+    isInstalled zimbra-core
+    if [ x"$PKGINSTALLED" != "x" ]; then
+	    export ZMVERSION_CURRENT=`echo $PKGVERSION | sed s/^zimbra-core-//`
+	    ZM_CUR_MAJOR=$(perl -e '$v=$ENV{ZMVERSION_CURRENT}; $v =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/; ($maj,$min,$mic) = $v =~ m/^(\d+)\.(\d+)\.(\d+)/; print "$maj\n"')
+	    ZM_CUR_MINOR=$(perl -e '$v=$ENV{ZMVERSION_CURRENT}; $v =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/; ($maj,$min,$mic) = $v =~ m/^(\d+)\.(\d+)\.(\d+)/; print "$min\n"')
+	    ZM_CUR_MICRO=$(perl -e '$v=$ENV{ZMVERSION_CURRENT}; $v =~ s/^(\d+\.\d+\.[^_]*_[^_]+_[^.]+).*/\1/; ($maj,$min,$mic) = $v =~ m/^(\d+)\.(\d+)\.(\d+)/; print "$mic\n"')
+	    if [ -z "$ZM_CUR_MAJOR" ] || [ -z "$ZM_CUR_MINOR" ] || [ -z "$ZM_CUR_MICRO" ]; then
+		    echo "ERROR: Failed to determine ZCS Version."
+		    exit 1
+	    fi
+	    if [ "${ZM_CUR_MAJOR}" -lt "10" ] || { [ "${ZM_CUR_MAJOR}" -eq "10" ] && [ "${ZM_CUR_MINOR}" -lt "1" ]; }; then
+		    echo "ERROR: Chat Video zimlets and extension installation requires ZCS 10.1.0 or later."
+		    exit 1
+	    fi
+    fi
+}
+
+isStoreInstalled() {
+    isInstalled zimbra-network-store
+    if [ x$PKGINSTALLED = "x" ]; then
+	    echo "ERROR: Chat Video zimlets and extension installation requires mailbox node."
+	    exit 1
+    fi
+}
+
+check_feature_status() {
+	local feature=$1
+	echo "$license_output" | grep -A 2 "Feature : $feature" | grep -i "Status:" | grep -i "Authorized for use" >/dev/null 2>&1
+}
+
+checkLicense() {
+	license_output=$(su - zimbra -c "zmlicense -p")
+	exit_status=$?
+	if [ $exit_status -ne 0 ]; then
+		echo "ERROR: Failed to run zmlicense -p"
+		exit 1
+	fi
+	if [ -z "$license_output" ]; then
+		echo "ERROR: No output received from zmlicense -p"
+		exit 1
+	fi
+	features_to_check=("BasicOneToOneChatAccountsLimit" "ChatAccountsLimit" "ChatVideoAccountsLimit")
+	feature_authorized=0
+	for feature in "${features_to_check[@]}"; do
+		if check_feature_status "$feature"; then
+			feature_authorized=1
+			break
+		fi
+	done
+	if [ $feature_authorized -eq 0 ]; then
+		echo "ERROR: Your license does not support Chat Video zimlets."
+		exit 1
+	fi
+}
+
+ask() {
+    local PROMPT=$1
+    local DEFAULT=$2
+    if [ -z "$DEFAULT" ]; then
+        echo -n "$PROMPT: "
+    else
+        echo -n "$PROMPT [$DEFAULT]: "
+    fi
+    read response
+    [ -z "$response" ] && response=$DEFAULT
+}
+
+askYN() {
+    local PROMPT=$1
+    local DEFAULT=$2
+    DEFAULT=${DEFAULT,,}
+    local valid_responses=("yes" "no")
+    while true; do
+        ask "$PROMPT" "$DEFAULT"
+        response=${response,,}
+        if [[ " ${valid_responses[@]} " =~ " $response " ]]; then
+            break
+        else
+            echo "A Yes/No answer is required"
+        fi
+    done
+}
+
+pkgError() {
+    echo ""
+    echo "ERROR: Unable to install required packages"
+    echo "Fix the issues with remote package installation and rerun the installer"
+    exit 1
+}
+
+installPackages() {
+    echo
+    echo "Beginning Installation - see $LOGFILE for details..."
+    echo
+    pretty_display() {
+        local banner=$1; shift;
+        local pk=("$@");
+        echo
+        echo "$banner (${#pk[*]}):" | tee -a $LOGFILE
+        local p;
+        for p in "${pk[@]}"
+        do
+            echo "   $(basename $p)" | tee -a $LOGFILE
+        done
+        echo -n "      ...";
+        echo >> $LOGFILE
+    }
+    local repo_pkg_names=()
+    for PKG in $INSTALL_PACKAGES
+    do
+        repo_pkg_names+=( "$PKG" )
+    done
+    if [ "${#repo_pkg_names[@]}" -gt 0 ]; then
+        pretty_display "Downloading packages" "${repo_pkg_names[@]}";
+        $PACKAGEDOWNLOAD "${repo_pkg_names[@]}" >> $LOGFILE 2>&1
+        if [ $? -ne 0 ]; then
+            echo "Unable to download packages from repository. System is not modified."
+            exit 1
+        fi
+        echo "done"
+        pretty_display "Installing repo packages" "${repo_pkg_names[@]}";
+        $REPOINST "${repo_pkg_names[@]}" >>$LOGFILE 2>&1
+        if [ $? != 0 ]; then
+            pkgError
+        fi
+        echo "done"
+        echo "Running Post Installation Configuration..."
+    fi
+}
+
+readExistingValues() {
+    if [ -f "$CONFIG" ]; then
+        while IFS='=' read -r key value; do
+            existing_values[$key]=$value
+        done < "$CONFIG"
+    fi
+}
+
+promptForInput() {
+    local var_name=$1
+    local prompt_message=$2
+    local current_value=$3
+    local example=$4
+    while true; do
+        if [ -n "$example" ] && [ -z "$current_value" ]; then
+            ask "$prompt_message (E.g. $example)" "$current_value"
+        else
+            ask "$prompt_message" "$current_value"
+        fi
+        if [ -z "$response" ]; then
+            if [ -n "$current_value" ]; then
+                response=$current_value
+            else
+                response=""
+            fi
+        fi
+        eval "$var_name=\"$response\""
+        break
+    done
+}
+
+createDomainsJson() {
+    contains_non_empty_values() {
+        local file=$1
+        local domain=$(grep -oP '"domain": *"\K[^"]*' "$file")
+        local apiKey=$(grep -oP '"apiKey": *"\K[^"]*' "$file")
+        [ -n "$domain" ] && [ -n "$apiKey" ] && [ "$domain" != "" ] && [ "$apiKey" != "" ]
+    }
+    if [ -f "$CONFIG_DOMAINS_FILE" ]; then
+        if contains_non_empty_values "$CONFIG_DOMAINS_FILE"; then
+            return
+        fi
+    fi
+    echo -n "Creating JSON configuration file $CONFIG_DOMAINS_FILE..."
+    cat <<EOF > "$CONFIG_DOMAINS_FILE"
+[
+  {
+    "domain": "$ZIMBRA_DOMAIN_NAME",
+    "apiKey": "$ZIMBRA_DOMAIN_API_KEY"
+  }
+]
+EOF
+    echo "done"
+}
+
+createPropertiesFile() {
+    echo -n "Creating properties configuration file $CONFIG_PROPERTIES_FILE..."
+    cat <<EOF > "$CONFIG_PROPERTIES_FILE"
+chatVideoApiURL=https://$PRIMARY_CHAT_SERVER_WEB_DOMAIN/api
+EOF
+	echo "done"
+}
+
+updateXMLFile() {
+    local input_file="$1"
+    local output_file="$2"
+    local web_url="https://$PRIMARY_CHAT_SERVER_WEB_DOMAIN"
+    if [ ! -f "$input_file" ]; then
+        echo "ERROR: $input_file does not exist."
+        exit 1
+    fi
+    cp "$input_file" "$output_file" || {
+        echo "ERROR: Failed to copy $input_file to $output_file."
+        exit 1
+    }
+    sed -i "s|<property name=\"iframeURL\">.*</property>|<property name=\"iframeURL\">$web_url</property>|" "$output_file" || {
+        echo "ERROR: Failed to update iframeURL in $output_file."
+        exit 1
+    }
+    sed -i "s|<property name=\"apiURL\">.*</property>|<property name=\"apiURL\">$web_url/api</property>|" "$output_file" || {
+        echo "ERROR: Failed to update apiURL in $output_file."
+        exit 1
+    }
+    sed -i "s|<property name=\"webURL\">.*</property>|<property name=\"webURL\">$web_url</property>|" "$output_file" || {
+        echo "ERROR: Failed to update webURL in $output_file."
+        exit 1
+    }
+}
+
+runAsZimbra() {
+	echo "COMMAND: $1" >> $LOGFILE 2>&1
+	su - zimbra -c "$1" >> $LOGFILE 2>&1
+}
+
+updateZimletConfiguration() {
+    chmod 644 $MODERN_ZIMLET_TMP
+    chmod 644 $CLASSIC_ZIMLET_TMP
+    execute_command() {
+        local description="$1"
+        local command="$2"
+
+        echo -n "$description... "
+        if runAsZimbra "$command"; then
+            echo "done"
+        else
+            echo "failed"
+            exit 1
+        fi
+    }
+    execute_command "Updating chat video modern zimlet configuration service" "zmzimletctl configure $MODERN_ZIMLET_TMP"
+    execute_command "Updating chat video classic zimlet configuration service" "zmzimletctl configure $CLASSIC_ZIMLET_TMP"
+    execute_command "Clearing the zimlet cache" "zmprov flushCache zimlet"
+    execute_command "Restarting mailbox" "zmmailboxdctl restart"
+    echo "Configuration complete."
+}
+
+
+getInputs() {
+    mkdir -p "$CHAT_VIDEO"
+    if [ ! -f "$CONFIG" ]; then
+        touch "$CONFIG"
+    fi
+    declare -A existing_values
+    readExistingValues
+    rm -f "$CONFIG_TMP" || { echo "ERROR: Failed to remove temporary file $CONFIG_TMP."; exit 1; }
+    while true; do
+        promptForInput "PRIMARY_CHAT_SERVER_WEB_DOMAIN" "Provide Primary Chat server Web domain" "${existing_values[PRIMARY_CHAT_SERVER_WEB_DOMAIN]}" "chat.company.com"
+        if [ -z "$PRIMARY_CHAT_SERVER_WEB_DOMAIN" ]; then
+            askYN "Primary Chat server Web domain is required. Do you want to exit?" "no"
+            if [ "$response" = "yes" ]; then
+                exit 1
+            fi
+        else
+            break
+        fi
+    done
+    if [ -z "${existing_values[ZIMBRA_DOMAIN_NAME]}" ]; then
+        promptForInput "ZIMBRA_DOMAIN_NAME" "Provide Zimbra domain name" "" "mail.company.com"
+        if [ -n "$response" ]; then
+            ZIMBRA_DOMAIN_NAME=$response
+	    while true; do
+		    promptForInput "ZIMBRA_DOMAIN_API_KEY" "Provide Zimbra domain API key" "" ""
+		    if [ -z "$ZIMBRA_DOMAIN_API_KEY" ]; then
+			    askYN "Zimbra domain API key is required with Zimbra domain name. Do you want to exit?" "no"
+			    if [ "$response" = "yes" ]; then
+				    exit 1
+			    fi
+		    else
+			    break
+		    fi
+	    done
+        else
+            echo "INFO: Providing a Zimbra domain name is optional. If you choose not to provide it, you can still proceed."
+            ZIMBRA_DOMAIN_NAME=""
+            ZIMBRA_DOMAIN_API_KEY=""
+        fi
+    else
+        ZIMBRA_DOMAIN_NAME=${existing_values[ZIMBRA_DOMAIN_NAME]}
+        if [ -z "${existing_values[ZIMBRA_DOMAIN_API_KEY]}" ]; then
+		while true; do
+			promptForInput "ZIMBRA_DOMAIN_API_KEY" "Provide Zimbra domain API key" "" ""
+			if [ -z "$ZIMBRA_DOMAIN_API_KEY" ]; then
+				askYN "Zimbra domain API key is required with Zimbra domain name. Do you want to exit?" "no"
+				if [ "$response" = "yes" ]; then
+					exit 1
+				fi
+			else
+				break
+			fi
+		done
+        else
+            ZIMBRA_DOMAIN_API_KEY=${existing_values[ZIMBRA_DOMAIN_API_KEY]}
+        fi
+    fi
+    {
+        echo "PRIMARY_CHAT_SERVER_WEB_DOMAIN=$PRIMARY_CHAT_SERVER_WEB_DOMAIN"
+        [ -n "$ZIMBRA_DOMAIN_NAME" ] && echo "ZIMBRA_DOMAIN_NAME=$ZIMBRA_DOMAIN_NAME"
+        [ -n "$ZIMBRA_DOMAIN_API_KEY" ] && echo "ZIMBRA_DOMAIN_API_KEY=$ZIMBRA_DOMAIN_API_KEY"
+    } > "$CONFIG_TMP"
+    cp "$CONFIG_TMP" "$CONFIG" || { echo "ERROR: Failed to copy $CONFIG_TMP to $CONFIG"; exit 1; }
+    rm -f "$CONFIG_TMP" || { echo "ERROR: Failed to remove $CONFIG_TMP"; exit 1; }
+}
+
+
+ID=`id -u`
+
+if [ "x$ID" != "x0" ]; then
+    echo "Run as root!"
+    exit 1
+fi
+
+if [ ! -f "/opt/zimbra/bin/zmcontrol" ] || [ ! -f "/opt/zimbra/conf/localconfig.xml" ]; then
+    echo "The Zimbra Collaboration Server does not appear to be installed."
+    exit 1
+fi
+
+if [ ! -f "/opt/zimbra/bin/zmbackupquery" ]; then
+    echo "Chat Video zimlets and extension installation requires ZCS Network Edition."
+    exit 1
+fi
+
+INSTALL_PACKAGES="zimbra-zimlet-chat-video-classic zimbra-zimlet-chat-video-modern zimbra-extension-chat-video"
+LOGFILE=`mktemp -t chat-video-install.log.XXXXXXXX 2> /dev/null` || { echo "Failed to create tmpfile"; exit 1; }
+if [ -e "/tmp/chat-video-install.log" ]; then
+    rm -f "/tmp/chat-video-install.log"
+fi
+ln -sf "$LOGFILE" "/tmp/chat-video-install.log"
+echo "Operations logged to $LOGFILE"
+getPlatformVars
+checkVersion
+isStoreInstalled
+checkLicense
+getInputs
+installPackages
+createDomainsJson
+createPropertiesFile
+updateXMLFile "$MODERN_ZIMLET" "$MODERN_ZIMLET_TMP"
+updateXMLFile "$CLASSIC_ZIMLET" "$CLASSIC_ZIMLET_TMP"
+echo "Configuration updated in $CONFIG"
+updateZimletConfiguration
