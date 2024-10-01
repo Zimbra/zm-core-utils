@@ -570,6 +570,8 @@ sub displayVersion {
   my $proxy_patch = "";
   my $mta_patch = "";
   my $ldap_patch = "";
+  my $lds_patch = "";
+  my $onlyoffice_patch = "";
   if (open(HIST_FILE, "/opt/zimbra/.install_history")) {
     my $hline;
     while ($hline = <HIST_FILE>) {
@@ -589,12 +591,20 @@ sub displayVersion {
       if ($entry =~ /CONFIGURED patch /) {
 	      $zimbra_patch = substr($entry, 17);
       }
+      if ($entry =~ /CONFIGURED lds-patch /) {
+      	      $lds_patch = substr($entry, 21);
+      }
+      if ($entry =~ /CONFIGURED onlyoffice-patch /) {
+              $onlyoffice_patch = substr($entry, 28);
+      }
 	  
       if ($entry =~ /INSTALL SESSION START/) {
 	      $zimbra_patch = "";
 	      $proxy_patch = "";
 	      $mta_patch = "";
 	      $ldap_patch = "";
+	      $lds_patch = "";
+	      $onlyoffice_patch = "";
       }
     }
     close(HIST_FILE);
@@ -603,7 +613,9 @@ sub displayVersion {
   my $proxy_patch_version = getPatchVersion($proxy_patch);
   my $mta_patch_version = getPatchVersion($mta_patch);
   my $ldap_patch_version = getPatchVersion($ldap_patch);
-  my @patches = ($zimbra_patch_version, $proxy_patch_version, $mta_patch_version, $ldap_patch_version);
+  my $lds_patch_version = getPatchVersion($lds_patch);
+  my $onlyoffice_patch_version = getPatchVersion($onlyoffice_patch);
+  my @patches = ($zimbra_patch_version, $proxy_patch_version, $mta_patch_version, $ldap_patch_version, $lds_patch_version, $onlyoffice_patch_version);
   $patch = max(@patches);
   if ($patch != 0) {
 	  $base_version = "$release";
