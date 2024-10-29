@@ -29,6 +29,7 @@ check_if_root() {
 check_setfacl_installed() {
 	if ! which setfacl &> /dev/null; then
 		echo "setfacl command not found. skipping"
+		exit 0
 	fi
 }
 
