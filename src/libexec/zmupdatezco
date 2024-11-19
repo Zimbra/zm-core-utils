@@ -24,6 +24,7 @@ fi
 source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars
 
+[ -x /opt/zimbra/bin/zmacl ] && /opt/zimbra/bin/zmacl disable &>/dev/null
 download_dir=${mailboxd_directory}/webapps/zimbra/downloads
 
 client_file=$1
@@ -64,5 +65,5 @@ for file in `ls ${download_dir}/${client_file_appglob}`; do
 	/bin/rm -f ${file}
 done
 
-
+[ -x /opt/zimbra/bin/zmacl ] && /opt/zimbra/bin/zmacl enable &>/dev/null
 /opt/zimbra/bin/zmmailboxdctl update
