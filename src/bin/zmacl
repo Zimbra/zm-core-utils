@@ -19,7 +19,6 @@
 # Function to check if setfacl is installed
 check_setfacl_installed() {
 	if ! which setfacl &> /dev/null; then
-		echo "setfacl command not found. skipping"
 		exit 0
 	fi
 }
@@ -33,53 +32,46 @@ fi
 ACL_ACTION="$1"
 
 # Directories to apply ACLs to
-DIRS=(
-  "/opt/zimbra/jetty/webapps/"
-)
+DIR="/opt/zimbra/jetty/webapps/"
 
 # Function to enable ACLs (deny write access)
 enable_acls() {
-	for DIR in "${DIRS[@]}"; do
-		if [[ -d "$DIR" ]]; then
-			echo "Setting ownership and base permissions for $DIR"
-			chown zimbra:zimbra -R "$DIR"
-			chmod ugo-w -R "$DIR"
-			echo "Applying write deny ACLs to $DIR"
+	if [[ -d "$DIR" ]]; then
+		echo "Applying write deny ACLs"
+		# Setting ownership and base permissions
+		chown zimbra:zimbra -R "$DIR"
+		chmod ugo-w -R "$DIR"
 
-			# Deny write access for everyone except root and zimbra
-			setfacl -R -m u::r-x "$DIR"     # Owner has read/execute
-			setfacl -R -m u:zimbra:r-x "$DIR"  # zimbra user has read/execute
-			setfacl -R -m g::r-x "$DIR"     # Group has read/execute
-			setfacl -R -m o::r-x "$DIR"     # Others have read/execute
+		# Deny write access for everyone except root and zimbra
+		setfacl -R -m u::r-x "$DIR"     # Owner has read/execute
+		setfacl -R -m u:zimbra:r-x "$DIR"  # zimbra user has read/execute
+		setfacl -R -m g::r-x "$DIR"     # Group has read/execute
+		setfacl -R -m o::r-x "$DIR"     # Others have read/execute
 
-			# Ensure these ACLs are the default for new files and directories
-			setfacl -dR -m u::r-x "$DIR"
-			setfacl -dR -m u:zimbra:r-x "$DIR"
-			setfacl -dR -m g::r-x "$DIR"
-			setfacl -dR -m o::r-x "$DIR"
-
-			echo "ACLs applied successfully to $DIR"
-		fi
-	done
+		# Ensure these ACLs are the default for new files and directories
+		setfacl -dR -m u::r-x "$DIR"
+		setfacl -dR -m u:zimbra:r-x "$DIR"
+		setfacl -dR -m g::r-x "$DIR"
+		setfacl -dR -m o::r-x "$DIR"
+		echo "ACLs applied successfully"
+	fi
 }
 
 # Function to disable ACLs (remove all setfacl entries)
 disable_acls() {
-	for DIR in "${DIRS[@]}"; do
-		if [[ -d "$DIR" ]]; then
-			echo "Setting ownership and base permissions for $DIR"
-			chown zimbra:zimbra -R "$DIR"
-			chmod go-w -R "$DIR"
-			chmod u+w -R "$DIR"
-			
-			echo "Removing ACLs from $DIR"
-			# Remove ACLs recursively
-			setfacl -R -b "$DIR"
-			setfacl -dR -b "$DIR"   # Remove default ACLs
-			
-			echo "ACLs removed successfully from $DIR"
-		fi
-	done
+	if [[ -d "$DIR" ]]; then
+		echo "Removing ACLs"
+		# Setting ownership and base permissions
+		chown zimbra:zimbra -R "$DIR"
+		chmod go-w -R "$DIR"
+		chmod u+w -R "$DIR"
+
+		# Remove ACLs recursively
+		setfacl -R -b "$DIR"
+		setfacl -dR -b "$DIR"   # Remove default ACLs
+		echo "ACLs removed successfully"
+
+	fi
 }
 
 # Main script logic
