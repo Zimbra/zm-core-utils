@@ -30,7 +30,7 @@ fi
 source /opt/zimbra/bin/zmshutil || exit 1
 zmsetvars
 
-[ -x /opt/zimbra/bin/zmacl ] && /opt/zimbra/bin/zmacl disable &>/dev/null
+[ -f /opt/zimbra/bin/zmacl ] && /opt/zimbra/bin/zmacl disable &> /dev/null
 # shellcheck disable=SC2154
 download_dir=${mailboxd_directory}/webapps/zimbra/downloads
 index=${download_dir}/index.html
@@ -114,6 +114,6 @@ if [ -d "${download_dir}" ]; then
   done
 fi
 
-[ -x /opt/zimbra/bin/zmacl ] && /opt/zimbra/bin/zmacl enable &>/dev/null
+[ -f /opt/zimbra/bin/zmacl ] && /opt/zimbra/bin/zmacl enable &> /dev/null
 exit 0
 
