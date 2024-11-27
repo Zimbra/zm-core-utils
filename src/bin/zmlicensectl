@@ -262,6 +262,43 @@ startNalpeironDaemonService() {
 	fi
 }
 
+checkNalpeironConnectionStatus() {
+    hostAndPort=$(getLicenseDaemonHostAndPort)
+    apiEndpoint="http://$hostAndPort/v1/rest/connection/check"
+
+    echo "Checking Nalpeiron connection status..."
+    response=$(curl -s "$apiEndpoint")
+    httpStatus=$(curl -s -o /dev/null -w "%{http_code}" "$apiEndpoint")
+    
+    if [ "$httpStatus" -eq 200 ]; then
+        status=$(echo "$response" | sed -n 's/.*"status":\s*\(-\?[0-9]*\).*/\1/p')
+        statusMessage=$(echo "$response" | sed -n 's/.*"statusMessage":"\([^"]*\)".*/\1/p')
+
+        if [ "$status" -eq 0 ]; then
+            echo "Nalpeiron connection is active!"
+        else
+            echo "Error: Nalpeiron connection failed. Status: $status, Message: $statusMessage"
+            exit 1
+        fi
+    else
+        echo "Error: Unable to check nalpeiron connection status from LDS."
+        exit 1
+    fi
+}
+
+getLicenseDaemonHostAndPort() {
+    licenseDaemonHost=$(zmprov gcf zimbraLicenseDaemonServerHost | cut -d ':' -f2 | xargs)
+    licenseDaemonPort=8081
+
+    if [ -z "$licenseDaemonHost" ]; then
+        echo "Error: Could not determine the license daemon host. zimbraLicenseDaemonServerHost is empty."
+        exit 1
+    fi
+
+    echo "$licenseDaemonHost:$licenseDaemonPort"
+}
+
+
 displayHelp()
 {
 	echo "Usage: $0 [option...]"
@@ -274,6 +311,7 @@ displayHelp()
 	echo "   --nalpeiron start|restart|stop|status"
 	echo "   --exportOfflineLicenseData | -exportOfflineLicenseData --exportStartTime YYYY/MM/DD --exportEndTime YYYY/MM/DD (offline only feature)"
 	echo "   --clearLicenseWorkDir"
+	echo "   --checkNalpeironConnectionStatus"
 }
 
 case "$1" in
@@ -418,6 +456,9 @@ case "$1" in
 		;;
 	"--clearLicenseWorkDir")
 		clearLicenseWorkDir
+		;;
+	"--checkNalpeironConnectionStatus")
+		checkNalpeironConnectionStatus
 		;;
 	"--exportOfflineLicenseData")
 		shift
