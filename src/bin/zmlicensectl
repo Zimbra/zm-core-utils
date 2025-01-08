@@ -64,10 +64,19 @@ startLicenseDaemonService()
 	if [ "x$zimbra_license_daemon_offline_mode" = "x" ]; then
 		zimbra_license_daemon_offline_mode=false
 	fi
+	if [ "x$ext_service_timeout" = "x" ]; then
+		ext_service_timeout=60000
+	fi
+	if [ "x$ext_service_socketTimeout" = "x" ]; then
+		ext_service_socketTimeout=60000
+	fi
+	if [ "x$ext_service_readTimeout" = "x" ]; then
+		ext_service_readTimeout=60000
+	fi
 	if [ -f ${LD_LIBRARY_PATH}/libShafer-prod-linux64.so ]; then
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=prod --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -Dext.service.socketTimeout=${ext_service_socketTimeout} -Dext.service.readTimeout=${ext_service_readTimeout} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=prod --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
 	else
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -Dext.service.socketTimeout=${ext_service_socketTimeout} -Dext.service.readTimeout=${ext_service_readTimeout} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
 	fi
 	sleep 5
 	checkLicenseDaemonServiceRunning
@@ -269,7 +278,7 @@ checkNalpeironConnectionStatus() {
     echo "Checking Nalpeiron connection status..."
     response=$(curl -s "$apiEndpoint")
     httpStatus=$(curl -s -o /dev/null -w "%{http_code}" "$apiEndpoint")
-    
+
     if [ "$httpStatus" -eq 200 ]; then
         status=$(echo "$response" | sed -n 's/.*"status":\s*\(-\?[0-9]*\).*/\1/p')
         statusMessage=$(echo "$response" | sed -n 's/.*"statusMessage":"\([^"]*\)".*/\1/p')
@@ -306,8 +315,14 @@ displayHelp()
 	echo "   --service start|restart|stop|status"
 	echo "   --service setLogLevel=INFO|DEBUG|ERROR|WARN"
 	echo "   --service setOfflineMode=true|false"
+	echo "   --service setProxyTimeout=70000 (any numeric value greater than 60000 is acceptable, and value is considered in milliseconds)"
+	echo "   --service setProxySocketTimeout=70000 (any numeric value greater than 60000 is acceptable, and value is considered in milliseconds)"
+	echo "   --service setProxyReadTimeout=70000 (any numeric value greater than 60000 is acceptable, and value is considered in milliseconds)"
 	echo "   --service getLogLevel"
 	echo "   --service getOfflineMode"
+	echo "   --service getProxyTimeout"
+	echo "   --service getProxySocketTimeout"
+	echo "   --service getProxyReadTimeout"
 	echo "   --nalpeiron start|restart|stop|status"
 	echo "   --exportOfflineLicenseData | -exportOfflineLicenseData --exportStartTime YYYY/MM/DD --exportEndTime YYYY/MM/DD (offline only feature)"
 	echo "   --clearLicenseWorkDir"
@@ -356,7 +371,7 @@ case "$1" in
 			  		exit 0
 			  	fi
 			  	;;
-			 
+
 			"getLogLevel")
 			  # Ensure exact match for "getLogLevel"
 			  if [ "$#" -ne 2 ]; then
@@ -383,6 +398,45 @@ case "$1" in
 			  exit 0
 			  ;;
 
+			"getProxyTimeout")
+				# Ensure exact match for "getProxyTimeout"
+				if [ "$#" -ne 2 ]; then
+					displayHelp
+					exit 1
+				fi
+				# Read the current log level from CONFIG_FILE
+				proxyTimeout=$(grep "ext_service_timeout" "$CONFIG_FILE" | cut -d '=' -f 2)
+				# Output the current log level
+				echo "Current proxy timeout: $proxyTimeout milliseconds"
+				exit 0
+				;;
+
+			"getProxySocketTimeout")
+				# Ensure exact match for "getProxySocketTimeout"
+				if [ "$#" -ne 2 ]; then
+					displayHelp
+					exit 1
+				fi
+				# Read the current log level from CONFIG_FILE
+				proxySocketTimeout=$(grep "ext_service_socketTimeout" "$CONFIG_FILE" | cut -d '=' -f 2)
+				# Output the current log level
+				echo "Current proxy socket timeout: $proxySocketTimeout milliseconds"
+				exit 0
+				;;
+
+			"getProxyReadTimeout")
+				# Ensure exact match for "getProxyReadTimeout"
+				if [ "$#" -ne 2 ]; then
+					displayHelp
+					exit 1
+				fi
+				# Read the current log level from CONFIG_FILE
+				proxyReadTimeout=$(grep "ext_service_readTimeout" "$CONFIG_FILE" | cut -d '=' -f 2)
+				# Output the current log level
+				echo "Current proxy read timeout: $proxyReadTimeout milliseconds"
+				exit 0
+				;;
+
 			"setLogLevel=INFO"|"setLogLevel=DEBUG"|"setLogLevel=ERROR"|"setLogLevel=WARN")
 				loglevel=`echo $2|cut -d = -f 2`
 				sed -i "/zimbra_license_daemon_log_level*/c\zimbra_license_daemon_log_level="$loglevel"" $CONFIG_FILE
@@ -399,6 +453,87 @@ case "$1" in
 					exit 1
 				fi
 				exit 0
+				;;
+
+			"setProxyTimeout="*)
+				# Extract the timeout value from the second argument
+				proxyTimeout=`echo $2|cut -d = -f 2`
+				# Validate that the value is not empty
+				if [[ -z "$proxyTimeout" ]]; then
+					echo "Error: Proxy timeout value is missing."
+					exit 1
+				fi
+				# Validate if the value is numeric
+				if ! [[ "$proxyTimeout" =~ ^[0-9]+$ ]]; then
+					echo "Error: Proxy timeout must be a numeric value."
+					exit 1
+				fi
+				# Ensure the proxyTimeout value is greater than 60
+				if (( proxyTimeout <= 60000 )); then
+					echo "Error: Proxy timeout must be greater than 60000."
+					exit 1
+				fi
+				# Update the configuration file
+				sed -i "/ext_service_timeout*/c\ext_service_timeout="$proxyTimeout"" $CONFIG_FILE
+				# Check if the sed command succeeded
+				if [ $? != 0 ]; then
+					exit 1
+				fi
+					exit 0
+				;;
+
+			"setProxySocketTimeout="*)
+				# Extract the socket timeout value from the second argument
+				proxySocketTimeout=`echo $2|cut -d = -f 2`
+				# Validate that the value is not empty
+				if [[ -z "$proxySocketTimeout" ]]; then
+					echo "Error: Proxy socket timeout value is missing."
+					exit 1
+				fi
+				# Validate if the value is numeric
+				if ! [[ "$proxySocketTimeout" =~ ^[0-9]+$ ]]; then
+					echo "Error: Proxy socket timeout must be a numeric value."
+					exit 1
+				fi
+				# Ensure the proxySocketTimeout value is greater than 60
+				if (( proxySocketTimeout <= 60000 )); then
+					echo "Error: Proxy socket timeout must be greater than 60000."
+					exit 1
+				fi
+				# Update the configuration file
+				sed -i "/ext_service_socketTimeout*/c\ext_service_socketTimeout="$proxySocketTimeout"" $CONFIG_FILE
+				# Check if the sed command succeeded
+				if [ $? != 0 ]; then
+					exit 1
+				fi
+					exit 0
+				;;
+
+			"setProxyReadTimeout="*)
+				# Extract the read timeout value from the second argument
+				proxyReadTimeout=`echo $2|cut -d = -f 2`
+				# Validate that the value is not empty
+				if [[ -z "$proxyReadTimeout" ]]; then
+					echo "Error: Proxy read timeout value is missing."
+					exit 1
+				fi
+				# Validate if the value is numeric
+				if ! [[ "$proxyReadTimeout" =~ ^[0-9]+$ ]]; then
+					echo "Error: Proxy read timeout must be a numeric value."
+					exit 1
+				fi
+				# Ensure the proxyReadTimeout value is greater than 60
+				if (( proxyReadTimeout <= 60000 )); then
+					echo "Error: Proxy read timeout must be greater than 60000."
+					exit 1
+				fi
+				# Update the configuration file
+				sed -i "/ext_service_readTimeout*/c\ext_service_readTimeout="$proxyReadTimeout"" $CONFIG_FILE
+				# Check if the sed command succeeded
+				if [ $? != 0 ]; then
+					exit 1
+				fi
+					exit 0
 				;;
 
 			*)
