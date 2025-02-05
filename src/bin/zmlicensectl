@@ -26,6 +26,11 @@ LD_LIBRARY_PATH="/opt/zimbra/license/lib"
 LICENSE_DAEMON_SERVICE="/opt/zimbra/license/lib/app.jar"
 LICENSE_DAEMON_SERVICE_PORT="8081"
 licenseDaemonServicepid=""
+LICENSE_WORK_DIR="/opt/zimbra/license/work/"
+LICENSE_DATA_DIR="/opt/zimbra/data/license/"
+SSH_PATH="/opt/zimbra/.ssh/zimbra_identity"
+RSYNC_CMD_PATH="/opt/zimbra/common/bin/rsync"
+ZMHOSTNAME_CMD="/opt/zimbra/bin/zmhostname"
 
 checkLicenseDaemonServiceRunning()
 {
@@ -152,73 +157,94 @@ exportOfflineLicenseData() {
         exit 1
     fi
 
-    # Rsync to local system (filename uses the original epoch timestamps)
-    rsyncCmd="/opt/zimbra/common/bin/rsync -az -e 'ssh -T -i /opt/zimbra/.ssh/zimbra_identity -o StrictHostKeyChecking=no' zimbra@$licenseDaemonHost:/etc/nalpeiron/exports/daemondata_${startEpoch}_${endEpoch}.csv /opt/zimbra/data/license/"
+	currentHost=$($ZMHOSTNAME_CMD 2>/dev/null)
+	if [ -z "$currentHost" ]; then
+		echo "Error: Could not determine the current host using zmhostname."
+		exit 1
+	fi
 
-    eval "$rsyncCmd"
-    if [[ $? -ne 0 ]]; then
-        echo "Error: Failed to copy license data from remote host."
-        exit 1
-    fi
+	if [[ "$currentHost" == "$licenseDaemonHost" ]]; then
+		cp "/etc/nalpeiron/exports/daemondata_${startEpoch}_${endEpoch}.csv" "$LICENSE_DATA_DIR"
+		if [[ $? -ne 0 ]]; then
+			echo "Error: Failed to copy license data locally."
+			exit 1
+		fi
+	else
+		zimbraRemoteManagementPort=$(zmprov gcf zimbraRemoteManagementPort 2>/dev/null | cut -d ':' -f2 | xargs)
+		if [ -z "$zimbraRemoteManagementPort" ]; then
+			echo "Error: Could not determine the remote management port."
+			exit 1
+		fi
+
+		$RSYNC_CMD_PATH -az \
+			-e "ssh -p $zimbraRemoteManagementPort -T -i $SSH_PATH -o StrictHostKeyChecking=no" \
+			zimbra@"$licenseDaemonHost:/etc/nalpeiron/exports/daemondata_${startEpoch}_${endEpoch}.csv" \
+			"$LICENSE_DATA_DIR"
+		if [[ $? -ne 0 ]]; then
+			echo "Error: Failed to copy license data from remote host."
+			exit 1
+		fi
+	fi
 
     echo "Offline license data exported successfully for the period from $(date -d @$startEpoch +"%Y/%m/%d") to $(date -d @$endEpoch +"%Y/%m/%d"), exported to: /opt/zimbra/data/license/daemondata_${startEpoch}_${endEpoch}.csv"
 }
 
 clearLicenseWorkDir() {
-    echo "clearing license cache..."
-    LICENSE_WORK_DIR="/opt/zimbra/license/work/"
-    LICENSE_DATA_DIR="/opt/zimbra/data/license/"
+    echo "Clearing license cache..."
 
-    # getting the license daemon server host from zmprov
-    licenseDaemonHost=$(zmprov gcf zimbraLicenseDaemonServerHost | cut -d ':' -f2 | xargs)
-
+    licenseDaemonHost=$(zmprov gcf zimbraLicenseDaemonServerHost 2>/dev/null | cut -d ':' -f2 | xargs)
     if [ -z "$licenseDaemonHost" ]; then
         echo "Error: Could not determine the license daemon host. zimbraLicenseDaemonServerHost is empty."
         exit 1
     fi
 
-    # getting log files from cache to backup
-    logFiles=$(/opt/zimbra/common/bin/rsync --list-only -az -e 'ssh -T -i /opt/zimbra/.ssh/zimbra_identity -o StrictHostKeyChecking=no' zimbra@$licenseDaemonHost:$LICENSE_WORK_DIR)
-
-    if [[ $? -ne 0 ]]; then
-        echo "Error: Failed to list log files on remote host."
+    currentHost=$($ZMHOSTNAME_CMD 2>/dev/null)
+    if [ -z "$currentHost" ]; then
+        echo "Error: Could not determine the current host using zmhostname."
         exit 1
     fi
-
-    # extract the filenames from the rsync output
-    logFiles=$(echo "$logFiles" | awk '{print $NF}' | grep '\.log$')
-
-    if [[ -z "$logFiles" ]]; then
-        echo "No log files found in $LICENSE_WORK_DIR on remote host."
-    else
-        for logFile in $logFiles; do
-            echo "copying $logFile from remote host..."
-            rsyncCmd="/opt/zimbra/common/bin/rsync -az -e 'ssh -T -i /opt/zimbra/.ssh/zimbra_identity -o StrictHostKeyChecking=no' zimbra@$licenseDaemonHost:$LICENSE_WORK_DIR$logFile $LICENSE_DATA_DIR"
-            eval "$rsyncCmd"
-            if [[ $? -ne 0 ]]; then
-                echo "Error: Failed to copy $logFile from remote host."
-                exit 1
-            fi
-        done
-    fi
-
-    echo "deleting license cache contents. . ."
-    # creating temporary directory for rsync
-    empty_dir=$(mktemp -d /tmp/license.XXXXXX) || { echo "Failed to create empty directory"; exit 1; }
-    # execute rsync command
-    /opt/zimbra/common/bin/rsync -az --delete -e 'ssh -i /opt/zimbra/.ssh/zimbra_identity -o StrictHostKeyChecking=no' "$empty_dir/" zimbra@$licenseDaemonHost:$LICENSE_WORK_DIR
-    # rsync exit code
-    rsync_exit_code=$?
-    # deleting temp dir
-    rm -rf "$empty_dir"
-
-    if [[ $rsync_exit_code -ne 0 ]]; then
-	    echo "Error: Failed to clear the license cache on remote host."
+ 
+    if [[ "$licenseDaemonHost" == "$currentHost" ]]; then
+        echo "Backing up all files in $LICENSE_WORK_DIR to $LICENSE_DATA_DIR ..."
+        cp -a "$LICENSE_WORK_DIR"/* "$LICENSE_DATA_DIR/"
+        if [[ $? -ne 0 ]]; then
+            echo "Error: Failed to back up files from $LICENSE_WORK_DIR."
             exit 1
+        fi
+
+        echo "Deleting all contents in $LICENSE_WORK_DIR ..."
+        rm -rf "${LICENSE_WORK_DIR:?}"/*
+        if [[ $? -ne 0 ]]; then
+            echo "Error: Failed to delete contents in $LICENSE_WORK_DIR."
+            exit 1
+        fi
+    else
+        zimbraRemoteManagementPort=$(zmprov gcf zimbraRemoteManagementPort 2>/dev/null | cut -d ':' -f2 | xargs)
+
+        echo "Backing up all files from remote $LICENSE_WORK_DIR to $LICENSE_DATA_DIR ..."
+        $RSYNC_CMD_PATH -az -e "ssh -p $zimbraRemoteManagementPort -i $SSH_PATH -o StrictHostKeyChecking=no" \
+            zimbra@"$licenseDaemonHost":"$LICENSE_WORK_DIR/" "$LICENSE_DATA_DIR/"
+        if [[ $? -ne 0 ]]; then
+            echo "Error: Failed to back up files from remote $LICENSE_WORK_DIR."
+            exit 1
+        fi
+
+        echo "Deleting all contents in $LICENSE_WORK_DIR on remote host..."
+        empty_dir=$(mktemp -d /tmp/license.XXXXXX) || { echo "Failed to create temporary directory"; exit 1; }
+        $RSYNC_CMD_PATH -az --delete -e "ssh -p $zimbraRemoteManagementPort -i $SSH_PATH -o StrictHostKeyChecking=no" \
+            "$empty_dir/" zimbra@"$licenseDaemonHost":"$LICENSE_WORK_DIR"
+        rsync_exit_code=$?
+        rm -rf "$empty_dir"
+
+        if [[ $rsync_exit_code -ne 0 ]]; then
+            echo "Error: Failed to clear the license cache on remote host."
+            exit 1
+        fi
     fi
 
-    echo "License cache cleared successfully."
+    echo "Backup completed and license cache cleared successfully."
 }
+
 
 checkNalpeironDaemonServiceRunning() {
 	nalpeironDaemonServiceRunning=0
@@ -267,14 +293,16 @@ checkNalpeironConnectionStatus() {
     apiEndpoint="http://$hostAndPort/v1/rest/connection/check"
 
     echo "Checking Nalpeiron connection status..."
-    response=$(curl -s "$apiEndpoint")
-    httpStatus=$(curl -s -o /dev/null -w "%{http_code}" "$apiEndpoint")
-    
-    if [ "$httpStatus" -eq 200 ]; then
-        status=$(echo "$response" | sed -n 's/.*"status":\s*\(-\?[0-9]*\).*/\1/p')
-        statusMessage=$(echo "$response" | sed -n 's/.*"statusMessage":"\([^"]*\)".*/\1/p')
 
-        if [ "$status" -eq 0 ]; then
+    response=$(curl -s -w "\n%{http_code}" "$apiEndpoint")
+    httpStatus=$(echo "$response" | tail -n1)
+    body=$(echo "$response" | sed '$d')
+
+    if [ "$httpStatus" -eq 200 ]; then
+        status=$(echo "$body" | sed -n 's/.*"status":\s*\(-\?[0-9]*\).*/\1/p')
+        statusMessage=$(echo "$body" | sed -n 's/.*"statusMessage":"\([^"]*\)".*/\1/p')
+        
+		if [ "$status" -eq 0 ]; then
             echo "Nalpeiron connection is active!"
         else
             echo "Error: Nalpeiron connection failed. Status: $status, Message: $statusMessage"
