@@ -49,10 +49,12 @@ if [ ! -d ${download_dir} ]; then
     exit 1
 fi
 
+[ -f /opt/zimbra/bin/zmacl ] && /opt/zimbra/bin/zmacl disable &> /dev/null
 cp -f ${client_file} ${download_dir}
 
 if [ $? -ne 0 ]; then
 	echo Error: copy failed
+        [ -f /opt/zimbra/bin/zmacl ] && /opt/zimbra/bin/zmacl enable &> /dev/null
 	exit 1
 fi
 
@@ -64,5 +66,5 @@ for file in `ls ${download_dir}/${client_file_appglob}`; do
 	/bin/rm -f ${file}
 done
 
-
+[ -f /opt/zimbra/bin/zmacl ] && /opt/zimbra/bin/zmacl enable &> /dev/null
 /opt/zimbra/bin/zmmailboxdctl update
