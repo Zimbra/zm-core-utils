@@ -1,0 +1,92 @@
+#!/bin/bash 
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2025 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+
+# Function to check if setfacl is installed
+check_setfacl_installed() {
+	if ! which setfacl &> /dev/null; then
+		exit 0
+	fi
+}
+
+# Check if acl argument is passed
+if [ "$#" -ne 1 ]; then
+	echo "Usage: $0 [enable|disable]"
+	exit 
+fi
+
+ACL_ACTION="$1"
+
+# Directories to apply ACLs to
+DIR="/opt/zimbra/jetty/webapps/"
+
+# Function to enable ACLs (deny write access)
+enable_acls() {
+	if [[ -d "$DIR" ]]; then
+		echo "Applying write deny ACLs"
+		# Setting ownership and base permissions
+		chown zimbra:zimbra -R "$DIR"
+		chmod ugo-w -R "$DIR"
+
+		# Deny write access for everyone except root and zimbra
+		setfacl -R -m u::r-x "$DIR"     # Owner has read/execute
+		setfacl -R -m u:zimbra:r-x "$DIR"  # zimbra user has read/execute
+		setfacl -R -m g::r-x "$DIR"     # Group has read/execute
+		setfacl -R -m o::r-x "$DIR"     # Others have read/execute
+
+		# Ensure these ACLs are the default for new files and directories
+		setfacl -dR -m u::r-x "$DIR"
+		setfacl -dR -m u:zimbra:r-x "$DIR"
+		setfacl -dR -m g::r-x "$DIR"
+		setfacl -dR -m o::r-x "$DIR"
+		echo "ACLs applied successfully"
+	fi
+}
+
+# Function to disable ACLs (remove all setfacl entries)
+disable_acls() {
+	if [[ -d "$DIR" ]]; then
+		echo "Removing ACLs"
+		# Setting ownership and base permissions
+		chown zimbra:zimbra -R "$DIR"
+		chmod go-w -R "$DIR"
+		chmod u+w -R "$DIR"
+
+		# Remove ACLs recursively
+		setfacl -R -b "$DIR"
+		setfacl -dR -b "$DIR"   # Remove default ACLs
+		echo "ACLs removed successfully"
+
+	fi
+}
+
+# Main script logic
+check_setfacl_installed # Check if setfacl is installed
+
+case "$ACL_ACTION" in
+	enable)
+		enable_acls
+		;;
+	disable)
+		disable_acls
+		;;
+	*)
+		echo "Invalid argument. Use enable or disable."
+		exit 1
+		;;
+
+esac
