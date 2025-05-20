@@ -1,0 +1,304 @@
+#!/bin/bash
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2025 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+usage() {
+  echo "Usage: $0 [options]" >&3
+  echo "" >&3
+  echo "Options:" >&3
+  echo "  -h, --help     Show this help message" >&3
+  echo "  --filename=<file>  Specify input file containing domain list" >&3
+  echo "" >&3
+  echo "Description:" >&3
+  echo "  This script provisions chat accounts for domains with the chat feature enabled." >&3
+  echo "  If --filename option is provided, it provisions chat accounts for domains listed in the file(one domain per line) that have the chat feature enabled." >&3
+  echo "  If no --filename option is provided, it provisions chat accounts for all domains that have the chat feature enabled." >&3
+  echo "" >&3
+  echo "Note:" >&3
+  echo "  Domains without the chat feature enabled will be skipped." >&3
+  echo "" >&3
+  echo "Example:" >&3
+  echo "  $0 --filename=chatdomains.txt" >&3
+  echo "  $0" >&3
+}
+
+exec 3>&1 4>&2
+
+# User check
+if [ x`whoami` != xroot ]; then
+  echo "Please run command as root user..." >&3
+  exit 1
+fi
+
+# Zimbra version check
+zimbra_version=$(sudo -u zimbra /opt/zimbra/bin/zmcontrol -v | cut -d' ' -f2)
+if [ $(printf "%s\n" "10.1.0" "$zimbra_version" | sort -V | head -n1) != "10.1.0" ]; then
+  echo "Zimbra version $zimbra_version is not supported." >&3
+  exit 1
+fi
+
+ # Directory check and creation
+  [ -d "/opt/zimbra/chat" ] || mkdir -p /opt/zimbra/chat
+
+exec > /opt/zimbra/chat/provisionedChatDomainAccountsResult.txt 2>&1
+
+file=""
+
+# Argument parsing: only allow --filename=filename or no args
+if [ "$#" -gt 0 ]; then
+  for arg in "$@"; do
+    case $arg in
+      --filename=*)
+        file="${arg#*=}"
+        ;;
+	-h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        echo "Error: Invalid argument '$arg'. Only --filename=filename is supported." >&3
+        exit 1
+        ;;
+    esac
+  done
+fi
+
+HOSTNAME=localhost
+PORT=$(/opt/zimbra/bin/zmlocalconfig -s zimbra_admin_service_port | awk '{print $3}')
+URL="https://${HOSTNAME}:${PORT}/service/admin/soap"
+
+get_auth_token() {
+  USERNAME=$(/opt/zimbra/bin/zmlocalconfig -s zimbra_ldap_user | awk '{print $3}')
+  PASSWORD=$(/opt/zimbra/bin/zmlocalconfig -s zimbra_ldap_password | awk '{print $3}')
+  AUTH_RESPONSE=$(curl -s -k -X POST \
+    "${URL}" \
+    -H "Content-Type: application/soap+xml; charset=utf-8" \
+    -d "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\">
+  <soap:Body>
+    <AuthRequest xmlns=\"urn:zimbraAdmin\">
+      <name>${USERNAME}</name>
+      <password>${PASSWORD}</password>
+    </AuthRequest>
+  </soap:Body>
+</soap:Envelope>")
+
+  AUTH_TOKEN=$(echo "${AUTH_RESPONSE}" | grep -oP '(?<=<authToken>).*?(?=</authToken>)')
+
+  if [[ -z "$AUTH_TOKEN" ]]; then
+    echo "Failed to retrieve auth token. Check credentials or server access." >&3
+    exit 1
+  fi
+}
+
+successful_domains=0
+failed_domains=0
+background_processing_domains=0
+
+prov_chat_domains() {
+  local domain_name="$1"
+  local domain_id="$2"
+  local AUTH_TOKEN="$3"
+  local URL="$4"
+
+  # Skip invalid entries
+  if [[ -z "$domain_name" || -z "$domain_id" ]]; then
+    echo " Skipping invalid or blank domain line: $domain_name, $domain_id"
+    return
+  fi
+
+  echo -e "Provisioning chat accounts for domain:\n$domain_name"
+
+  # SOAP Request
+  local SOAP_REQUEST="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\">
+  <soap:Header>
+    <context xmlns=\"urn:zimbra\">
+      <authToken>${AUTH_TOKEN}</authToken>
+    </context>
+  </soap:Header>
+  <soap:Body>
+    <ProvChatAccountsRequest xmlns=\"urn:zimbraAdmin\">
+      <domain by=\"id\">${domain_id}</domain>
+    </ProvChatAccountsRequest>
+  </soap:Body>
+</soap:Envelope>"
+
+  local RESPONSE
+  RESPONSE=$(curl -s -k -X POST \
+    "https://${HOSTNAME}:${PORT}/service/admin/soap" \
+    -H "Content-Type: application/soap+xml; charset=utf-8" \
+    -d "${SOAP_REQUEST}" -w "%{http_code}")
+ 
+  HTTP_STATUS_CODE=${RESPONSE: -3}
+  RESPONSE=${RESPONSE::-3}
+  
+  local is_domain_failed=false
+  local is_in_progress=false
+  local ERROR_MESSAGE=""
+
+  if echo "$RESPONSE" | grep -q "<soap:Fault>"; then
+    ERROR_MESSAGE=$(echo "$RESPONSE" | grep -oP '(?<=<soap:Text>).*?(?=</soap:Text>)')
+    ERROR_CODE=$(echo "$RESPONSE" | grep -oP '(?<=<Code>).*?(?=</Code>)')
+
+    if [ "$ERROR_CODE" == "ServiceException.ALREADY_IN_PROGRESS" ]; then
+      IN_PROGRESS_MESSAGE="Chat accounts are being provisioned in the background. Please check the logs on the Chat server for the completion status"
+      echo "$IN_PROGRESS_MESSAGE"
+      ((background_processing_domains++))
+      is_in_progress=true
+      is_domain_failed=false  # Do NOT mark this domain as failed
+      ERROR_MESSAGE=""
+    else
+      echo "Error provisioning chat accounts: $ERROR_MESSAGE"
+      is_domain_failed=true
+    fi
+
+  elif [ "$HTTP_STATUS_CODE" -ne 200 ]; then
+    if echo "$RESPONSE" | grep -q "404 Not Found"; then
+      ERROR_MESSAGE="404 Not Found"
+    else
+      ERROR_MESSAGE=$(echo "$RESPONSE" | sed -n '/<p>/,/<\/p>/p' | sed 's/<p>//g; s/<\/p>//g; s/<br\/>//g; s/<a.*a>//g; s/Error [0-9]*//g; s/^[[:space:]]*//g; s/[[:space:]]*$//g' | tr -d '\n')
+    fi
+  fi
+
+  if [ "$is_in_progress" = false ] && [ -n "$ERROR_MESSAGE" ]; then
+    
+    if [[ "$ERROR_MESSAGE" != "$IN_PROGRESS_MESSAGE" ]]; then
+      if [ "$ERROR_MESSAGE" == "404 Not Found" ]; then
+        echo " Error provisioning chat accounts: 404 Not Found"
+      elif [ "$HTTP_STATUS_CODE" -ne 200 ]; then
+        echo " Error provisioning chat accounts:
+HTTP status code $HTTP_STATUS_CODE
+$ERROR_MESSAGE"
+      else
+        echo " Error provisioning chat accounts:
+$ERROR_MESSAGE"
+      fi
+      is_domain_failed=true
+    fi
+  else
+    local success_count failure_count
+    success_count=$(echo "$RESPONSE" | grep -oP '(?<=<numSucceeded>).*?(?=</numSucceeded>)')
+    failure_count=$(echo "$RESPONSE" | grep -oP '(?<=<numFailed>).*?(?=</numFailed>)')
+
+    success_count=${success_count:-0}
+    failure_count=${failure_count:-0}
+
+    if ! $is_domain_failed; then
+      echo "Accounts provisioned: ${success_count}"
+      echo "Accounts not provisioned: ${failure_count}"
+    fi
+
+    # Count domains with successes or failures
+    if (( success_count > 0 )); then
+      ((successful_domains++))
+    fi
+    if (( failure_count > 0 )); then
+      is_domain_failed=true
+    fi
+  fi
+
+  if $is_domain_failed; then
+    ((failed_domains++))
+  fi
+
+  echo "--------------------------------------------------"
+}
+
+echo
+print_summary() {
+
+  chat_path="/opt/zimbra/chat/"
+  result_file="${chat_path}provisionedChatDomainAccountsResult.txt"
+  success_msg="\033[32mDomains with successful provisioning: $successful_domains\033[0m"
+  error_msg="\033[31mDomains with provisioning errors: $failed_domains\033[0m"
+  progress_msg="\033[33mDomains in Progress: $background_processing_domains\033[0m"
+  detail_msg="For detail result please check $result_file"
+
+  echo >&3
+  echo -e "$success_msg" >&3
+  echo -e "$error_msg" >&3
+  echo -e "$progress_msg" >&3
+  echo "$detail_msg" >&3  
+  echo >&3
+
+  echo
+  echo -e "$success_msg"
+  echo -e "$error_msg"
+  echo -e "$progress_msg"
+  echo
+}
+
+get_auth_token
+AUTH_TOKEN_VALUE="$AUTH_TOKEN"
+
+process_file_domains() {
+  local file="$1"
+  if [ ! -f "$file" ]; then
+    echo "File not found or is empty. Do you want to continue execution for all domains? (y/n): " >&3
+    read -r answer < /dev/tty
+    if [[ "${answer,,}" =~ ^(y|yes)$ ]]; then
+      echo "Proceeding with provisioning all domains..." >&3
+      feature="zimbraFeatureZulipChatEnabled"
+      attrs="zimbraFeatureZulipChatEnabled,zimbraId"
+      domains=$(/opt/zimbra/bin/zmjava com.zimbra.util.DomainFilterBasedOnFeature "$feature" "$attrs")
+      while IFS= read -r line; do
+        domain_name=$(echo "$line" | cut -d',' -f1 | cut -d':' -f2- | xargs)
+        domain_id=$(echo "$line" | cut -d',' -f2 | cut -d':' -f2- | xargs)
+        prov_chat_domains "$domain_name" "$domain_id" "$AUTH_TOKEN_VALUE" "$URL"
+      done <<< "$domains"
+      print_summary
+    else
+      echo "Execution cancelled." >&3
+      exit 0
+    fi
+  else
+    echo "Processing domains from file: $file" >&3
+    while IFS= read -r line; do
+      domain_name=$(echo "$line" | cut -d',' -f1 | cut -d':' -f2- | xargs)
+      domain_id=$(/opt/zimbra/bin/zmprov getDomain "$domain_name" 2>/dev/null | awk '/^zimbraId:/ {print $2}')
+      if [ -z "$domain_id" ]; then
+       echo "Domain $domain_name does not exist"
+       continue
+     fi
+    zulip_enabled=$(/opt/zimbra/bin/zmprov getDomain "$domain_name" zimbraFeatureZulipChatEnabled | awk '/zimbraFeatureZulipChatEnabled:/ {print $2}')
+    if [ "$zulip_enabled" = "TRUE" ]; then
+     prov_chat_domains "$domain_name" "$domain_id" "$AUTH_TOKEN_VALUE" "$URL"
+    else
+    echo "Skipping domain $domain_name: chat feature is not enable"
+    fi
+    done < "$file"
+    print_summary
+  fi
+}
+
+if [ -z "$file" ]; then
+  echo "Provisioning all domains.."
+  feature="zimbraFeatureZulipChatEnabled"
+  attrs="zimbraFeatureZulipChatEnabled,zimbraId"
+  domains=$(/opt/zimbra/bin/zmjava com.zimbra.util.DomainFilterBasedOnFeature "$feature" "$attrs")
+  while IFS= read -r line; do
+    domain_name=$(echo "$line" | cut -d',' -f1 | cut -d':' -f2- | xargs)
+    domain_id=$(echo "$line" | cut -d',' -f2 | cut -d':' -f2- | xargs)
+    prov_chat_domains "$domain_name" "$domain_id" "$AUTH_TOKEN_VALUE" "$URL"
+  done <<< "$domains" 
+  print_summary
+else
+  echo "File provided: $file"
+  domain_file="$file"
+  domains=$(process_file_domains "$domain_file")
+  echo "$domains"
+fi
