@@ -101,6 +101,11 @@ if [ ${extended} = "yes" ]; then
 fi
 
 # Adding Checks for /opt/zimbra and /opt/zimbra/common directories
+if [ -d /opt ]; then
+  chown ${root_user}:${root_group} /opt
+  chmod 755 /opt
+fi
+
 if [ -d /opt/zimbra ]; then
   chown ${root_user}:${root_group} /opt/zimbra
   chmod 755 /opt/zimbra
