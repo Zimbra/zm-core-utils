@@ -100,32 +100,33 @@ if [ ${extended} = "yes" ]; then
   chown -R ${zimbra_user}:${zimbra_group} /opt/zimbra/a* /opt/zimbra/[c-hj-ot-z]* /opt/zimbra/s[a-su-z]* 2> /dev/null
 fi
 
-chown ${root_user}:${root_group} /opt
-chmod 755 /opt
-chown ${root_user}:${root_group} /opt/zimbra
-chmod 755 /opt/zimbra
-chown -R ${root_user}:${root_group} /opt/zimbra/common
-chmod 755 /opt/zimbra/common
-chown -R ${root_user}:${zimbra_group} /opt/zimbra/common/conf
-chmod 775 /opt/zimbra/common/conf
-
-for i in master.cf master.cf.in bysender bysender.lmdb tag_as_foreign.re tag_as_foreign.re.in tag_as_originating.re tag_as_originating.re.in;
-do
-  if [ -f /opt/zimbra/common/conf/${i} ]; then
-    chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/${i};
-  fi
-done
-
-for i in snmp.conf main.cf; do
-  if [ -f /opt/zimbra/common/conf/${i} ]; then
-    chown -f ${root_user}:${root_group} /opt/zimbra/common/conf/${i};
-  fi
-done
-
-
+# Adding Checks for /opt/zimbra and /opt/zimbra/common directories
 if [ -d /opt/zimbra ]; then
   chown ${root_user}:${root_group} /opt/zimbra
   chmod 755 /opt/zimbra
+ 
+  if [ -d /opt/zimbra/common ]; then
+    chown -R ${root_user}:${root_group} /opt/zimbra/common
+    chmod 755 /opt/zimbra/common
+
+    if [ -d /opt/zimbra/common/conf ]; then
+      chown -R ${root_user}:${zimbra_group} /opt/zimbra/common/conf
+      chmod 775 /opt/zimbra/common/conf
+
+      for i in master.cf master.cf.in bysender bysender.lmdb tag_as_foreign.re tag_as_foreign.re.in tag_as_originating.re tag_as_originating.re.in;
+      do
+        if [ -f /opt/zimbra/common/conf/${i} ]; then
+          chown -f ${zimbra_user}:${zimbra_group} /opt/zimbra/common/conf/${i};
+        fi
+      done
+
+      for i in snmp.conf main.cf; do
+        if [ -f /opt/zimbra/common/conf/${i} ]; then
+          chown -f ${root_user}:${root_group} /opt/zimbra/common/conf/${i};
+        fi
+      done
+    fi
+  fi
 
   if [ -f /opt/zimbra/.viminfo ]; then
     chown ${zimbra_user}:${zimbra_group} /opt/zimbra/.viminfo
