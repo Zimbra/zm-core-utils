@@ -379,6 +379,9 @@ sub updateRsyslogd {
     unlink("/etc/rsyslog.d/60-zimbra.conf");
   }
   open(ZFH, ">/etc/rsyslog.d/60-zimbra.conf");
+  if ($platform eq "UBUNTU24_64") {
+    print ZFH "\$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat\n";
+  }
   if ( $TYPE eq "remote" ) {
     print ZFH "local0.*                @".$LOGHOST."\n";
     print ZFH "local1.*                @".$LOGHOST."\n";
