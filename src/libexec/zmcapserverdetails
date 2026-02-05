@@ -1,0 +1,136 @@
+#!/bin/bash
+
+# Run this script as root.
+
+SERVER_NAME=$(hostname -s)
+CAPTURE_TIME=$(date +%Y-%m-%d_%H%M)
+LOG_FILE="/tmp/server_details_capture_${SERVER_NAME}_${CAPTURE_TIME}.log"
+
+show_server_intro() {
+    echo "========================================================"
+    echo " SERVER DETAILS CAPTURE"
+    echo " Hostname: $(hostname)"
+    echo " Date: $(date)"
+    echo "========================================================"
+    echo
+}
+
+capture_cpu_details() {
+    echo "--- CPU Details ---"
+    CORES=$(nproc 2>/dev/null || echo "Unknown")
+    LOAD_AVG=$(awk '{print $1" "$2" "$3}' /proc/loadavg)
+    
+    echo "CPU Cores                     : $CORES"
+    echo "Load Average (last 1m/5m/15m) : $LOAD_AVG"
+    echo
+    
+    if command -v mpstat >/dev/null 2>&1; then
+        echo "=== CPU Per-Core Usage (mpstat) ==="
+        mpstat -P ALL 1 1
+        echo
+    fi
+
+    echo "-- Top 10 CPU Processes --"
+    ps -ef --sort=-%cpu | head -11
+    echo
+}
+
+capture_memory_details() {
+    echo "--- Memory Details ---"
+    free -h
+    echo
+    echo "-- Top 10 Memory Processes --"
+    ps -ef --sort=-%mem | head -11
+    echo
+}
+
+capture_disk_details() {
+    echo "--- Disk Details ---"
+    df -h
+    echo
+    echo "Largest Folders (Top 15):"
+    du -xh / --exclude={/proc,/sys,/dev} 2>/dev/null | sort -hr | head -15
+    echo
+}
+
+capture_zimbra_version() {
+    echo "--- Zimbra Version ---"
+    if [ -d /opt/zimbra ]; then
+        Z_VER=$(su - zimbra -c "zmcontrol -v" 2>/dev/null)
+        echo "$Z_VER"
+        NUM_VER=$(echo "$Z_VER" | grep -oP '\d+\.\d+\.\d+' | head -1)
+        MIN_VER="10.1.13"
+        if [[ -n $NUM_VER ]]; then
+            if [ "$(printf '%s\n%s\n' "$MIN_VER" "$NUM_VER" | sort -V | head -1)" = "$MIN_VER" ]; then
+                echo "Status: Minimum version met"
+            else
+                echo "Status: Version is older than $MIN_VER"
+            fi
+        fi
+    else
+        echo "/opt/zimbra is not present"
+    fi
+    echo
+}
+
+capture_zimbra_accounts() {
+    if [ -d /opt/zimbra ]; then
+        echo "--- Zimbra Account Details ---"
+        echo "Total Mailboxes : $(su - zimbra -c 'zmprov -l gaa | wc -l' 2>/dev/null)"
+        echo "Total Domains   : $(su - zimbra -c 'zmprov gad | wc -l' 2>/dev/null)"
+	echo "Total COS       : $(su - zimbra -c 'zmprov gac | wc -l' 2>/dev/null)"
+        echo
+    fi
+}
+
+capture_zimbra_license() {
+    echo "--- Zimbra License Details ---"
+    if [ -f /opt/zimbra/bin/zmlicense ]; then
+        su - zimbra -c "/opt/zimbra/bin/zmlicense -p"
+    else
+        echo "zmlicense not found at /opt/zimbra/bin/zmlicense"
+    fi
+    echo
+}
+
+capture_midnight_tasks() {
+    TIME_PATTERN='^((4[5-9]|5[0-9])\s+23\s+|([0-9]|1[0-5])\s+0\s+)'
+    echo "--- Tasks Scheduled Around Midnight (23:45 - 00:15) ---"
+
+    for user in $(cut -f1 -d: /etc/passwd); do
+        USER_CRON=$(crontab -u "$user" -l 2>/dev/null | grep -v '^#' | grep -E "$TIME_PATTERN")
+        [[ -n $USER_CRON ]] && echo "USER ($user): $USER_CRON"
+    done
+
+    echo -e "\nSystem /etc/crontab:"
+    grep -v '^#' /etc/crontab | grep -E "$TIME_PATTERN" || echo "None"
+    
+    echo -e "\nCustom files in /etc/cron.d/:"
+    for file in /etc/cron.d/*; do
+        if [ -f "$file" ]; then
+            FILE_CRON=$(grep -v '^#' "$file" | grep -E "$TIME_PATTERN")
+            [[ -n $FILE_CRON ]] && echo "FILE ($file): $FILE_CRON"
+        fi
+    done
+}
+
+if [[ $EUID -ne 0 ]]; then
+   echo "Error: This script must be run as root."
+   exit 1
+fi
+
+{
+    show_server_intro
+    capture_cpu_details
+    capture_memory_details
+    capture_disk_details
+    capture_zimbra_version
+    capture_zimbra_accounts
+    capture_zimbra_license
+    capture_midnight_tasks
+
+    echo "========================================================"
+    echo " CAPTURE COMPLETE"
+    echo " Details saved in: $LOG_FILE"
+    echo "========================================================"
+} | tee "$LOG_FILE"
