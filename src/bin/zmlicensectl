@@ -75,9 +75,9 @@ startLicenseDaemonService()
 	# Appending 000 to convert the value into milliseconds
 	ext_service_timeout="${ext_service_timeout}000"
 	if [ -f ${LD_LIBRARY_PATH}/libShafer-prod-linux64.so ]; then
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=prod --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -Dhttps_connection_enabled=${https_connection_enabled} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=prod --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
 	else
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -Dhttps_connection_enabled=${https_connection_enabled} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
 	fi
 	sleep 5
 	checkLicenseDaemonServiceRunning
@@ -339,10 +339,12 @@ displayHelp()
 	echo "   --service start|restart|stop|status"
 	echo "   --service setLogLevel=INFO|DEBUG|ERROR|WARN"
 	echo "   --service setOfflineMode=true|false"
+	echo "   --service setHttpsConnectionEnabled=true|false"
 	echo "   --service setProxyTimeout=60 (any numeric value of 60 or greater is acceptable, value is considered in seconds)"
 	echo "   --service getLogLevel"
 	echo "   --service getOfflineMode"
 	echo "   --service getProxyTimeout"
+	echo "   --service getHttpsConnectionEnabled"
 	echo "   --nalpeiron start|restart|stop|status"
 	echo "   --exportOfflineLicenseData | -exportOfflineLicenseData --exportStartTime YYYY/MM/DD --exportEndTime YYYY/MM/DD (offline only feature)"
 	echo "   --clearLicenseWorkDir"
@@ -418,6 +420,19 @@ case "$1" in
 			  exit 0
 			  ;;
 
+			"getHttpsConnectionEnabled")
+      			  # Ensure exact match for "getHttpsConnectionEnabled"
+      			  if [ "$#" -ne 2 ]; then
+      			      displayHelp
+      			      exit 1
+      			  fi
+      			  # Read the current log level from CONFIG_FILE
+      			  HttpsConnectionEnabled=$(grep "https_connection_enabled" "$CONFIG_FILE" | cut -d '=' -f 2)
+      			  # Output the current log level
+      			  echo "Current value for secure connection enabled: $HttpsConnectionEnabled"
+      			  exit 0
+      			  ;;
+
 			"getProxyTimeout")
 				# Ensure exact match for "getProxyTimeout"
 				if [ "$#" -ne 2 ]; then
@@ -448,6 +463,15 @@ case "$1" in
 				fi
 				exit 0
 				;;
+
+		  "setHttpsConnectionEnabled=true"|"setHttpsConnectionEnabled=false")
+    		HttpsConnectionEnabled=`echo $2|cut -d = -f 2`
+    		sed -i "/https_connection_enabled*/c\https_connection_enabled="$HttpsConnectionEnabled"" $CONFIG_FILE
+    		if [ $? != 0 ]; then
+    			exit 1
+    		fi
+    			exit 0
+    			;;
 
 			"setProxyTimeout="*)
 				# Extract the timeout value from the second argument
