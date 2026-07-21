@@ -1,0 +1,73 @@
+#!/bin/bash
+source /opt/zimbra/bin/zmshutil || exit 1
+zmsetvars
+
+TARGET_DIR="/opt/zimbra/jetty_base/work"
+
+# --- BATCH CONFIGURATION ---
+BATCH_SIZE=5000       # Number of files to delete at once
+SLEEP_INTERVAL=2      # Cooldown pause in seconds between deletion batches
+# -------------------------------------
+
+# Dynamic timestamp function to generate current time on-demand
+get_time() {
+    date '+%Y-%m-%d %H:%M:%S'
+}
+
+echo "[$(get_time)] --- Starting Tika Cleanup ---"
+
+# 1. Create secure temporary files for storing file lists
+TMP_LIST=$(mktemp /tmp/tika_cleanup.XXXXXX)
+TMP_BATCH="${TMP_LIST}.batch"
+
+# --- CRITICAL SAFETY TRAP ---
+cleanup_temp_files() {
+    echo "[$(get_time)] Ensuring all intermediate script temp files are removed..."
+    rm -f "$TMP_LIST" "$TMP_BATCH"
+}
+# Run cleanup automatically when the script finishes successfully
+trap cleanup_temp_files EXIT
+
+# Force quit safely on interruption and clean up files once
+trap 'trap - EXIT; cleanup_temp_files; exit 1' INT TERM
+
+# 2. Find Tika files older than 24 hours that were not accessed in the last 8 hours
+find "$TARGET_DIR" -maxdepth 1 -type f -name "apache-tika-*.tmp" -mtime +0 -amin +480 > "$TMP_LIST"
+
+TOTAL_FILES=$(wc -l < "$TMP_LIST")
+echo "[$(get_time)] Found $TOTAL_FILES files queued for deletion."
+
+if [ "$TOTAL_FILES" -eq 0 ]; then
+    echo "[$(get_time)] --- Cleanup complete. No files to delete. ---"
+    exit 0
+fi
+
+CURRENT_FILE=1
+BATCH_NUM=1
+
+# 3. Loop through the list and process files in batches
+while [ $CURRENT_FILE -le $TOTAL_FILES ]; do
+
+    END_FILE=$((CURRENT_FILE + BATCH_SIZE - 1))
+    [ $END_FILE -gt $TOTAL_FILES ] && END_FILE=$TOTAL_FILES
+
+    echo "[$(get_time)] Deleting Batch #$BATCH_NUM (Files $CURRENT_FILE to $END_FILE)..."
+
+    # Copy the lines for the current batch into a separate temporary batch file
+    sed -n "${CURRENT_FILE},${END_FILE}p" "$TMP_LIST" > "$TMP_BATCH"
+
+    # Add a 'DELETE: ' prefix to each file path and print it to the log
+    sed 's/^/DELETE: /' "$TMP_BATCH"
+
+    # Pass the file paths from the batch file directly to 'rm -f' for deletion
+    xargs -r rm -f < "$TMP_BATCH"
+
+    CURRENT_FILE=$((END_FILE + 1))
+    BATCH_NUM=$((BATCH_NUM + 1))
+
+    if [ $CURRENT_FILE -le $TOTAL_FILES ]; then
+        sleep "$SLEEP_INTERVAL"
+    fi
+done
+
+echo "[$(get_time)] --- Cleanup complete. ---"
