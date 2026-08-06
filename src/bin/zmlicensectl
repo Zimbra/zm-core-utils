@@ -75,9 +75,9 @@ startLicenseDaemonService()
 	# Appending 000 to convert the value into milliseconds
 	ext_service_timeout="${ext_service_timeout}000"
 	if [ -f ${LD_LIBRARY_PATH}/libShafer-prod-linux64.so ]; then
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -Dhttps_connection_enabled=${https_connection_enabled} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=prod --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -Dnalpeiron.proxy.host=${nalpeiron_proxy_host} -Dnalpeiron.proxy.port=${nalpeiron_proxy_port} -Dnalpeiron.proxy.username=${nalpeiron_proxy_username} -Dnalpeiron.proxy.password=${nalpeiron_proxy_password} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=prod --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
 	else
-		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -Dhttps_connection_enabled=${https_connection_enabled} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
+		export LD_LIBRARY_PATH; nohup ${ZMJAVA} -Dlicense-daemon.log.level=${zimbra_license_daemon_log_level} -Dlicense-daemon.offline.mode=${zimbra_license_daemon_offline_mode} -Dext.service.timeout=${ext_service_timeout} -Dnalpeiron.proxy.host=${nalpeiron_proxy_host} -Dnalpeiron.proxy.port=${nalpeiron_proxy_port} -Dnalpeiron.proxy.username=${nalpeiron_proxy_username} -Dnalpeiron.proxy.password=${nalpeiron_proxy_password} -jar $LICENSE_DAEMON_SERVICE --spring.profiles.active=dev --server.port=$LICENSE_DAEMON_SERVICE_PORT > /dev/null 2>&1 &
 	fi
 	sleep 5
 	checkLicenseDaemonServiceRunning
