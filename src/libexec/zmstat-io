@@ -86,7 +86,7 @@ sub getHeading($) {
     while ($line !~ /^Device/) {
         $line = readLine(*HEADING, 1);
     }
-    $line =~ s/^Device\s+//;
+    $line =~ s/^Device:?\s+//;
     my @devs;
     my @dev_cols = split('\s+', $line);
     $line = readLine(*HEADING, 1);
