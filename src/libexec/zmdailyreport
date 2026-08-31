@@ -81,7 +81,7 @@ if (fork()) {
 	    	
             while (<LOG>) {
 		        my $line = $_;
-		        if ($line =~ /$today/o) {
+		        if ($line =~ /$today|$datestring/o) {
    		             print PFOUT $line;
    		             $found = 1;
 	            } elsif ($found) {
@@ -96,7 +96,7 @@ if (fork()) {
 	$found = 0;
 	while (<LOG>) {
 		my $line = $_;
-		if ($line =~ /$today/o) {
+		if ($line =~ /$today|$datestring/o) {
    		     print PFOUT $line;
    		     $found = 1;
 	    } elsif ($found) {
