@@ -38,7 +38,7 @@ else
   java_options=""
 fi
 
-runcmd="${java} ${java_options} -Dlog4j.configuration=file:${log4jfile} -Dzimbra.home=\"/opt/zimbra\" -Dzimbra.config=\"${configfile}\" \
+runcmd="${java} ${java_options} -Dlog4j.configurationFile=file:${log4jfile} -Dzimbra.home=\"/opt/zimbra\" -Dzimbra.config=\"${configfile}\" \
    com.zimbra.cs.milter.MilterServer"
 
 getpid()
