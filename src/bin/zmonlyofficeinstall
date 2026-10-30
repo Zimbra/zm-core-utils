@@ -376,7 +376,6 @@ configureOnlyoffice() {
 		chmod +x /opt/zimbra/onlyoffice/bin/zmonlyofficeconfig
 		/opt/zimbra/onlyoffice/bin/zmonlyofficeconfig
 		chmod 775 /opt/zimbra/onlyoffice/bin/process_id.json
-		chown -R zimbra:zimbra /opt/zimbra/onlyoffice/
 		createOnlyofficeDB
 		if isEnabled "mailbox"; then
 			ONLYOFFICESTANDALONE="no"
