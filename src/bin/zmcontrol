@@ -181,11 +181,12 @@ my %REMOTECOMMANDS = (
 
 $| = 1;
 
-unless ( getopts( 'vhH:', \%GlobalOpts ) ) { usage(); }
+unless ( getopts( 'vghH:', \%GlobalOpts ) ) { usage(); }
 
 if ( ! $GlobalOpts{H} ) { $GlobalOpts{H} = $localHostName; chomp $GlobalOpts{H}; }
 
 if ( $GlobalOpts{h} ) { usage(); }
+if ( $GlobalOpts{g} ) { exit(displayGlobalVersion()); }
 if ( $GlobalOpts{v} ) { displayVersion(); exit 0;}
 
 # Commands: start, stop, restart and status
@@ -637,6 +638,76 @@ sub displayVersion {
   }
 }
 
+# Displays the deployment-wide version stored in zimbraGlobalVersion
+# (global config), read with "zmprov -l gcf zimbraGlobalVersion".
+# Returns 0 if a value was shown, 1 for any failure.
+sub displayGlobalVersion {
+  my $zmprov = "/opt/zimbra/bin/zmprov";
+  my $limit  = 120;
+
+  if (! -x $zmprov) {
+    print "Unable to read zimbraGlobalVersion: zmprov not found.\n";
+    return 1;
+  }
+
+  # zmprov -l reads LDAP directly (works even when mailboxd is down).
+  my @out;
+  my $rc;
+  eval {
+    local $SIG{ALRM} = sub { die "timeout\n" };
+    alarm($limit);
+    @out = qx($zmprov -l gcf zimbraGlobalVersion 2>&1);
+    $rc = $?;
+    alarm(0);
+  };
+  alarm(0);
+  if ($@ eq "timeout\n") {
+    print "Unable to read zimbraGlobalVersion from LDAP: LDAP request timed out.\n";
+    return 1;
+  }
+  chomp(@out);
+
+  # zmprov could not be started
+  if (!defined $rc || $rc == -1) {
+    print "Unable to read zimbraGlobalVersion from LDAP.\n";
+    return 1;
+  }
+
+  # zmprov ran but failed (LDAP down, bind failure, ...). Its output can
+  # contain Java stack traces, so never print it; show a short reason instead.
+  if ($rc != 0) {
+    my $all = join("\n", @out);
+    my $reason = "";
+    if ($all =~ /Connection refused|ConnectException|attempting to connect|Unable to establish|UnknownHost|No route to host|CONNECT_ERROR|SERVER_DOWN|server is down/i) {
+      $reason = ": unable to connect to LDAP";
+    } elsif ($all =~ /Invalid credentials|INVALID_CREDENTIALS|AUTH_FAILED|AUTH_REQUIRED|authentication failed|bind failed/i) {
+      $reason = ": LDAP bind failed";
+    } elsif ($all =~ /timed? ?out|TIMEOUT/i) {
+      $reason = ": LDAP request timed out";
+    } elsif ($all =~ /SSL|TLS|certificate/i) {
+      $reason = ": LDAP TLS/SSL error";
+    }
+    print "Unable to read zimbraGlobalVersion from LDAP$reason.\n";
+    return 1;
+  }
+
+  # Success but no line: attribute not set yet (or not in the schema yet)
+  my ($version) = map { /^zimbraGlobalVersion:\s*(.*?)\s*$/ ? $1 : () } @out;
+  if (!defined $version || $version eq "") {
+    print "zimbraGlobalVersion is not set.\n";
+    return 1;
+  }
+
+  # Value present but not in the expected X.Y.Z format
+  if ($version !~ /^\d+\.\d+\.\d+$/) {
+    print "zimbraGlobalVersion has an unexpected value: '$version'.\n";
+    return 1;
+  }
+
+  print "Global Release $version.\n";
+  return 0;
+}
+
 sub getPatchVersion {
 	my $version = shift;
 	if ($version eq "") {
@@ -706,9 +777,10 @@ sub hasAvailableSpace() {
 
 sub usage {
 	displayVersion();
-	print "$0 [-v -h -H <host>] command [args]\n";
+	print "$0 [-v -gv -h -H <host>] command [args]\n";
 	print "\n";
 	print "\t-v:	display version\n";
+	print "\t-gv:	display deployment-wide version (zimbraGlobalVersion from LDAP)\n";
 	print "\t-h:	print usage statement\n";
 	print "\t-H:	Host name (localhost)\n";
 	print "\n";

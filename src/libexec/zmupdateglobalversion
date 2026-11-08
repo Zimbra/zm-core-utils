@@ -1,0 +1,287 @@
+#!/usr/bin/perl
+#
+# ***** BEGIN LICENSE BLOCK *****
+# Zimbra Collaboration Suite Server
+# Copyright (C) 2026 Synacor, Inc.
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software Foundation,
+# version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see <https://www.gnu.org/licenses/>.
+# ***** END LICENSE BLOCK *****
+#
+# zmupdateglobalversion - set the immutable global config attribute
+# zimbraGlobalVersion (cn=config,cn=zimbra) to a given X.Y.Z version,
+# only if it is higher than the value currently stored.
+#
+# Called by:
+#   - every patch postinstall script (with its own patch version)
+#   - zmsetup.pl at the end of setup (fresh install / build-to-build upgrade)
+#
+# Usage:
+#   zmupdateglobalversion <X.Y.Z>           update if higher
+#
+# Exit codes:
+#   0  updated
+#   1  usage error
+#   2  nothing to do (stored value is equal or higher)
+#   3  skipped: LDAP not ready (no LDAP config, master unreachable, no schema)
+#   4  failed: StartTLS/bind, schema read, value read or write failed
+#
+
+use strict;
+use warnings;
+use lib "/opt/zimbra/common/lib/perl5";
+use Net::LDAP;
+
+my $ATTR         = "zimbraGlobalVersion";
+my $CONFIG_DN    = "cn=config,cn=zimbra";
+my $ZMLOCALCONFIG = "/opt/zimbra/bin/zmlocalconfig";
+my $CA_PATH      = "/opt/zimbra/conf/ca";
+my $TIMEOUT      = 10;
+
+my $SELF = "zmupdateglobalversion";
+
+use constant { EXIT_UPDATED => 0, EXIT_USAGE => 1, EXIT_NOTHING => 2, EXIT_SKIPPED => 3, EXIT_FAILED => 4 };
+
+our ($new_version, @eligible);
+
+sub msg  { print "$SELF: $_[0]\n"; }
+
+# Prints the reason and the re-run command, then exits with the given code
+sub stop {
+  my ($code, $reason) = @_;
+  closeAll();
+  msg($reason);
+  if ($code == EXIT_SKIPPED) {
+    msg("zimbraGlobalVersion not updated. If this is a patch upgrade, run as root: /opt/zimbra/libexec/$SELF $new_version");
+  } else {
+    msg("zimbraGlobalVersion not updated. After fixing the error above, run as root: /opt/zimbra/libexec/$SELF $new_version");
+  }
+  exit $code;
+}
+
+usage() unless (@ARGV == 1 && isValidVersion($ARGV[0]));
+$new_version = $ARGV[0];
+
+# ---------------------------------------------------------------------------
+# Local config: LDAP masters and bind credentials
+# ---------------------------------------------------------------------------
+my %lc = readLocalConfig(qw(ldap_master_url zimbra_ldap_userdn zimbra_ldap_password
+                            ldap_starttls_supported zimbra_require_interprocess_security));
+
+my @urls = grep { $_ ne "" } split(/[\s,]+/, ($lc{ldap_master_url} || ""));
+if (!@urls || !$lc{zimbra_ldap_userdn} || !$lc{zimbra_ldap_password}) {
+  stop(EXIT_SKIPPED, "LDAP master URL or credentials not found in local config (Zimbra not set up yet).");
+}
+
+my $starttls    = isTrue($lc{ldap_starttls_supported});
+my $require_tls = isTrue($lc{zimbra_require_interprocess_security});
+
+# ---------------------------------------------------------------------------
+# Check every LDAP master separately
+# ---------------------------------------------------------------------------
+my (@unreachable, @failed);
+foreach my $url (@urls) {
+  my ($ldap, $err, $connected) = connectMaster($url);
+  if (!$ldap) {
+    if ($connected) {
+      msg("LDAP master $url: $err");
+      push @failed, $url;
+    } else {
+      msg("LDAP master $url: not reachable ($err)");
+      push @unreachable, $url;
+    }
+    next;
+  }
+  my $schema = $ldap->schema();
+  if (!$schema) {
+    msg("LDAP master $url: cannot read schema");
+    push @failed, $url;
+    $ldap->unbind; $ldap->disconnect;
+    next;
+  }
+  if (!$schema->attribute($ATTR)) {
+    msg("LDAP master $url: $ATTR not in schema yet (not upgraded)");
+    $ldap->unbind; $ldap->disconnect;
+    next;
+  }
+  my ($ok, $vals, $rerr) = readValues($ldap);
+  if (!$ok) {
+    msg("LDAP master $url: cannot read $ATTR ($rerr)");
+    push @failed, $url;
+    $ldap->unbind; $ldap->disconnect;
+    next;
+  }
+  push @eligible, { url => $url, ldap => $ldap, values => $vals };
+}
+
+if (@failed) {
+  stop(EXIT_FAILED, "LDAP error on master(s) " . join(" ", @failed) . "; check the messages above.");
+}
+if (@unreachable) {
+  stop(EXIT_SKIPPED, "not all LDAP masters are reachable (" . join(" ", @unreachable) . ").");
+}
+if (!@eligible) {
+  stop(EXIT_SKIPPED, "no LDAP master has the $ATTR schema yet; it will be set once the LDAP nodes are upgraded.");
+}
+
+# ---------------------------------------------------------------------------
+# Compare with the highest value on any master, then write to the first
+# master that has the schema. Masters still on the old schema get the value
+# through replication once they are upgraded (same as upgrades already do
+# for new attributes).
+# ---------------------------------------------------------------------------
+my $current_max = highestOf(map { @{ $_->{values} } } @eligible);
+
+if ($current_max ne "" && compareVersions($new_version, $current_max) <= 0) {
+  closeAll();
+  msg("$ATTR is already $current_max (not lower than $new_version); nothing to do.");
+  exit EXIT_NOTHING;
+}
+
+my $target = $eligible[0];
+my $result = conditionalWrite($target->{ldap}, $target->{values}, $new_version);
+
+if ($result->code && isConflict($result->code)) {
+  # Someone changed the value between our read and our write: re-read once.
+  msg("$ATTR changed on $target->{url} while updating; re-checking.");
+  my ($ok, $vals, $rerr) = readValues($target->{ldap});
+  if (!$ok) {
+    stop(EXIT_FAILED, "cannot re-read $ATTR on $target->{url} ($rerr).");
+  }
+  my $latest = highestOf(@$vals, $current_max);
+  if ($latest ne "" && compareVersions($new_version, $latest) <= 0) {
+    closeAll();
+    msg("$ATTR is now $latest (not lower than $new_version); nothing to do.");
+    exit EXIT_NOTHING;
+  }
+  $current_max = $latest;
+  $result = conditionalWrite($target->{ldap}, $vals, $new_version);
+}
+
+if ($result->code) {
+  stop(EXIT_FAILED, "failed to update $ATTR on $target->{url}: " . $result->error);
+}
+
+closeAll();
+msg("$ATTR updated " . ($current_max eq "" ? "" : "from $current_max ") . "to $new_version.");
+exit EXIT_UPDATED;
+
+# ===========================================================================
+
+sub usage {
+  print "Usage: $SELF <X.Y.Z>\n";
+  exit EXIT_USAGE;
+}
+
+sub isValidVersion { return defined $_[0] && $_[0] =~ /^\d+\.\d+\.\d+$/; }
+
+sub isTrue { my $v = lc($_[0] // ""); return ($v eq "true" || $v eq "1" || $v eq "yes"); }
+
+# Returns 1 if a > b, 0 if equal, -1 if a < b (X.Y.Z, numeric per part)
+sub compareVersions {
+  my @a = split(/\./, $_[0]);
+  my @b = split(/\./, $_[1]);
+  for my $i (0 .. 2) {
+    return  1 if ($a[$i] > $b[$i]);
+    return -1 if ($a[$i] < $b[$i]);
+  }
+  return 0;
+}
+
+# Highest valid X.Y.Z among the arguments; "" if none
+sub highestOf {
+  my $max = "";
+  foreach my $v (@_) {
+    next unless isValidVersion($v);
+    $max = $v if ($max eq "" || compareVersions($v, $max) > 0);
+  }
+  return $max;
+}
+
+# Reads local config keys with one zmlocalconfig call (same tool zmsetup.pl uses)
+sub readLocalConfig {
+  my @keys = @_;
+  my %val;
+  return %val unless (-x $ZMLOCALCONFIG);
+  my $cmd = "$ZMLOCALCONFIG -x -s " . join(" ", @keys) . " 2>/dev/null";
+  if (open(my $fh, "-|", $cmd)) {
+    while (my $line = <$fh>) {
+      chomp($line);
+      if ($line =~ /^(\S+)\s+=\s?(.*)$/) {
+        $val{$1} = $2;
+      }
+    }
+    close($fh);
+  }
+  return %val;
+}
+
+# Connects and binds to one master.
+# Returns ($ldap) on success, or (undef, $error, $connected) where $connected
+# is 0 if the server could not be reached and 1 if it answered but StartTLS
+# or the bind failed.
+sub connectMaster {
+  my ($url) = @_;
+  my $verify = $require_tls ? "require" : "none";
+  my $ldap = Net::LDAP->new($url, timeout => $TIMEOUT, verify => $verify, capath => $CA_PATH);
+  return (undef, "connect failed: " . ($@ || "unknown error"), 0) unless $ldap;
+
+  if ($url =~ m{^ldap://}i && $starttls) {
+    my $tls = $ldap->start_tls(verify => $verify, capath => $CA_PATH);
+    if ($tls->code) {
+      $ldap->disconnect;
+      return (undef, "StartTLS failed: " . $tls->error, 1);
+    }
+  }
+
+  my $bind = $ldap->bind($lc{zimbra_ldap_userdn}, password => $lc{zimbra_ldap_password});
+  if ($bind->code) {
+    $ldap->disconnect;
+    return (undef, "bind failed: " . $bind->error, 1);
+  }
+  return ($ldap);
+}
+
+# Reads the current values of the attribute. Returns (1, \@values) or (0, undef, $error).
+sub readValues {
+  my ($ldap) = @_;
+  my $res = $ldap->search(base => $CONFIG_DN, scope => "base",
+                          filter => "(objectClass=*)", attrs => [$ATTR]);
+  return (0, undef, $res->error) if ($res->code);
+  my $entry = $res->entry(0);
+  return (0, undef, "$CONFIG_DN not found") unless $entry;
+  my @vals = $entry->get_value($ATTR);
+  return (1, \@vals);
+}
+
+# Delete the exact old value(s) and add the new one in a single modify, so a
+# concurrent change makes this fail instead of being overwritten.
+sub conditionalWrite {
+  my ($ldap, $old_vals, $new) = @_;
+  if (@$old_vals) {
+    return $ldap->modify($CONFIG_DN, changes => [
+      delete => [ $ATTR => [ @$old_vals ] ],
+      add    => [ $ATTR => $new ],
+    ]);
+  }
+  return $ldap->modify($CONFIG_DN, add => { $ATTR => $new });
+}
+
+# noSuchAttribute(16), constraintViolation(19), attributeOrValueExists(20)
+sub isConflict { my $c = shift; return ($c == 16 || $c == 19 || $c == 20); }
+
+sub closeAll {
+  foreach my $e (@eligible) {
+    next unless $e->{ldap};
+    $e->{ldap}->unbind;
+    $e->{ldap}->disconnect;
+    $e->{ldap} = undef;
+  }
+}
