@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see <https://www.gnu.org/licenses/>.
 # ***** END LICENSE BLOCK *****
-# 
+#
+# Ensure Zimbra common bin/sbin paths are available for Erlang/RabbitMQ binaries
+# in both interactive/login and non-login automation shells
+export PATH=/opt/zimbra/common/bin:/opt/zimbra/common/sbin:$PATH
 NAME=rabbitmq-server
 DAEMON=/opt/zimbra/common/sbin/${NAME}
 CONTROL=/opt/zimbra/common/sbin/rabbitmqctl
@@ -25,6 +28,8 @@ LOCK_FILE=/opt/zimbra/data/rabbitmq/$NAME
 RABBITMQ_SERVER_CONSOLE_OUTPUT=/opt/zimbra/log/rabbitmq_startup.log
 RABBITMQ_LOG_BASE=/opt/zimbra/log
 RABBITMQ_STARTUP_TIMEOUT=600
+# Maximum seconds to wait for graceful broker shutdown before force killing
+RABBITMQ_STOP_TIMEOUT=60
 CONF_ENV_FILE=/opt/zimbra/conf/rabbitmq-env.conf
 
 if [ x`whoami` != xzimbra ]; then
@@ -45,9 +50,19 @@ ensure_pid_dir () {
         chown -R ${USER}:${USER} ${PID_DIR}
     fi
 }
-
+# Safely remove PID file only if the underlying Erlang/beam process has actually terminated.
+# Avoids stale state deletion if the broker is still running, and prevents failure under 'set -e'.
 remove_pid () {
-    rm -f ${PID_FILE}
+    if [ -f "${PID_FILE}" ]; then
+        LIVE_PID=$(cat "${PID_FILE}" 2>/dev/null)
+        if [ -n "${LIVE_PID}" ] && kill -0 "${LIVE_PID}" 2>/dev/null && \
+           ps -p "${LIVE_PID}" -o comm= 2>/dev/null | grep -q "beam"; then
+            echo "Warning: RabbitMQ process (PID ${LIVE_PID}) is still running. PID file retained." >&2
+            return 0
+        fi
+    fi
+    rm -f "${PID_FILE}"
+    return 0
 }
 
 start_rabbitmq () {
@@ -81,17 +96,25 @@ start_rabbitmq () {
         esac
     fi
 }
-
+# Attempt graceful shutdown via rabbitmqctl with a bounded timeout to prevent hanging.
+# If shutdown times out (exit code 124), forcefully kill the broker process
 stop_rabbitmq () {
     echo -n "Stopping $DESC....."
     status_rabbitmq quiet
     if [ $RETVAL = 0 ] ; then
         set +e
-        RABBITMQ_CONF_ENV_FILE=$CONF_ENV_FILE $CONTROL stop ${PID_FILE} \
+        timeout ${RABBITMQ_STOP_TIMEOUT} \
+            sh -c "RABBITMQ_CONF_ENV_FILE=${CONF_ENV_FILE} ${CONTROL} stop ${PID_FILE}" \
             >> ${RABBITMQ_SERVER_CONSOLE_OUTPUT} \
             2>> ${RABBITMQ_SERVER_CONSOLE_OUTPUT}
         RETVAL=$?
         set -e
+            if [ $RETVAL = 124 ] ; then
+                echo "Stop timed out after ${RABBITMQ_STOP_TIMEOUT}s. Force killing broker..." >&2
+                LIVE_PID=$(cat "${PID_FILE}" 2>/dev/null)
+                [ -n "${LIVE_PID}" ] && kill -9 "${LIVE_PID}" 2>/dev/null || true
+                RETVAL=0
+            fi
         if [ $RETVAL = 0 ] ; then
             remove_pid
             if [ -n "$LOCK_FILE" ] ; then
