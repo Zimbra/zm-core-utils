@@ -108,13 +108,19 @@ stop_rabbitmq () {
             >> ${RABBITMQ_SERVER_CONSOLE_OUTPUT} \
             2>> ${RABBITMQ_SERVER_CONSOLE_OUTPUT}
         RETVAL=$?
-        set -e
-            if [ $RETVAL = 124 ] ; then
-                echo "Stop timed out after ${RABBITMQ_STOP_TIMEOUT}s. Force killing broker..." >&2
+        if [ $RETVAL = 124 ] ; then
+            echo "Stop timed out after ${RABBITMQ_STOP_TIMEOUT}s. Force killing broker..." >&2
+            LIVE_PID=""
+            if [ -f "${PID_FILE}" ]; then
                 LIVE_PID=$(cat "${PID_FILE}" 2>/dev/null)
-                [ -n "${LIVE_PID}" ] && kill -9 "${LIVE_PID}" 2>/dev/null || true
-                RETVAL=0
             fi
+            if [ -z "${LIVE_PID}" ]; then
+                LIVE_PID=$( (pgrep -u zimbra -f 'beam.*rabbit' 2>/dev/null || ps -u zimbra -o pid=,args= 2>/dev/null | awk '/[b]eam.*rabbit/ {print $1}') | tr '\n' ' ' )
+            fi
+            [ -n "${LIVE_PID}" ] && kill -9 ${LIVE_PID} 2>/dev/null || true
+            RETVAL=0
+        fi
+        set -e
         if [ $RETVAL = 0 ] ; then
             remove_pid
             if [ -n "$LOCK_FILE" ] ; then
